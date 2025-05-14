@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 export class PostgresRest {
     private readonly logger = new Logger(PostgresRest.name);
     private clientInstance: PostgrestClient;
+    private authClientInstance: PostgrestClient;
 
     constructor(
         @Inject(REQUEST) private readonly request: Request,
@@ -20,6 +21,7 @@ export class PostgresRest {
                 }
                 if (this.clientInstance && prop in this.clientInstance) {
                     const value = this.clientInstance[prop];
+                    const authClientInstanceValue = this.authClientInstance[prop];
                     return typeof value === 'function'
                         ? value.bind(this.clientInstance)
                         : value;
@@ -31,18 +33,32 @@ export class PostgresRest {
 
     private initializeClient() {
         this.logger.log('Initializing PostgresRest client...');
-
         const DB_REST_URL = this.configService.get<string>('DB_REST_URL');
 
         if (!DB_REST_URL) {
             throw new Error('DB_REST_URL configuration is not defined');
         }
-        this.clientInstance = new PostgrestClient(DB_REST_URL);
+
+        this.clientInstance = new PostgrestClient(DB_REST_URL, {
+            headers: {
+                'Accept-Profile': 'public', // Allow both schemas
+                'Content-Profile': 'public' // Default to auth for writes
+            }
+        });
+        this.authClientInstance = new PostgrestClient(DB_REST_URL, {
+            headers: {
+                'Accept-Profile': 'auth', // Allow both schemas
+                'Content-Profile': 'auth' // Default to auth for writes
+            }
+        });
         this.logger.log('PostgresRest client initialized');
     }
 
     public from(tableName: string) {
         return this.clientInstance.from(tableName);
+    }
+    public auth_client(tableName: string) {
+        return this.authClientInstance.from(tableName);
     }
 
     public rpc(fnName: string, params?: object) {

@@ -10,4 +10,4 @@ import { ProfileSeeder } from './profile_seeder.service';
   exports: [UserService, ProfileSeeder]
 
 })
-export class UserModule { }
+export class UserModule {}

@@ -2,7 +2,7 @@ import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/guards/jwt.auth.guard';
 
-@Controller('users')
+@Controller('')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
@@ -18,5 +18,10 @@ export class AppController {
       "message": "AuthGuard works 🎉",
       "authenticated_user": req.user
     };
+  }
+
+  @Get('/objects')
+  getObjectS(): Object {
+    return this.appService.getObject();
   }
 }

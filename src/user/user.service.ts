@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -9,13 +8,15 @@ import { ProfileSeeder } from './profile_seeder.service';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  constructor(private readonly postgresrest: PostgresRest, private readonly profileSeeder: ProfileSeeder) { }
-
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly profileSeeder: ProfileSeeder,
+  ) {}
 
   async seedDatabase() {
     await this.profileSeeder.seedProfiles();
   }
-  
+
   async createUser(createUserDto: CreateUserDto): Promise<User | undefined> {
     const user: User = new User();
     user.name = createUserDto.name;
@@ -25,9 +26,12 @@ export class UserService {
     user.password = createUserDto.password;
     user.gender = createUserDto.gender;
 
-    const new_user = await this.postgresrest.from('profiles').insert(user).single();
+    const new_user = await this.postgresrest
+      .from('profiles')
+      .insert(user)
+      .single();
     if (new_user.data) {
-      return new_user
+      return new_user;
     } else {
       return;
     }
@@ -71,7 +75,10 @@ export class UserService {
     }
   }
 
-  async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User | null> {
+  async updateUser(
+    id: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User | null> {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
@@ -80,7 +87,7 @@ export class UserService {
           age: updateUserDto.age,
           email: updateUserDto.email,
           username: updateUserDto.username,
-          password: updateUserDto.password
+          password: updateUserDto.password,
         })
         .eq('id', id)
         .select()

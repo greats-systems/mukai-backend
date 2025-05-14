@@ -6,62 +6,63 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable({ scope: Scope.REQUEST })
 export class PostgresRest {
-    private readonly logger = new Logger(PostgresRest.name);
-    private clientInstance: PostgrestClient;
-    private authClientInstance: PostgrestClient;
+  private readonly logger = new Logger(PostgresRest.name);
+  private clientInstance: PostgrestClient;
+  private authClientInstance: PostgrestClient;
 
-    constructor(
-        @Inject(REQUEST) private readonly request: Request,
-        private readonly configService: ConfigService) {
-        this.initializeClient();
-        return new Proxy(this, {
-            get: (target, prop: keyof PostgrestClient, receiver) => {
-                if (prop in target) {
-                    return Reflect.get(target, prop, receiver);
-                }
-                if (this.clientInstance && prop in this.clientInstance) {
-                    const value = this.clientInstance[prop];
-                    const authClientInstanceValue = this.authClientInstance[prop];
-                    return typeof value === 'function'
-                        ? value.bind(this.clientInstance)
-                        : value;
-                }
-                return Reflect.get(target, prop, receiver);
-            }
-        });
-    }
-
-    private initializeClient() {
-        this.logger.log('Initializing PostgresRest client...');
-        const DB_REST_URL = this.configService.get<string>('DB_REST_URL');
-
-        if (!DB_REST_URL) {
-            throw new Error('DB_REST_URL configuration is not defined');
+  constructor(
+    @Inject(REQUEST) private readonly request: Request,
+    private readonly configService: ConfigService,
+  ) {
+    this.initializeClient();
+    return new Proxy(this, {
+      get: (target, prop: keyof PostgrestClient, receiver) => {
+        if (prop in target) {
+          return Reflect.get(target, prop, receiver);
         }
+        if (this.clientInstance && prop in this.clientInstance) {
+          const value = this.clientInstance[prop];
+          const authClientInstanceValue = this.authClientInstance[prop];
+          return typeof value === 'function'
+            ? value.bind(this.clientInstance)
+            : value;
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+  }
 
-        this.clientInstance = new PostgrestClient(DB_REST_URL, {
-            headers: {
-                'Accept-Profile': 'public', // Allow both schemas
-                'Content-Profile': 'public' // Default to auth for writes
-            }
-        });
-        this.authClientInstance = new PostgrestClient(DB_REST_URL, {
-            headers: {
-                'Accept-Profile': 'auth', // Allow both schemas
-                'Content-Profile': 'auth' // Default to auth for writes
-            }
-        });
-        this.logger.log('PostgresRest client initialized');
-    }
+  private initializeClient() {
+    this.logger.log('Initializing PostgresRest client...');
+    const DB_REST_URL = this.configService.get<string>('DB_REST_URL');
 
-    public from(tableName: string) {
-        return this.clientInstance.from(tableName);
-    }
-    public auth_client(tableName: string) {
-        return this.authClientInstance.from(tableName);
+    if (!DB_REST_URL) {
+      throw new Error('DB_REST_URL configuration is not defined');
     }
 
-    public rpc(fnName: string, params?: object) {
-        return this.clientInstance.rpc(fnName, params);
-    }
+    this.clientInstance = new PostgrestClient(DB_REST_URL, {
+      headers: {
+        'Accept-Profile': 'public', // Allow both schemas
+        'Content-Profile': 'public', // Default to auth for writes
+      },
+    });
+    this.authClientInstance = new PostgrestClient(DB_REST_URL, {
+      headers: {
+        'Accept-Profile': 'auth', // Allow both schemas
+        'Content-Profile': 'auth', // Default to auth for writes
+      },
+    });
+    this.logger.log('PostgresRest client initialized');
+  }
+
+  public from(tableName: string) {
+    return this.clientInstance.from(tableName);
+  }
+  public auth_client(tableName: string) {
+    return this.authClientInstance.from(tableName);
+  }
+
+  public rpc(fnName: string, params?: object) {
+    return this.clientInstance.rpc(fnName, params);
+  }
 }

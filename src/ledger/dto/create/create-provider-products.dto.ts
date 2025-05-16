@@ -7,6 +7,10 @@ export class CreateProviderProductsDto {
 
   @IsString()
   @IsNotEmpty()
+  provider_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   unit_measure: string;
 
   @IsString()

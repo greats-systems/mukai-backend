@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Injectable, Logger } from '@nestjs/common';
 import {
   Commodity,
@@ -12,7 +13,6 @@ import {
   TraderInventory,
 } from './entities/ledger.entity';
 import { PostgresRest } from 'src/common/postgresrest/postgresrest';
-// import { ProfileSeeder } from '../user/profile_seeder.service';
 import { CreateCommodityDto } from './dto/create/create-commodity.dto';
 import { CreateContractBidDto } from './dto/create/create-contract-bid.dto';
 import { UpdateContractBidDto } from './dto/update/update-contract-bid.dto';
@@ -25,6 +25,8 @@ import { CreateTraderInventoryDto } from './dto/create/create-trader-inventory.d
 import { UpdateTraderInventoryDto } from './dto/update/update-trader-inventory.dto';
 import { UpdateContractDto } from './dto/update/update-contract.dto';
 import { CreateProducerDto } from './dto/create/create-producer.dto';
+import { UpdateProviderProductsDto } from './dto/update/update-provider-products.dto';
+import { UpdateProviderServicesDto } from './dto/update/update-provider-services.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -98,6 +100,7 @@ export class CommodityService {
   }
 }
 
+@Injectable()
 export class ContractBidService {
   private readonly logger = initLogger(ContractBidService);
   constructor(private readonly postgresrest: PostgresRest) {}
@@ -211,8 +214,9 @@ export class ContractBidService {
   }
 }
 
+@Injectable()
 export class ContractService {
-    private readonly logger = initLogger(ContractService);
+  private readonly logger = initLogger(ContractService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createContract(
@@ -326,6 +330,7 @@ export class ContractService {
   }
 }
 
+@Injectable()
 export class ProducerService {
   private readonly logger = initLogger(ProducerService);
   constructor(private readonly postgresrest: PostgresRest) {}
@@ -391,6 +396,7 @@ export class ProducerService {
   }
 }
 
+@Injectable()
 export class ProviderService {
   private readonly logger = initLogger(ProviderService);
   constructor(private readonly postgresrest: PostgresRest) {}
@@ -453,43 +459,9 @@ export class ProviderService {
       return null;
     }
   }
-
-  async upsertProductOrService(
-    provider_id: string,
-    createProviderDto: CreateProviderDto,
-  ): Promise<Provider | null> {
-    try {
-      // Include all required fields in the upsert
-      const { data, error } = await this.postgresrest
-        .from('Provider')
-        .upsert({
-          provider_id, // Include the provider_id in the upsert data
-          product_id: createProviderDto.product_id,
-          service_id: createProviderDto.service_id,
-          first_name: createProviderDto.first_name,
-          last_name: createProviderDto.last_name,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        this.logger.error(
-          `Error upserting product/service ${provider_id}`,
-          error,
-        );
-        return null;
-      }
-      return data as Provider;
-    } catch (error) {
-      this.logger.error(
-        `Exception in upsertProductOrService for id ${provider_id}`,
-        error,
-      );
-      return null;
-    }
-  }
 }
 
+@Injectable()
 export class ProviderProductsService {
   private readonly logger = initLogger(ProviderProductsService);
   constructor(private readonly postgresrest: PostgresRest) {}
@@ -556,10 +528,61 @@ export class ProviderProductsService {
       return null;
     }
   }
+
+  async updateProviderProducts(
+    product_id: string,
+    updateProviderProductsDto: UpdateProviderProductsDto,
+  ): Promise<ProviderProducts | null> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('ProviderProducts')
+        .update({
+          unit_price: updateProviderProductsDto.unit_price,
+          max_capacity: updateProviderProductsDto.max_capacity,
+        })
+        .eq('product_id', product_id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating products ${product_id}`, error);
+        return null;
+      }
+      return data as ProviderProducts;
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateProviderProducts for id ${product_id}`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  async deleteProviderProducts(product_id: string): Promise<boolean> {
+    try {
+      const { error } = await this.postgresrest
+        .from('ProviderProducts')
+        .delete()
+        .eq('product_id', product_id);
+
+      if (error) {
+        this.logger.error(`Error deleting product ${product_id}`, error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in deleteProviderProducts for id ${product_id}`,
+        error,
+      );
+      return false;
+    }
+  }
 }
 
-export class ProducerServicesService {
-  private readonly logger = initLogger(ProducerServicesService);
+@Injectable()
+export class ProviderServicesService {
+  private readonly logger = initLogger(ProviderServicesService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createProviderService(
@@ -600,7 +623,7 @@ export class ProducerServicesService {
     }
   }
 
-  async viewProviderService(
+  async viewProviderServices(
     service_id: string,
   ): Promise<ProviderServices | null> {
     try {
@@ -624,8 +647,59 @@ export class ProducerServicesService {
       return null;
     }
   }
+
+  async updateProviderServices(
+    service_id: string,
+    updateProviderServicesDto: UpdateProviderServicesDto,
+  ): Promise<ProviderServices | null> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('ProviderServices')
+        .update({
+          unit_price: updateProviderServicesDto.unit_price,
+          max_capacity: updateProviderServicesDto.max_capacity,
+        })
+        .eq('service_id', service_id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating services ${service_id}`, error);
+        return null;
+      }
+      return data as ProviderServices;
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateProviderServices for id ${service_id}`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  async deleteProviderServices(service_id: string): Promise<boolean> {
+    try {
+      const { error } = await this.postgresrest
+        .from('ProviderServices')
+        .delete()
+        .eq('service_id', service_id);
+
+      if (error) {
+        this.logger.error(`Error deleting service ${service_id}`, error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in deleteProviderServices for id ${service_id}`,
+        error,
+      );
+      return false;
+    }
+  }
 }
 
+@Injectable()
 export class TraderService {
   private readonly logger = initLogger(TraderService);
   constructor(private readonly postgresrest: PostgresRest) {}
@@ -682,12 +756,13 @@ export class TraderService {
 
       return data as Trader;
     } catch (error) {
-      this.logger.error(`Exception in viewTrader for id ${producer_id}`, error);
+      this.logger.error(`Exception in viewTrader for id ${trader_id}`, error);
       return null;
     }
   }
 }
 
+@Injectable()
 export class TraderInventoryService {
   private readonly logger = initLogger(TraderInventoryService);
   constructor(private readonly postgresrest: PostgresRest) {}

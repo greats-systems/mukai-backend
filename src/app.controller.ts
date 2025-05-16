@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/guards/jwt.auth.guard';
@@ -13,15 +15,21 @@ export class AppController {
 
   @Get('/users')
   @UseGuards(JwtAuthGuard)
-  async protected(@Req() req) {
+  protected(@Req() req) {
     return {
-      "message": "AuthGuard works 🎉",
-      "authenticated_user": req.user
+      message: 'AuthGuard works 🎉',
+      authenticated_user: req.user,
     };
   }
 
   @Get('/objects')
-  getObjectS(): Object {
+  getObjects(): object {
     return this.appService.getObject();
+  }
+
+  @Get('/commodities')
+  // @UseGuards(JwtAuthGuard)
+  getCommodities(): object {
+    return this.appService.getCommodity();
   }
 }

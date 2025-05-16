@@ -1,4 +1,5 @@
 export class Commodity {
+  commodity_id: string;
   name: string;
   description: string;
   quantity: number;
@@ -7,6 +8,7 @@ export class Commodity {
 }
 
 export class Contract {
+  contract_id: string;
   producer_id: string;
   title: string;
   description: string;
@@ -14,6 +16,7 @@ export class Contract {
 }
 
 export class ContractBid {
+  bid_id: string;
   contract_id: string;
   provider_id: string;
   opening_date: string;
@@ -25,6 +28,7 @@ export class ContractBid {
 }
 
 export class Producer {
+  producer_id: string;
   first_name: string;
   last_name: string;
   address: string;
@@ -33,6 +37,7 @@ export class Producer {
 }
 
 export class Provider {
+  provider_id: string;
   first_name: string;
   last_name: string;
   product_id: string;
@@ -40,6 +45,7 @@ export class Provider {
 }
 
 export class ProviderProducts {
+  product_id: string;
   product_name: string;
   unit_measure: string;
   unit_price: number;
@@ -47,6 +53,7 @@ export class ProviderProducts {
 }
 
 export class ProviderServices {
+  service_id: string;
   service_name: string;
   unit_measure: string;
   unit_price: number;
@@ -54,6 +61,7 @@ export class ProviderServices {
 }
 
 export class Trader {
+  trader_id: string;
   first_name: string;
   last_name: string;
   address: string;
@@ -62,6 +70,7 @@ export class Trader {
 }
 
 export class TraderInventory {
+  inventory_id: string;
   trader_id: string;
   commodity_id: string;
   quantity: number;

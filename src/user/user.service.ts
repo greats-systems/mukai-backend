@@ -2,20 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
+import { Profile, User } from './entities/user.entity';
 import { PostgresRest } from 'src/common/postgresrest/postgresrest';
 import { ProfileSeeder } from './profile_seeder.service';
 // private readonly userRepository: Repository<User>,
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  constructor(private readonly postgresrest: PostgresRest, private readonly profileSeeder: ProfileSeeder) { }
+  constructor(private readonly postgresrest: PostgresRest) { }
 
 
-  async seedDatabase() {
-    await this.profileSeeder.seedProfiles();
-  }
-  
   async createUser(createUserDto: CreateUserDto): Promise<User | undefined> {
     const user: User = new User();
     user.name = createUserDto.name;
@@ -114,6 +110,42 @@ export class UserService {
     } catch (error) {
       this.logger.error(`Exception in removeUser for id ${id}`, error);
       return false;
+    }
+  }
+
+  async getUser(id: string): Promise<Profile | null> {
+    if (!id) {
+      this.logger.warn('getUser called with empty id');
+      return null;
+    }
+
+    try {
+      const { data: profile, error } = await this.postgresrest
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        this.logger.error('Database error fetching profile', {
+          error,
+          userId: id
+        });
+        return null;
+      }
+
+      if (!profile) {
+        this.logger.debug('Profile not found', { userId: id });
+        return null;
+      }
+
+      return profile;
+    } catch (error) {
+      this.logger.error('Unexpected error in getUser', {
+        error,
+        userId: id
+      });
+      return null;
     }
   }
 }

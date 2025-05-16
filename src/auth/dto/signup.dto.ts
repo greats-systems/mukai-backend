@@ -17,5 +17,34 @@ export class SignupDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
-  name: string;
+  first_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2)
+  last_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2)
+  phone: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2)
+  account_type: string;
+
+
+  @IsString()
+  push_token: string;
+
+  @IsString()
+  national_id_url: string;
+
+
+  @IsString()
+  passport_url: string;
+
+  @IsString()
+  avatar: string;
 }

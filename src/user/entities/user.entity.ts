@@ -10,7 +10,7 @@ export class User {
 }
 
 export class Profile {
-    id: string;
+    id?: string;
     auth_user_id: string;
     created_at: string;
     first_name: string;

@@ -1,18 +1,18 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
-import { LoginDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { PostgresRest } from 'src/common/postgresrest';
+import { Profile } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
   ) { }
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -36,6 +36,90 @@ export class AuthService {
     return null;
   }
 
+  async validate_profile(accessAccountDto: AccessAccountDto) {
+    try {
+      console.log(' validate_profile user.id', accessAccountDto);
+      const decoded = this.jwtService.verify(accessAccountDto.accessToken);
+      if (!decoded?.sub) {
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      // 2. Get user from auth.users
+      const { data: user, error: userError } = await this.postgresRest
+        .auth_client('users')
+        .select('id, email, role')
+        .eq('id', decoded.sub)
+        .single();
+
+      if (userError || !user) {
+        return {
+          status: 'failed',
+          message: 'User not found',
+          access_token: null,
+          error: userError,
+          user: null
+        };
+      }
+      console.log(' validate_profile user.id', user.id);
+      // 3. Get profile with store information
+      const { data: profileData, error: profileError } = await this.postgresRest
+        .from('profiles')  // Explicit schema
+        .select(`
+        *,
+        stores (*)
+      `)
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        return {
+          status: 'failed',
+          message: 'Profile not found',
+          access_token: null,
+          error: profileError,
+          user: null
+        };
+      }
+
+      const newPayload = {
+        email: user.email,
+        sub: user.id,
+        role: user.role
+      };
+      const newToken = this.jwtService.sign(newPayload);
+
+      return {
+        status: 'success',
+        message: 'Profile retrieved successfully',
+        access_token: newToken,
+        user: {
+          ...profileData,
+          email: user.email,
+          role: user.role
+        }
+      };
+
+    } catch (error) {
+      if (error instanceof UnauthorizedException ||
+        error instanceof NotFoundException) {
+        return {
+          status: 'failed',
+          message: 'Profile not found',
+          access_token: null,
+          error: error,
+          user: null
+        };
+      }
+      return {
+        status: 'failed',
+        message: 'Failed to fetch profile',
+        access_token: null,
+        error: error,
+        user: null
+      };
+    }
+  }
+
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
@@ -47,15 +131,17 @@ export class AuthService {
       sub: user.id,
       role: user.role
     };
-
-    return {
+    const { error: profileError, data: profileData } = await this.postgresRest
+      .from('profiles')
+      .select('*, stores(*)').eq('id', user.id).single();
+    const response_data = {
+      status: 'account authenticated',
+      message: 'account authenticated successfully',
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-    };
+      user: profileData,
+      error: null,
+    }
+    return response_data;
   }
 
   async signup(signupDto: SignupDto) {
@@ -80,12 +166,11 @@ export class AuthService {
       email: signupDto.email,
       encrypted_password: hashedPassword,
       role: 'authenticated',
-      raw_user_meta_data: { name: signupDto.name },
+      raw_user_meta_data: { first_name: signupDto.first_name },
       created_at: now,
       updated_at: now
     }
-    console.log('hashedPassword', hashedPassword);
-    console.log('user_data', user_data);
+
 
     // Create auth user in auth.users
     const { data: newAuthUser, error: authError } = await this.postgresRest
@@ -93,8 +178,7 @@ export class AuthService {
       .insert(user_data)
       .select('id, email, role, raw_user_meta_data')
       .single();
-    console.log('newAuthUser', newAuthUser);
-    console.log('authError', authError);
+
     if (authError) {
       throw new Error(`Auth user creation failed: ${authError.message}`);
     }
@@ -106,7 +190,14 @@ export class AuthService {
         id: userId,
         auth_user_id: userId,
         email: signupDto.email,
-        first_name: signupDto.name,
+        first_name: signupDto.first_name,
+        last_name: signupDto.last_name,
+        phone: signupDto.phone,
+        account_type: signupDto.account_type,
+        push_token: signupDto.push_token,
+        national_id_url: signupDto.national_id_url,
+        passport_url: signupDto.passport_url,
+        avatar: signupDto.avatar,
         created_at: now,
         updated_at: now
       });
@@ -125,13 +216,78 @@ export class AuthService {
     };
 
     return {
+      status: 'account created',
+      message: 'account created successfully',
       access_token: this.jwtService.sign(payload),
       user: {
         id: newAuthUser.id,
         email: newAuthUser.email,
-        name: signupDto.name,
+        first_name: signupDto.first_name,
+        last_name: signupDto.last_name,
+        account_type: signupDto.account_type,
         role: newAuthUser.role
       },
+      data: payload,
+      error: null,
+
+    };
+  }
+  async update(profile: Profile) {
+    const now = new Date().toISOString();
+    // Create profile in public.profiles
+
+    const { error: profileError } = await this.postgresRest
+      .from('profiles')
+      .update({
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        account_type: profile.account_type,
+        push_token: profile.push_token,
+        national_id_url: profile.national_id_url,
+        passport_url: profile.passport_url,
+        avatar: profile.avatar,
+        updated_at: now
+      }).eq('id', profile.id);
+
+    if (profileError) {
+      return {
+        status: 'account not updated',
+        message: 'account updated failed',
+        error: profileError,
+        data: null,
+      };
+    }
+    return {
+      status: 'account updated',
+      message: 'account updated successfully',
+      error: null,
+      data: profile,
+    };
+  }
+
+  async updateFCM(profile: Profile) {
+    const now = new Date().toISOString();
+    const { error: profileError, data: profileData } = await this.postgresRest
+      .from('profiles')
+      .update({
+        push_token: profile.push_token,
+        updated_at: now
+      }).eq('id', profile.id);
+
+    if (profileError) {
+      return {
+        status: 'account not updated',
+        message: 'account updated failed',
+        error: profileError,
+        data: null,
+      };
+    }
+    return {
+      status: 'account updated',
+      message: 'account updated successfully',
+      error: null,
+      data: profile,
     };
   }
 }

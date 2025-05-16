@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, Logger } from '@nestjs/common';
@@ -6,16 +9,18 @@ import { AuthUser } from '@supabase/supabase-js';
 
 @Injectable()
 export class PostgresRestHandlerStrategy extends PassportStrategy(Strategy) {
-    private readonly logger = new Logger(PostgresRestHandlerStrategy.name);
-    constructor(private readonly configService: ConfigService) {
-        super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false,
-            secretOrKey: configService.get('JWT_SECRET'),
-        });
-    }
+  constructor(private readonly configService: ConfigService) {
+    const jwtSecret = configService.get('JWT_SECRET');
+    if (!jwtSecret) throw new Error('JWT_SECRET is not configured!');
 
-    async validate(user: AuthUser) {
-        return user;
-    }
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: jwtSecret, // Now definitely a string
+    });
+  }
+
+  validate(user: AuthUser) {
+    return user;
+  }
 }

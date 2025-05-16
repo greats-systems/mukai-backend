@@ -1,6 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder, SwaggerDocumentOptions } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import {
+  SwaggerModule,
+  DocumentBuilder,
+  SwaggerDocumentOptions,
+} from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,16 +17,21 @@ async function bootstrap() {
     .build();
 
   const options: SwaggerDocumentOptions = {
-    operationIdFactory: (
-      controllerKey: string,
-      methodKey: string
-    ) => methodKey
+    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
   };
-  const documentFactory = () => SwaggerModule.createDocument(app, config, options);
-  SwaggerModule.setup('api/docs', app, documentFactory);
+  const documentFactory = () =>
+    SwaggerModule.createDocument(app, config, options);
+  SwaggerModule.setup('api', app, documentFactory);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // remove non-whitelisted properties
+      forbidNonWhitelisted: true, // throw errors for non-whitelisted properties
+      transform: true, // automatically transform payloads to DTO instances
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0', () => {
     console.log('server connected');
   });
 }
-bootstrap();
+void bootstrap();

@@ -6,9 +6,9 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable({ scope: Scope.REQUEST })
 export class PostgresRest {
-    private readonly logger = new Logger(PostgresRest.name);
-    private clientInstance: PostgrestClient;
-    private authClientInstance: PostgrestClient;
+  private readonly logger = new Logger(PostgresRest.name);
+  private clientInstance: PostgrestClient;
+  private authClientInstance: PostgrestClient;
 
     constructor(
         @Inject(REQUEST) private readonly request: Request,
@@ -31,37 +31,44 @@ export class PostgresRest {
         });
     }
 
-    private initializeClient() {
-        this.logger.log('Initializing PostgresRest client...');
-        const DB_REST_URL = this.configService.get<string>('ENV') == 'local' ? this.configService.get<string>('LOCAL_DB_REST_URL') : this.configService.get<string>('PROD_DB_REST_URL');
 
-        if (!DB_REST_URL) {
-            throw new Error('DB_REST_URL configuration is not defined');
-        }
+  private initializeClient() {
+    this.logger.log('Initializing PostgresRest client...');
+    const DB_REST_URL = this.configService.get<string>('DB_REST_URL');
+    // eslint-disable-next-line prettier/prettier
+    const LOCAL_SERVICE_ROLE_KEY = this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY');
 
-        this.clientInstance = new PostgrestClient(DB_REST_URL, {
-            headers: {
-                'Accept-Profile': 'public', // Allow both schemas
-                'Content-Profile': 'public' // Default to auth for writes
-            }
-        });
-        this.authClientInstance = new PostgrestClient(DB_REST_URL, {
-            headers: {
-                'Accept-Profile': 'auth', // Allow both schemas
-                'Content-Profile': 'auth' // Default to auth for writes
-            }
-        });
-        this.logger.log('PostgresRest client initialized');
+    if (!DB_REST_URL) {
+      throw new Error('DB_REST_URL configuration is not defined');
     }
 
-    public from(tableName: string) {
-        return this.clientInstance.from(tableName);
-    }
-    public auth_client(tableName: string) {
-        return this.authClientInstance.from(tableName);
-    }
+    this.clientInstance = new PostgrestClient(DB_REST_URL, {
+      headers: {
+        apikey: LOCAL_SERVICE_ROLE_KEY as string, // Required for all requests
+        Authorization: `Bearer ${LOCAL_SERVICE_ROLE_KEY as string}`,
+        'Accept-Profile': 'public', // Allow both schemas
+        'Content-Profile': 'public', // Default to auth for writes
+      },
+    });
+    this.authClientInstance = new PostgrestClient(DB_REST_URL, {
+      headers: {
+        apikey: LOCAL_SERVICE_ROLE_KEY as string, // Required for all requests
+        Authorization: `Bearer ${LOCAL_SERVICE_ROLE_KEY as string}`,
+        'Accept-Profile': 'auth', // Allow both schemas
+        'Content-Profile': 'auth', // Default to auth for writes
+      },
+    });
+    this.logger.log('PostgresRest client initialized');
+  }
 
-    public rpc(fnName: string, params?: object) {
-        return this.clientInstance.rpc(fnName, params);
-    }
+  public from(tableName: string) {
+    return this.clientInstance.from(tableName);
+  }
+  public auth_client(tableName: string) {
+    return this.authClientInstance.from(tableName);
+  }
+
+  public rpc(fnName: string, params?: object) {
+    return this.clientInstance.rpc(fnName, params);
+  }
 }

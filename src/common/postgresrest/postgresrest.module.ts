@@ -6,8 +6,16 @@ import { PostgresRestHandlerGuard } from './postgresrest.guard';
 import { PostgresRest } from './postgresrest';
 
 @Module({
-    imports: [ConfigModule],
-    providers: [PostgresRest, PostgresRestHandlerStrategy, PostgresRestHandlerGuard],
-    exports: [PostgresRest, PostgresRestHandlerStrategy, PostgresRestHandlerGuard],
+  imports: [ConfigModule],
+  providers: [
+    PostgresRest,
+    PostgresRestHandlerStrategy,
+    PostgresRestHandlerGuard,
+  ],
+  exports: [
+    PostgresRest,
+    PostgresRestHandlerStrategy,
+    PostgresRestHandlerGuard,
+  ],
 })
-export class PostgresRestHandlerModule { }
+export class PostgresRestHandlerModule {}

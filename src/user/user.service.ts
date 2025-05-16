@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Profile, User } from './entities/user.entity';
@@ -21,9 +21,12 @@ export class UserService {
     user.password = createUserDto.password;
     user.gender = createUserDto.gender;
 
-    const new_user = await this.postgresrest.from('profiles').insert(user).single();
+    const new_user = await this.postgresrest
+      .from('profiles')
+      .insert(user)
+      .single();
     if (new_user.data) {
-      return new_user
+      return new_user;
     } else {
       return;
     }
@@ -67,7 +70,10 @@ export class UserService {
     }
   }
 
-  async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User | null> {
+  async updateUser(
+    id: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User | null> {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
@@ -76,7 +82,7 @@ export class UserService {
           age: updateUserDto.age,
           email: updateUserDto.email,
           username: updateUserDto.username,
-          password: updateUserDto.password
+          password: updateUserDto.password,
         })
         .eq('id', id)
         .select()

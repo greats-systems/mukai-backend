@@ -7,7 +7,6 @@ import { ProfileSeeder } from './profile_seeder.service';
 @Module({
   controllers: [UserController],
   providers: [UserService, ProfileSeeder, PostgresRest],
-  exports: [UserService, ProfileSeeder]
-
+  exports: [UserService, ProfileSeeder],
 })
-export class UserModule { }
+export class UserModule {}

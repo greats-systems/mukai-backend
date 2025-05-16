@@ -10,8 +10,16 @@ export class CreateProviderDto {
   last_name: string;
 
   @IsString()
-  product_id: string;
+  @IsNotEmpty()
+  phone: string;
 
   @IsString()
-  service_id: string;
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  product_name: string;
+
+  @IsString()
+  service_name: string;
 }

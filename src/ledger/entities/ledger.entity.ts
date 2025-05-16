@@ -40,12 +40,15 @@ export class Provider {
   provider_id: string;
   first_name: string;
   last_name: string;
-  product_id: string;
-  service_id: string;
+  phone: string;
+  email: string;
+  product_name: string;
+  service_name: string;
 }
 
 export class ProviderProducts {
   product_id: string;
+  provider_id: string;
   product_name: string;
   unit_measure: string;
   unit_price: number;
@@ -54,6 +57,7 @@ export class ProviderProducts {
 
 export class ProviderServices {
   service_id: string;
+  provider_id: string;
   service_name: string;
   unit_measure: string;
   unit_price: number;

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   Commodity,
   ContractBid,
@@ -407,8 +407,10 @@ export class ProviderService {
     const provider = new Provider();
     provider.first_name = createProviderDto.first_name;
     provider.last_name = createProviderDto.last_name;
-    provider.product_id = createProviderDto.product_id;
-    provider.service_id = createProviderDto.service_id;
+    provider.phone = createProviderDto.phone;
+    provider.email = createProviderDto.email;
+    provider.product_name = createProviderDto.product_name;
+    provider.service_name = createProviderDto.service_name;
 
     const new_provider = await this.postgresrest
       .from('Provider')
@@ -470,6 +472,7 @@ export class ProviderProductsService {
     createProviderProductDto: CreateProviderProductsDto,
   ): Promise<ProviderProducts | undefined> {
     const product = new ProviderProducts();
+    product.provider_id = createProviderProductDto.provider_id;
     product.product_name = createProviderProductDto.product_name;
     product.unit_measure = createProviderProductDto.unit_measure;
     product.unit_price = createProviderProductDto.unit_price;
@@ -587,8 +590,9 @@ export class ProviderServicesService {
 
   async createProviderService(
     createProviderServiceDto: CreateProviderServicesDto,
-  ): Promise<ProviderServices | undefined> {
+  ): Promise<ProviderServices | null> {
     const service = new ProviderServices();
+    service.provider_id = createProviderServiceDto.provider_id;
     service.service_name = createProviderServiceDto.service_name;
     service.unit_measure = createProviderServiceDto.unit_measure;
     service.unit_price = createProviderServiceDto.unit_price;
@@ -601,7 +605,7 @@ export class ProviderServicesService {
     if (new_service.data) {
       return new_service;
     } else {
-      return;
+      return null;
     }
   }
 
@@ -741,7 +745,7 @@ export class TraderService {
     }
   }
 
-  async viewTrader(trader_id: string): Promise<Trader | null> {
+  async viewTrader(trader_id: string): Promise<Trader> {
     try {
       const { data, error } = await this.postgresrest
         .from('Trader')
@@ -749,15 +753,14 @@ export class TraderService {
         .eq('trader_id', trader_id)
         .single();
 
-      if (error) {
-        this.logger.error(`Error fetching trader ${trader_id}`, error);
-        return null;
+      if (error || !data) {
+        throw new NotFoundException(`Trader ${trader_id} not found`);
       }
 
       return data as Trader;
     } catch (error) {
-      this.logger.error(`Exception in viewTrader for id ${trader_id}`, error);
-      return null;
+      this.logger.error(`Trader lookup failed`, { trader_id, error });
+      throw error; // Let Nest handle the HTTP response
     }
   }
 }

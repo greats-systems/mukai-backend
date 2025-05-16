@@ -26,10 +26,4 @@ export class AppController {
   getObjects(): object {
     return this.appService.getObject();
   }
-
-  @Get('/commodities')
-  // @UseGuards(JwtAuthGuard)
-  getCommodities(): object {
-    return this.appService.getCommodity();
-  }
 }

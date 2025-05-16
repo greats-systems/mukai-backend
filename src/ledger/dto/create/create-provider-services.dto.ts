@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateProviderServicesDto {
   @IsString()
@@ -13,11 +13,11 @@ export class CreateProviderServicesDto {
   @IsNotEmpty()
   unit_measure: string;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
   unit_price: number;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
   max_capacity: number;
 }

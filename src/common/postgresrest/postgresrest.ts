@@ -35,6 +35,8 @@ export class PostgresRest {
   private initializeClient() {
     this.logger.log('Initializing PostgresRest client...');
     const DB_REST_URL = this.configService.get<string>('DB_REST_URL');
+    // eslint-disable-next-line prettier/prettier
+    const LOCAL_SERVICE_ROLE_KEY = this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY');
 
     if (!DB_REST_URL) {
       throw new Error('DB_REST_URL configuration is not defined');
@@ -42,12 +44,16 @@ export class PostgresRest {
 
     this.clientInstance = new PostgrestClient(DB_REST_URL, {
       headers: {
+        apikey: LOCAL_SERVICE_ROLE_KEY as string, // Required for all requests
+        Authorization: `Bearer ${LOCAL_SERVICE_ROLE_KEY as string}`,
         'Accept-Profile': 'public', // Allow both schemas
         'Content-Profile': 'public', // Default to auth for writes
       },
     });
     this.authClientInstance = new PostgrestClient(DB_REST_URL, {
       headers: {
+        apikey: LOCAL_SERVICE_ROLE_KEY as string, // Required for all requests
+        Authorization: `Bearer ${LOCAL_SERVICE_ROLE_KEY as string}`,
         'Accept-Profile': 'auth', // Allow both schemas
         'Content-Profile': 'auth', // Default to auth for writes
       },

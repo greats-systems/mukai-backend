@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import * as LedgerService from './ledger.service';
 import { CreateCommodityDto } from './dto/create/create-commodity.dto';
@@ -22,6 +24,7 @@ import { UpdateContractDto } from './dto/update/update-contract.dto';
 import { CreateProducerDto } from './dto/create/create-producer.dto';
 import { UpdateProviderProductsDto } from './dto/update/update-provider-products.dto';
 import { UpdateProviderServicesDto } from './dto/update/update-provider-services.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('test')
 export class TestController {
@@ -256,9 +259,13 @@ export class TraderController {
     return this.traderService.findAllTraders();
   }
 
-  @Get(':producer_id')
-  findOne(@Param('producer_id') producer_id: string) {
-    return this.traderService.viewTrader(producer_id);
+  @Get(':trader_id') // This expects a PATH parameter
+  async findOne(@Param('trader_id') trader_id: string) {
+    const result = await this.traderService.viewTrader(trader_id);
+    if (!result) {
+      throw new NotFoundException(`Trader ${trader_id} not found`);
+    }
+    return result;
   }
 }
 

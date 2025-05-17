@@ -9,8 +9,7 @@ import { ProfileSeeder } from './profile_seeder.service';
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
-
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User | undefined> {
     const user: User = new User();
@@ -135,7 +134,7 @@ export class UserService {
       if (error) {
         this.logger.error('Database error fetching profile', {
           error,
-          userId: id
+          userId: id,
         });
         return null;
       }
@@ -149,7 +148,7 @@ export class UserService {
     } catch (error) {
       this.logger.error('Unexpected error in getUser', {
         error,
-        userId: id
+        userId: id,
       });
       return null;
     }

@@ -12,19 +12,20 @@ export class Contract {
   producer_id: string;
   title: string;
   description: string;
+  quantity_kg: number;
   value: number;
 }
 
 export class ContractBid {
   bid_id: string;
   contract_id: string;
-  provider_id: string;
+  provider_id?: string;
   opening_date: string;
   status: string;
-  closing_date: string;
+  closing_date?: string;
   valued_at: number;
-  award_date: string;
-  awarded_to: string;
+  award_date?: string;
+  awarded_to?: string;
 }
 
 export class Producer {

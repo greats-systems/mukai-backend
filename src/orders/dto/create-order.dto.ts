@@ -6,6 +6,8 @@ import { InventoryResponseDto } from 'src/inventories/dto/update-inventory.dto';
 export class CreateOrderDto { }
 
 export class CreateDemandOrderDto {
+    @IsString()
+    id?: string;
 
     @ApiProperty({ description: 'Order category', example: 'retail' })
     @IsNotEmpty()

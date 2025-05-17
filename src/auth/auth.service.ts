@@ -267,6 +267,8 @@ export class AuthService {
   }
 
   async updateFCM(profile: Profile) {
+    console.log('updateFCM', profile);
+    
     const now = new Date().toISOString();
     const { error: profileError, data: profileData } = await this.postgresRest
       .from('profiles')
@@ -276,6 +278,8 @@ export class AuthService {
       }).eq('id', profile.id);
 
     if (profileError) {
+    console.log('updateFCM profileError', profileError);
+
       return {
         status: 'account not updated',
         message: 'account updated failed',
@@ -283,6 +287,8 @@ export class AuthService {
         data: null,
       };
     }
+    console.log('updateFCM profileData', profileData);
+
     return {
       status: 'account updated',
       message: 'account updated successfully',

@@ -358,3 +358,89 @@ export class CreateDemandRequestInventoryDto {
     @IsString()
     order_id?: string;
 }
+
+
+export class CreateDemandRequestOfferDto {
+    @ApiProperty({ description: 'Order ID', example: '2884ed1c-9a32-46c9-bb9d-954f40abd69c' })
+    @IsString()
+    order_id?: string;
+    
+    @IsString()
+    id: string;
+
+    @ApiPropertyOptional({ description: 'Product description', example: 'Arabica coffee beans from Colombia' })
+    @IsOptional()
+    @IsString()
+    message?: string;
+
+    @ApiPropertyOptional({ description: 'Product category', example: 'Beverages' })
+    @IsOptional()
+    @IsString()
+    category?: string;
+
+    @ApiProperty({ description: 'Offer amount', example: 12.99 })
+    @IsNotEmpty()
+    @IsNumber()
+    provider_price_offer: number;
+
+    @ApiProperty({ description: 'Current quantity in stock', example: 50 })
+    @IsNotEmpty()
+    @IsNumber()
+    quantity: number;
+
+    @ApiPropertyOptional({ description: 'Unit of measure', example: 'kg' })
+    @IsOptional()
+    @IsString()
+    unit_measure?: string;
+
+    @ApiPropertyOptional({ description: 'Is this a commodity product?', example: false })
+    @IsOptional()
+    @IsBoolean()
+    is_commodity?: boolean;
+
+    @ApiPropertyOptional({ description: 'Is this product export ready?', example: false })
+    @IsOptional()
+    @IsBoolean()
+    is_export_ready?: boolean;
+
+    // Location
+    @ApiPropertyOptional({ description: 'Country', example: 'United States' })
+    @IsOptional()
+    @IsString()
+    country?: string;
+
+    @ApiPropertyOptional({ description: 'City', example: 'Seattle' })
+    @IsOptional()
+    @IsString()
+    city?: string;
+
+    @ApiPropertyOptional({ description: 'Neighborhood', example: 'Downtown' })
+    @IsOptional()
+    @IsString()
+    neighbourhood?: string;
+
+    @ApiPropertyOptional({ description: 'Location coordinates', example: ['47.6062', '-122.3321'] })
+    @IsOptional()
+    @IsString()
+    location_coordinates?: string[];
+
+    // Media
+    @ApiPropertyOptional({ description: 'Thumbnail image URL', example: 'products/product_images/0dfe15aa-71a0-4c01-b2d7-8895f18217d8.jpg' })
+    @IsOptional()
+    @IsString()
+    thumbnail?: string;
+
+    @ApiPropertyOptional({ description: 'List of images', example: ['IMG-1', 'IMG-2'], type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    images?: string[];
+
+    @ApiPropertyOptional({ description: 'Product variants', example: [{ 'size': 'small', 'weight': '500g', 'color': '1kg', 'brand': 'no-label' }], type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    variants?: object[];
+
+
+}

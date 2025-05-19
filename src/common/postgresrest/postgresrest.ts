@@ -10,27 +10,27 @@ export class PostgresRest {
   private clientInstance: PostgrestClient;
   private authClientInstance: PostgrestClient;
 
-  constructor(
-    @Inject(REQUEST) private readonly request: Request,
-    private readonly configService: ConfigService,
-  ) {
-    this.initializeClient();
-    return new Proxy(this, {
-      get: (target, prop: keyof PostgrestClient, receiver) => {
-        if (prop in target) {
-          return Reflect.get(target, prop, receiver);
-        }
-        if (this.clientInstance && prop in this.clientInstance) {
-          const value = this.clientInstance[prop];
-          const authClientInstanceValue = this.authClientInstance[prop];
-          return typeof value === 'function'
-            ? value.bind(this.clientInstance)
-            : value;
-        }
-        return Reflect.get(target, prop, receiver);
-      },
-    });
-  }
+    constructor(
+        @Inject(REQUEST) private readonly request: Request,
+        private readonly configService: ConfigService) {
+        this.initializeClient();
+        return new Proxy(this, {
+            get: (target, prop: keyof PostgrestClient, receiver) => {
+                if (prop in target) {
+                    return Reflect.get(target, prop, receiver);
+                }
+                if (this.clientInstance && prop in this.clientInstance) {
+                    const value = this.clientInstance[prop];
+                    const authClientInstanceValue = this.authClientInstance[prop];
+                    return typeof value === 'function'
+                        ? value.bind(this.clientInstance)
+                        : value;
+                }
+                return Reflect.get(target, prop, receiver);
+            }
+        });
+    }
+
 
   private initializeClient() {
     this.logger.log('Initializing PostgresRest client...');

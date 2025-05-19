@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -13,20 +14,8 @@ import {
   TraderInventory,
 } from './entities/ledger.entity';
 import { PostgresRest } from 'src/common/postgresrest/postgresrest';
-import { CreateCommodityDto } from './dto/create/create-commodity.dto';
-import { CreateContractBidDto } from './dto/create/create-contract-bid.dto';
-import { UpdateContractBidDto } from './dto/update/update-contract-bid.dto';
-import { CreateContractDto } from './dto/create/create-contract.dto';
-import { CreateProviderDto } from './dto/create/create-provider.dto';
-import { CreateProviderProductsDto } from './dto/create/create-provider-products.dto';
-import { CreateProviderServicesDto } from './dto/create/create-provider-services.dto';
-import { CreateTraderDto } from './dto/create/create-trader.dto';
-import { CreateTraderInventoryDto } from './dto/create/create-trader-inventory.dto';
-import { UpdateTraderInventoryDto } from './dto/update/update-trader-inventory.dto';
-import { UpdateContractDto } from './dto/update/update-contract.dto';
-import { CreateProducerDto } from './dto/create/create-producer.dto';
-import { UpdateProviderProductsDto } from './dto/update/update-provider-products.dto';
-import { UpdateProviderServicesDto } from './dto/update/update-provider-services.dto';
+import * as CreateLedgerDto from './dto/create-ledger.dto';
+import * as UpdateLedgerDto from './dto/update-ledger.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -38,7 +27,7 @@ export class CommodityService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createCommodity(
-    createCommodityDto: CreateCommodityDto,
+    createCommodityDto: CreateLedgerDto.CreateCommodityDto,
   ): Promise<Commodity | undefined> {
     const commodity = new Commodity();
     commodity.producer_id = createCommodityDto.producer_id;
@@ -106,38 +95,86 @@ export class ContractBidService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createContractBid(
-    createContractBidDto: CreateContractBidDto,
-  ): Promise<ContractBid | undefined> {
-    const bid = new ContractBid();
-    bid.provider_id = createContractBidDto.provider_id;
-    bid.opening_date = createContractBidDto.opening_date;
-    bid.status = 'open';
-    // bid.closing_date = createContractBidDto.closing_date;
-    bid.valued_at = createContractBidDto.valued_at;
-    // bid.award_date = createContractBidDto.award_date;
-    // bid.awarded_to = createContractBidDto.awarded_to;
+    createContractBidDto: CreateLedgerDto.CreateContractBidDto,
+  ): Promise<ContractBid | object> {
+    try {
+      // Initialize services properly via dependency injection
+      const providerService = new ProviderService(this.postgresrest);
+      const contractService = new ContractService(this.postgresrest);
 
-    const new_bid = await this.postgresrest
-      .from('ContractBid')
-      .insert(bid)
-      .single();
-    if (new_bid.data) {
-      return new_bid;
-    } else {
-      return;
+      // 1. Validate capacity vs quantity first
+      const provider = await providerService.viewProvider(
+        createContractBidDto.provider_id,
+      );
+      const contract = await contractService.viewContract(
+        createContractBidDto.contract_id,
+      );
+
+      if (!provider || !contract) {
+        throw new Error('Provider or Contract not found');
+      }
+
+      // Safely get capacity with fallback
+      const capacity = provider['ProviderServices'][0]['max_capacity'] ?? 0;
+      const quantity = contract['quantity_kg'] ?? 0;
+
+      console.log({ capacity, quantity });
+
+      // 2. Check capacity requirements
+      if (capacity < quantity) {
+        const errorMessage =
+          `${provider.first_name} ${provider.last_name} cannot fulfill this contract. ` +
+          `Capacity short by ${quantity - capacity}kg`;
+        console.warn(errorMessage);
+        return {
+          message:
+            `${provider.first_name} ${provider.last_name} cannot fulfill this contract. ` +
+            `Capacity short by ${quantity - capacity}kg`,
+        }; // Or return undefined if you prefer
+      }
+
+      // 3. Check if provider has existing bid
+      if (await this.viewBidByProvider(createContractBidDto.provider_id)) {
+        console.warn(
+          `${provider.first_name} ${provider.last_name} already sbmitted a bid`,
+        );
+        return {
+          message: `${provider.first_name} ${provider.last_name} already sbmitted a bid`,
+        };
+      }
+
+      // 4. Only create bid if validations passe
+      const { data: newBid, error } = await this.postgresrest
+        .from('ContractBid')
+        .insert({
+          provider_id: createContractBidDto.provider_id,
+          contract_id: createContractBidDto.contract_id,
+          status: createContractBidDto.status || 'pending', // Default status
+        })
+        .select()
+        .single();
+
+      if (error) console.error(error);
+      return newBid as ContractBid;
+    } catch (error) {
+      console.error('Failed to create contract bid:', error);
+      return {
+        message: `Failed to create contract bid: ${error}`,
+      };
     }
   }
-
   async findAllBids(): Promise<ContractBid[]> {
     try {
       const { data, error } = await this.postgresrest
         .from('ContractBid')
-        .select();
+        .select('*, Contract(*)');
 
       if (error) {
         this.logger.error('Error fetching contract bids', error);
         return [];
       }
+
+      console.log(data[0]['Contract']['quantity_kg']);
 
       return data as ContractBid[];
     } catch (error) {
@@ -146,11 +183,35 @@ export class ContractBidService {
     }
   }
 
+  async viewBidByProvider(provider_id: string): Promise<boolean | null> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('ContractBid')
+        .select()
+        .eq('provider_id', provider_id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching contract bid ${provider_id}`, error);
+        return null;
+      }
+
+      if (data) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`Exception in viewBid for id ${provider_id}`, error);
+      return null;
+    }
+  }
+
   async viewBid(bid_id: string): Promise<ContractBid | null> {
     try {
       const { data, error } = await this.postgresrest
         .from('ContractBid')
-        .select('*')
+        .select('*, Contract(*)')
         .eq('bid_id', bid_id)
         .single();
 
@@ -168,15 +229,16 @@ export class ContractBidService {
 
   async updateBid(
     bid_id: string,
-    updateContractBidDto: UpdateContractBidDto,
+    updateContractBidDto: UpdateLedgerDto.UpdateContractBidDto,
   ): Promise<ContractBid | null> {
     try {
       const { data, error } = await this.postgresrest
         .from('ContractBid')
         .update({
+          provider_id: updateContractBidDto.provider_id,
           status: updateContractBidDto.status,
           closing_date: updateContractBidDto.closing_date,
-          valued_at: updateContractBidDto.valued_at,
+          // valued_at: updateContractBidDto.valued_at,
           award_date: updateContractBidDto.award_date,
           awarded_to: updateContractBidDto.awarded_to,
         })
@@ -220,23 +282,42 @@ export class ContractService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createContract(
-    createContractDto: CreateContractDto,
+    createContractDto: CreateLedgerDto.CreateContractDto,
   ): Promise<Contract | undefined> {
-    const contract = new Contract();
-    contract.producer_id = createContractDto.producer_id;
-    contract.title = createContractDto.title;
-    contract.description = createContractDto.description;
-    contract.value = createContractDto.value;
-
-    const new_contract = await this.postgresrest
+    // Start a transaction
+    const { data: new_contract, error: contractError } = await this.postgresrest
       .from('Contract')
-      .insert(contract)
+      .insert({
+        producer_id: createContractDto.producer_id,
+        title: createContractDto.title,
+        description: createContractDto.description,
+        quantity_kg: createContractDto.quantity_kg,
+        value: createContractDto.value,
+      })
+      .select()
       .single();
-    if (new_contract.data) {
-      return new_contract;
-    } else {
-      return;
+
+    if (!new_contract || contractError) {
+      this.logger.error('Failed to create contract', contractError);
+      return undefined;
     }
+
+    // Create the associated bid
+    const { error: bidError } = await this.postgresrest
+      .from('ContractBid')
+      .insert({
+        contract_id: new_contract.contract_id, // Use the returned contract_id
+        status: 'open',
+        // valued_at: createContractDto.value,
+      });
+
+    if (bidError) {
+      this.logger.error('Failed to create contract bid', bidError);
+      // Consider rolling back the contract creation here
+      throw new Error('Contract created but failed to create bid');
+    }
+
+    return new_contract as Contract;
   }
 
   async findAllContracts(): Promise<Contract[]> {
@@ -280,7 +361,7 @@ export class ContractService {
 
   async updateContract(
     contract_id: string,
-    updateContractDto: UpdateContractDto,
+    updateContractDto: UpdateLedgerDto.UpdateContractDto,
   ): Promise<Contract | null> {
     try {
       const { data, error } = await this.postgresrest
@@ -336,7 +417,7 @@ export class ProducerService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createProducer(
-    createProducerDto: CreateProducerDto,
+    createProducerDto: CreateLedgerDto.CreateProducerDto,
   ): Promise<Producer | undefined> {
     const producer = new Producer();
     producer.first_name = createProducerDto.first_name;
@@ -402,30 +483,86 @@ export class ProviderService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createProvider(
-    createProviderDto: CreateProviderDto,
+    createProviderDto: CreateLedgerDto.CreateProviderDto,
   ): Promise<Provider | undefined> {
     const provider = new Provider();
     provider.first_name = createProviderDto.first_name;
     provider.last_name = createProviderDto.last_name;
     provider.phone = createProviderDto.phone;
     provider.email = createProviderDto.email;
-    provider.product_name = createProviderDto.product_name;
-    provider.service_name = createProviderDto.service_name;
+    provider.product_name = createProviderDto.product_name ?? null;
+    provider.product_unit_measure = createProviderDto.product_unit_measure;
+    provider.product_unit_price = createProviderDto.product_unit_price;
+    provider.product_max_capacity = createProviderDto.product_max_capacity;
+    provider.service_name = createProviderDto.service_name ?? null;
+    provider.service_unit_measure = createProviderDto.service_unit_measure;
+    provider.service_unit_price = createProviderDto.service_unit_price;
+    provider.service_max_capacity = createProviderDto.service_max_capacity;
 
-    const new_provider = await this.postgresrest
+    const { data: new_provider, error: providerError } = await this.postgresrest
       .from('Provider')
-      .insert(provider)
+      .insert({
+        first_name: provider.first_name,
+        last_name: provider.last_name,
+        phone: provider.phone,
+        email: provider.email,
+        product_name: provider.product_name,
+        service_name: provider.service_name,
+      })
+      .select()
       .single();
-    if (new_provider.data) {
-      return new_provider;
-    } else {
-      return;
+
+    if (!new_provider || providerError) {
+      console.error('Insert error:', providerError);
+      throw providerError as Error; // or handle the error appropriately
     }
+
+    if (provider.product_name != null) {
+      const { error: providerProductsError } = await this.postgresrest
+        .from('ProviderProducts')
+        .insert({
+          provider_id: new_provider.provider_id,
+          product_name: createProviderDto.product_name,
+          unit_measure: createProviderDto.product_unit_measure,
+          unit_price: createProviderDto.product_unit_price,
+          max_capacity: createProviderDto.product_max_capacity,
+        })
+        .select()
+        .single();
+
+      if (providerProductsError) {
+        this.logger.error('Failed to create product', providerProductsError);
+        throw new Error('Provider created but failed to create product');
+      }
+    }
+
+    if (provider.service_name) {
+      const { error: providerServicesError } = await this.postgresrest
+        .from('ProviderServices')
+        .insert({
+          provider_id: new_provider.provider_id,
+          service_name: provider.service_name,
+          unit_measure: provider.service_unit_measure,
+          unit_price: provider.service_unit_price,
+          max_capacity: provider.service_max_capacity,
+        })
+        .select()
+        .single();
+
+      if (providerServicesError) {
+        this.logger.error('Failed to create service', providerServicesError);
+        throw new Error('Provider created but failed to create service');
+      }
+    }
+
+    return new_provider as Provider;
   }
 
   async findAllProviders(): Promise<Provider[]> {
     try {
-      const { data, error } = await this.postgresrest.from('Provider').select();
+      const { data, error } = await this.postgresrest
+        .from('Provider')
+        .select('*, ProviderProducts(*), ProviderServices(*)');
 
       if (error) {
         this.logger.error('Error fetching providers', error);
@@ -443,7 +580,7 @@ export class ProviderService {
     try {
       const { data, error } = await this.postgresrest
         .from('Provider')
-        .select('*')
+        .select('*, ProviderProducts(*), ProviderServices(*)')
         .eq('provider_id', provider_id)
         .single();
 
@@ -469,7 +606,7 @@ export class ProviderProductsService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createProviderProduct(
-    createProviderProductDto: CreateProviderProductsDto,
+    createProviderProductDto: CreateLedgerDto.CreateProviderProductsDto,
   ): Promise<ProviderProducts | undefined> {
     const product = new ProviderProducts();
     product.provider_id = createProviderProductDto.provider_id;
@@ -478,14 +615,15 @@ export class ProviderProductsService {
     product.unit_price = createProviderProductDto.unit_price;
     product.max_capacity = createProviderProductDto.max_capacity;
 
-    const new_product = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('ProviderProducts')
       .insert(product)
       .single();
-    if (new_product.data) {
-      return new_product;
-    } else {
-      return;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -493,7 +631,7 @@ export class ProviderProductsService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderProducts')
-        .select();
+        .select('*, Provider(*)');
 
       if (error) {
         this.logger.error('Error fetching products', error);
@@ -513,7 +651,7 @@ export class ProviderProductsService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderProducts')
-        .select('*')
+        .select('*, Provider(*)')
         .eq('product_id', product_id)
         .single();
 
@@ -534,7 +672,7 @@ export class ProviderProductsService {
 
   async updateProviderProducts(
     product_id: string,
-    updateProviderProductsDto: UpdateProviderProductsDto,
+    updateProviderProductsDto: UpdateLedgerDto.UpdateProviderProductsDto,
   ): Promise<ProviderProducts | null> {
     try {
       const { data, error } = await this.postgresrest
@@ -589,8 +727,8 @@ export class ProviderServicesService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createProviderService(
-    createProviderServiceDto: CreateProviderServicesDto,
-  ): Promise<ProviderServices | null> {
+    createProviderServiceDto: CreateLedgerDto.CreateProviderServicesDto,
+  ): Promise<ProviderServices | undefined> {
     const service = new ProviderServices();
     service.provider_id = createProviderServiceDto.provider_id;
     service.service_name = createProviderServiceDto.service_name;
@@ -598,14 +736,15 @@ export class ProviderServicesService {
     service.unit_price = createProviderServiceDto.unit_price;
     service.max_capacity = createProviderServiceDto.max_capacity;
 
-    const new_service = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('ProviderServices')
       .insert(service)
       .single();
-    if (new_service.data) {
-      return new_service;
-    } else {
-      return null;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -613,7 +752,7 @@ export class ProviderServicesService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderServices')
-        .select();
+        .select('*, Provider(*)');
 
       if (error) {
         this.logger.error('Error fetching services', error);
@@ -654,7 +793,7 @@ export class ProviderServicesService {
 
   async updateProviderServices(
     service_id: string,
-    updateProviderServicesDto: UpdateProviderServicesDto,
+    updateProviderServicesDto: UpdateLedgerDto.UpdateProviderServicesDto,
   ): Promise<ProviderServices | null> {
     try {
       const { data, error } = await this.postgresrest
@@ -709,7 +848,7 @@ export class TraderService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTrader(
-    createTraderDto: CreateTraderDto,
+    createTraderDto: CreateLedgerDto.CreateTraderDto,
   ): Promise<Trader | undefined> {
     const trader = new Trader();
     trader.first_name = createTraderDto.first_name;
@@ -760,7 +899,7 @@ export class TraderService {
       return data as Trader;
     } catch (error) {
       this.logger.error(`Trader lookup failed`, { trader_id, error });
-      throw error; // Let Nest handle the HTTP response
+      throw error;
     }
   }
 }
@@ -771,7 +910,7 @@ export class TraderInventoryService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTraderInventory(
-    createTraderInventoryDto: CreateTraderInventoryDto,
+    createTraderInventoryDto: CreateLedgerDto.CreateTraderInventoryDto,
   ): Promise<TraderInventory | undefined> {
     const inventory = new TraderInventory();
     inventory.trader_id = createTraderInventoryDto.trader_id;
@@ -779,14 +918,15 @@ export class TraderInventoryService {
     inventory.quantity = createTraderInventoryDto.quantity;
     inventory.unit_measurement = createTraderInventoryDto.unit_measurement;
 
-    const new_inventory = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('TraderInventory')
       .insert(inventory)
       .single();
-    if (new_inventory.data) {
-      return new_inventory;
-    } else {
-      return;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -794,7 +934,7 @@ export class TraderInventoryService {
     try {
       const { data, error } = await this.postgresrest
         .from('TraderInventory')
-        .select('*')
+        .select('*, Trader(*)')
         .eq('trader_id', trader_id)
         .single();
 
@@ -815,7 +955,7 @@ export class TraderInventoryService {
 
   async updateInventory(
     inventory_id: string,
-    updateTraderInventoryDto: UpdateTraderInventoryDto,
+    updateTraderInventoryDto: UpdateLedgerDto.UpdateTraderInventoryDto,
   ): Promise<TraderInventory | null> {
     try {
       const { data, error } = await this.postgresrest

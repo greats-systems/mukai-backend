@@ -19,10 +19,10 @@ export class UserController {
     return this.userService.createUser(createUserDto);
   }
 
-  @Get('seed-database')
-  seedDatabase() {
-    return this.userService.seedDatabase();
-  }
+  // @Get('seed-database')
+  // seedDatabase() {
+  //   return this.userService.seedDatabase();
+  // }
 
   @Get()
   findAll() {

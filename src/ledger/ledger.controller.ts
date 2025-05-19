@@ -6,25 +6,11 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   NotFoundException,
 } from '@nestjs/common';
 import * as LedgerService from './ledger.service';
-import { CreateCommodityDto } from './dto/create/create-commodity.dto';
-import { CreateContractBidDto } from './dto/create/create-contract-bid.dto';
-import { UpdateContractBidDto } from './dto/update/update-contract-bid.dto';
-import { CreateContractDto } from './dto/create/create-contract.dto';
-import { CreateProviderDto } from './dto/create/create-provider.dto';
-import { CreateProviderProductsDto } from './dto/create/create-provider-products.dto';
-import { CreateProviderServicesDto } from './dto/create/create-provider-services.dto';
-import { CreateTraderDto } from './dto/create/create-trader.dto';
-import { CreateTraderInventoryDto } from './dto/create/create-trader-inventory.dto';
-import { UpdateTraderInventoryDto } from './dto/update/update-trader-inventory.dto';
-import { UpdateContractDto } from './dto/update/update-contract.dto';
-import { CreateProducerDto } from './dto/create/create-producer.dto';
-import { UpdateProviderProductsDto } from './dto/update/update-provider-products.dto';
-import { UpdateProviderServicesDto } from './dto/update/update-provider-services.dto';
-import { AuthGuard } from '@nestjs/passport';
+import * as CreateLedgerDto from './dto/create-ledger.dto';
+import * as UpdateLedgerDto from './dto/update-ledger.dto';
 
 @Controller('test')
 export class TestController {
@@ -40,7 +26,7 @@ export class CommodityController {
     private readonly commodityService: LedgerService.CommodityService,
   ) {}
   @Post()
-  create(@Body() createCommodityDto: CreateCommodityDto) {
+  create(@Body() createCommodityDto: CreateLedgerDto.CreateCommodityDto) {
     return this.commodityService.createCommodity(createCommodityDto);
   }
   @Get()
@@ -59,7 +45,7 @@ export class ContractController {
     private readonly contractService: LedgerService.ContractService,
   ) {}
   @Post()
-  create(@Body() createContractDto: CreateContractDto) {
+  create(@Body() createContractDto: CreateLedgerDto.CreateContractDto) {
     return this.contractService.createContract(createContractDto);
   }
 
@@ -76,7 +62,7 @@ export class ContractController {
   @Patch(':contract_id')
   update(
     @Param('contract_id') contract_id: string,
-    @Body() updateContractDto: UpdateContractDto,
+    @Body() updateContractDto: UpdateLedgerDto.UpdateContractDto,
   ) {
     return this.contractService.updateContract(contract_id, updateContractDto);
   }
@@ -93,7 +79,7 @@ export class ContractBidController {
     private readonly contractBidService: LedgerService.ContractBidService,
   ) {}
   @Post()
-  create(@Body() createContractBidDto: CreateContractBidDto) {
+  create(@Body() createContractBidDto: CreateLedgerDto.CreateContractBidDto) {
     return this.contractBidService.createContractBid(createContractBidDto);
   }
 
@@ -110,7 +96,7 @@ export class ContractBidController {
   @Patch(':bid_id')
   update(
     @Param('bid_id') bid_id: string,
-    updateContractBidDto: UpdateContractBidDto,
+    @Body() updateContractBidDto: UpdateLedgerDto.UpdateContractBidDto,
   ) {
     return this.contractBidService.updateBid(bid_id, updateContractBidDto);
   }
@@ -128,7 +114,7 @@ export class ProducerController {
   ) {}
 
   @Post()
-  create(@Body() createProducerDto: CreateProducerDto) {
+  create(@Body() createProducerDto: CreateLedgerDto.CreateProducerDto) {
     return this.producerService.createProducer(createProducerDto);
   }
 
@@ -150,7 +136,7 @@ export class ProviderController {
   ) {}
 
   @Post()
-  create(@Body() createProviderDto: CreateProviderDto) {
+  create(@Body() createProviderDto: CreateLedgerDto.CreateProviderDto) {
     return this.providerService.createProvider(createProviderDto);
   }
 
@@ -172,7 +158,10 @@ export class ProviderProductsController {
   ) {}
 
   @Post()
-  create(@Body() createProviderProductsDto: CreateProviderProductsDto) {
+  create(
+    @Body()
+    createProviderProductsDto: CreateLedgerDto.CreateProviderProductsDto,
+  ) {
     return this.providerProductsService.createProviderProduct(
       createProviderProductsDto,
     );
@@ -191,7 +180,8 @@ export class ProviderProductsController {
   @Patch(':product_id')
   update(
     @Param('product_id') product_id: string,
-    @Body() updateProviderProductsDto: UpdateProviderProductsDto,
+    @Body()
+    updateProviderProductsDto: UpdateLedgerDto.UpdateProviderProductsDto,
   ) {
     return this.providerProductsService.updateProviderProducts(
       product_id,
@@ -212,7 +202,10 @@ export class ProviderServicesController {
   ) {}
 
   @Post()
-  create(@Body() createProviderServicesDto: CreateProviderServicesDto) {
+  create(
+    @Body()
+    createProviderServicesDto: CreateLedgerDto.CreateProviderServicesDto,
+  ) {
     return this.providerServicesService.createProviderService(
       createProviderServicesDto,
     );
@@ -231,7 +224,8 @@ export class ProviderServicesController {
   @Patch(':service_id')
   update(
     @Param('service_id') service_id: string,
-    @Body() updateProviderServicesDto: UpdateProviderServicesDto,
+    @Body()
+    updateProviderServicesDto: UpdateLedgerDto.UpdateProviderServicesDto,
   ) {
     return this.providerServicesService.updateProviderServices(
       service_id,
@@ -250,7 +244,7 @@ export class TraderController {
   constructor(private readonly traderService: LedgerService.TraderService) {}
 
   @Post()
-  create(@Body() createTraderDto: CreateTraderDto) {
+  create(@Body() createTraderDto: CreateLedgerDto.CreateTraderDto) {
     return this.traderService.createTrader(createTraderDto);
   }
 
@@ -275,7 +269,9 @@ export class TraderInventoryController {
     private readonly traderInventoryService: LedgerService.TraderInventoryService,
   ) {}
   @Post()
-  create(@Body() createTraderInventoryDto: CreateTraderInventoryDto) {
+  create(
+    @Body() createTraderInventoryDto: CreateLedgerDto.CreateTraderInventoryDto,
+  ) {
     return this.traderInventoryService.createTraderInventory(
       createTraderInventoryDto,
     );
@@ -289,7 +285,7 @@ export class TraderInventoryController {
   @Patch(':inventory_id')
   update(
     @Param('inventory_id') inventory_id: string,
-    updateTraderInventoryDto: UpdateTraderInventoryDto,
+    updateTraderInventoryDto: UpdateLedgerDto.UpdateTraderInventoryDto,
   ) {
     return this.traderInventoryService.updateInventory(
       inventory_id,

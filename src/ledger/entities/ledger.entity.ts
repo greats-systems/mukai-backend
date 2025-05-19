@@ -12,19 +12,20 @@ export class Contract {
   producer_id: string;
   title: string;
   description: string;
+  quantity_kg: number;
   value: number;
 }
 
 export class ContractBid {
   bid_id: string;
   contract_id: string;
-  provider_id: string;
+  provider_id?: string;
   opening_date: string;
   status: string;
-  closing_date: string;
-  valued_at: number;
-  award_date: string;
-  awarded_to: string;
+  closing_date?: string;
+  // valued_at: number;
+  award_date?: string;
+  awarded_to?: string;
 }
 
 export class Producer {
@@ -43,7 +44,13 @@ export class Provider {
   phone: string;
   email: string;
   product_name: string;
+  product_unit_measure: string;
+  product_unit_price: number;
+  product_max_capacity: number;
   service_name: string;
+  service_unit_measure: string;
+  service_unit_price: number;
+  service_max_capacity: number;
 }
 
 export class ProviderProducts {

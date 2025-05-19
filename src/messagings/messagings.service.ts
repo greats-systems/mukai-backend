@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {  MultipleDeviceNotificationDto, NotificationDto, TopicNotificationDto } from './dto/create-messaging.dto';
+import { MultipleDeviceNotificationDto, NotificationDto, TopicNotificationDto } from './dto/create-messaging.dto';
 
 import * as admin from "firebase-admin";
 
@@ -11,15 +11,15 @@ export class MessagingsService {
     try {
       const response = await admin.messaging().send({
         token,
-        webpush: {
-          notification: {
-            title,
-            body,
-          },
+        notification: {
+          title,
+          body,
         },
       });
       return response;
     } catch (error) {
+      console.log("Successfully sent error:", error);
+
       throw error;
     }
   }
@@ -38,7 +38,7 @@ export class MessagingsService {
     };
 
     try {
-      
+
       const response = await admin.messaging().sendEachForMulticast(message);
       console.log("Successfully sent messages:", response.responses);
       return {

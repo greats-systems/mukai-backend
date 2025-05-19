@@ -97,26 +97,56 @@ export class ContractBidService {
   async createContractBid(
     createContractBidDto: CreateLedgerDto.CreateContractBidDto,
   ): Promise<ContractBid | undefined> {
-    const bid = new ContractBid();
-    bid.provider_id = createContractBidDto.provider_id;
-    bid.opening_date = createContractBidDto.opening_date;
-    bid.status = 'open';
-    // bid.closing_date = createContractBidDto.closing_date;
-    bid.valued_at = createContractBidDto.valued_at;
-    // bid.award_date = createContractBidDto.award_date;
-    // bid.awarded_to = createContractBidDto.awarded_to;
+    try {
+      // Initialize services properly via dependency injection
+      const providerService = new ProviderService(this.postgresrest);
+      const contractService = new ContractService(this.postgresrest);
 
-    const new_bid = await this.postgresrest
-      .from('ContractBid')
-      .insert(bid)
-      .single();
-    if (new_bid.data) {
-      return new_bid;
-    } else {
-      return;
+      // 1. Validate capacity vs quantity first
+      const provider = await providerService.viewProvider(
+        createContractBidDto.provider_id,
+      );
+      const contract = await contractService.viewContract(
+        createContractBidDto.contract_id,
+      );
+
+      if (!provider || !contract) {
+        throw new Error('Provider or Contract not found');
+      }
+
+      // Safely get capacity with fallback
+      const capacity = provider['ProviderServices'][0]['max_capacity'] ?? 0;
+      const quantity = contract['quantity_kg'] ?? 0;
+
+      console.log({ capacity, quantity });
+
+      // 2. Check capacity requirements
+      if (capacity < quantity) {
+        const errorMessage =
+          `${provider.first_name} ${provider.last_name} cannot fulfill this contract. ` +
+          `Capacity short by ${quantity - capacity}kg`;
+        console.warn(errorMessage);
+        return undefined; // Or return undefined if you prefer
+      }
+
+      // 3. Only create bid if validation passes
+      const { data: newBid, error } = await this.postgresrest
+        .from('ContractBid')
+        .insert({
+          provider_id: createContractBidDto.provider_id,
+          contract_id: createContractBidDto.contract_id,
+          status: createContractBidDto.status || 'pending', // Default status
+        })
+        .select()
+        .single();
+
+      if (error) console.error(error);
+      return newBid as ContractBid;
+    } catch (error) {
+      console.error('Failed to create contract bid:', error);
+      return undefined;
     }
   }
-
   async findAllBids(): Promise<ContractBid[]> {
     try {
       const { data, error } = await this.postgresrest
@@ -127,6 +157,8 @@ export class ContractBidService {
         this.logger.error('Error fetching contract bids', error);
         return [];
       }
+
+      console.log(data[0]['Contract']['quantity_kg']);
 
       return data as ContractBid[];
     } catch (error) {
@@ -166,7 +198,7 @@ export class ContractBidService {
           provider_id: updateContractBidDto.provider_id,
           status: updateContractBidDto.status,
           closing_date: updateContractBidDto.closing_date,
-          valued_at: updateContractBidDto.valued_at,
+          // valued_at: updateContractBidDto.valued_at,
           award_date: updateContractBidDto.award_date,
           awarded_to: updateContractBidDto.awarded_to,
         })
@@ -418,23 +450,79 @@ export class ProviderService {
     provider.last_name = createProviderDto.last_name;
     provider.phone = createProviderDto.phone;
     provider.email = createProviderDto.email;
-    provider.product_name = createProviderDto.product_name;
-    provider.service_name = createProviderDto.service_name;
+    provider.product_name = createProviderDto.product_name ?? null;
+    provider.product_unit_measure = createProviderDto.product_unit_measure;
+    provider.product_unit_price = createProviderDto.product_unit_price;
+    provider.product_max_capacity = createProviderDto.product_max_capacity;
+    provider.service_name = createProviderDto.service_name ?? null;
+    provider.service_unit_measure = createProviderDto.service_unit_measure;
+    provider.service_unit_price = createProviderDto.service_unit_price;
+    provider.service_max_capacity = createProviderDto.service_max_capacity;
 
-    const new_provider = await this.postgresrest
+    const { data: new_provider, error: providerError } = await this.postgresrest
       .from('Provider')
-      .insert(provider)
+      .insert({
+        first_name: provider.first_name,
+        last_name: provider.last_name,
+        phone: provider.phone,
+        email: provider.email,
+        product_name: provider.product_name,
+        service_name: provider.service_name,
+      })
+      .select()
       .single();
-    if (new_provider.data) {
-      return new_provider;
-    } else {
-      return;
+
+    if (!new_provider || providerError) {
+      console.error('Insert error:', providerError);
+      throw providerError as Error; // or handle the error appropriately
     }
+
+    if (provider.product_name != null) {
+      const { error: providerProductsError } = await this.postgresrest
+        .from('ProviderProducts')
+        .insert({
+          provider_id: new_provider.provider_id,
+          product_name: createProviderDto.product_name,
+          unit_measure: createProviderDto.product_unit_measure,
+          unit_price: createProviderDto.product_unit_price,
+          max_capacity: createProviderDto.product_max_capacity,
+        })
+        .select()
+        .single();
+
+      if (providerProductsError) {
+        this.logger.error('Failed to create product', providerProductsError);
+        throw new Error('Provider created but failed to create product');
+      }
+    }
+
+    if (provider.service_name) {
+      const { error: providerServicesError } = await this.postgresrest
+        .from('ProviderServices')
+        .insert({
+          provider_id: new_provider.provider_id,
+          service_name: provider.service_name,
+          unit_measure: provider.service_unit_measure,
+          unit_price: provider.service_unit_price,
+          max_capacity: provider.service_max_capacity,
+        })
+        .select()
+        .single();
+
+      if (providerServicesError) {
+        this.logger.error('Failed to create service', providerServicesError);
+        throw new Error('Provider created but failed to create service');
+      }
+    }
+
+    return new_provider as Provider;
   }
 
   async findAllProviders(): Promise<Provider[]> {
     try {
-      const { data, error } = await this.postgresrest.from('Provider').select();
+      const { data, error } = await this.postgresrest
+        .from('Provider')
+        .select('*, ProviderProducts(*), ProviderServices(*)');
 
       if (error) {
         this.logger.error('Error fetching providers', error);
@@ -452,7 +540,7 @@ export class ProviderService {
     try {
       const { data, error } = await this.postgresrest
         .from('Provider')
-        .select('*')
+        .select('*, ProviderProducts(*), ProviderServices(*)')
         .eq('provider_id', provider_id)
         .single();
 
@@ -487,14 +575,15 @@ export class ProviderProductsService {
     product.unit_price = createProviderProductDto.unit_price;
     product.max_capacity = createProviderProductDto.max_capacity;
 
-    const new_product = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('ProviderProducts')
       .insert(product)
       .single();
-    if (new_product.data) {
-      return new_product;
-    } else {
-      return;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -502,7 +591,7 @@ export class ProviderProductsService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderProducts')
-        .select();
+        .select('*, Provider(*)');
 
       if (error) {
         this.logger.error('Error fetching products', error);
@@ -522,7 +611,7 @@ export class ProviderProductsService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderProducts')
-        .select('*')
+        .select('*, Provider(*)')
         .eq('product_id', product_id)
         .single();
 
@@ -599,7 +688,7 @@ export class ProviderServicesService {
 
   async createProviderService(
     createProviderServiceDto: CreateLedgerDto.CreateProviderServicesDto,
-  ): Promise<ProviderServices | null> {
+  ): Promise<ProviderServices | undefined> {
     const service = new ProviderServices();
     service.provider_id = createProviderServiceDto.provider_id;
     service.service_name = createProviderServiceDto.service_name;
@@ -607,14 +696,15 @@ export class ProviderServicesService {
     service.unit_price = createProviderServiceDto.unit_price;
     service.max_capacity = createProviderServiceDto.max_capacity;
 
-    const new_service = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('ProviderServices')
       .insert(service)
       .single();
-    if (new_service.data) {
-      return new_service;
-    } else {
-      return null;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -622,7 +712,7 @@ export class ProviderServicesService {
     try {
       const { data, error } = await this.postgresrest
         .from('ProviderServices')
-        .select();
+        .select('*, Provider(*)');
 
       if (error) {
         this.logger.error('Error fetching services', error);
@@ -769,7 +859,7 @@ export class TraderService {
       return data as Trader;
     } catch (error) {
       this.logger.error(`Trader lookup failed`, { trader_id, error });
-      throw error; // Let Nest handle the HTTP response
+      throw error;
     }
   }
 }
@@ -788,14 +878,15 @@ export class TraderInventoryService {
     inventory.quantity = createTraderInventoryDto.quantity;
     inventory.unit_measurement = createTraderInventoryDto.unit_measurement;
 
-    const new_inventory = await this.postgresrest
+    const { data, error } = await this.postgresrest
       .from('TraderInventory')
       .insert(inventory)
       .single();
-    if (new_inventory.data) {
-      return new_inventory;
-    } else {
-      return;
+    if (data) {
+      return data;
+    }
+    if (error) {
+      console.log(error);
     }
   }
 
@@ -803,7 +894,7 @@ export class TraderInventoryService {
     try {
       const { data, error } = await this.postgresrest
         .from('TraderInventory')
-        .select('*')
+        .select('*, Trader(*)')
         .eq('trader_id', trader_id)
         .single();
 

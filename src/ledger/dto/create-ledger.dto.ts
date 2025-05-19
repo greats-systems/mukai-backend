@@ -1,4 +1,10 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateCommodityDto {
   @IsString()
@@ -32,28 +38,30 @@ export class CreateContractBidDto {
   @IsNotEmpty()
   provider_id: string;
 
+  /*
   @IsString()
-  @IsNotEmpty()
   opening_date: string;
+  */
 
   @IsString()
   @IsNotEmpty()
   status: string;
 
   @IsString()
-  // @IsNotEmpty()
+  @IsOptional()
   closing_date: string;
 
+  /*
   @IsNumber()
   @IsNotEmpty()
   valued_at: number;
-
+  */
   @IsString()
-  // @IsNotEmpty()
+  @IsOptional()
   award_date: string;
 
   @IsString()
-  // @IsNotEmpty()
+  @IsOptional()
   awarded_to: string;
 }
 
@@ -162,11 +170,37 @@ export class CreateProviderDto {
   @IsNotEmpty()
   email: string;
 
+  @IsOptional()
   @IsString()
   product_name: string;
 
+  @IsOptional()
+  @IsString()
+  product_unit_measure: string;
+
+  @IsOptional()
+  @IsNumber()
+  product_unit_price: number;
+
+  @IsOptional()
+  @IsNumber()
+  product_max_capacity: number;
+
+  @IsOptional()
   @IsString()
   service_name: string;
+
+  @IsOptional()
+  @IsString()
+  service_unit_measure: string;
+
+  @IsOptional()
+  @IsNumber()
+  service_unit_price: number;
+
+  @IsOptional()
+  @IsNumber()
+  service_max_capacity: number;
 }
 
 export class CreateTraderInventoryDto {

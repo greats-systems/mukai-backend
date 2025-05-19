@@ -96,7 +96,7 @@ export class ContractBidService {
 
   async createContractBid(
     createContractBidDto: CreateLedgerDto.CreateContractBidDto,
-  ): Promise<ContractBid | undefined> {
+  ): Promise<ContractBid | object> {
     try {
       // Initialize services properly via dependency injection
       const providerService = new ProviderService(this.postgresrest);
@@ -126,10 +126,24 @@ export class ContractBidService {
           `${provider.first_name} ${provider.last_name} cannot fulfill this contract. ` +
           `Capacity short by ${quantity - capacity}kg`;
         console.warn(errorMessage);
-        return undefined; // Or return undefined if you prefer
+        return {
+          message:
+            `${provider.first_name} ${provider.last_name} cannot fulfill this contract. ` +
+            `Capacity short by ${quantity - capacity}kg`,
+        }; // Or return undefined if you prefer
       }
 
-      // 3. Only create bid if validation passes
+      // 3. Check if provider has existing bid
+      if (await this.viewBidByProvider(createContractBidDto.provider_id)) {
+        console.warn(
+          `${provider.first_name} ${provider.last_name} already sbmitted a bid`,
+        );
+        return {
+          message: `${provider.first_name} ${provider.last_name} already sbmitted a bid`,
+        };
+      }
+
+      // 4. Only create bid if validations passe
       const { data: newBid, error } = await this.postgresrest
         .from('ContractBid')
         .insert({
@@ -144,7 +158,9 @@ export class ContractBidService {
       return newBid as ContractBid;
     } catch (error) {
       console.error('Failed to create contract bid:', error);
-      return undefined;
+      return {
+        message: `Failed to create contract bid: ${error}`,
+      };
     }
   }
   async findAllBids(): Promise<ContractBid[]> {
@@ -164,6 +180,30 @@ export class ContractBidService {
     } catch (error) {
       this.logger.error('Exception in findAllBids', error);
       return [];
+    }
+  }
+
+  async viewBidByProvider(provider_id: string): Promise<boolean | null> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('ContractBid')
+        .select()
+        .eq('provider_id', provider_id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching contract bid ${provider_id}`, error);
+        return null;
+      }
+
+      if (data) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`Exception in viewBid for id ${provider_id}`, error);
+      return null;
     }
   }
 
@@ -268,7 +308,7 @@ export class ContractService {
       .insert({
         contract_id: new_contract.contract_id, // Use the returned contract_id
         status: 'open',
-        valued_at: createContractDto.value,
+        // valued_at: createContractDto.value,
       });
 
     if (bidError) {

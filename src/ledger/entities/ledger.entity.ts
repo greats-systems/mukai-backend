@@ -23,7 +23,6 @@ export class ContractBid {
   opening_date: string;
   status: string;
   closing_date?: string;
-  // valued_at: number;
   award_date?: string;
   awarded_to?: string;
 }

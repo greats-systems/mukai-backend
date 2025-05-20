@@ -38,11 +38,6 @@ export class CreateContractBidDto {
   @IsNotEmpty()
   provider_id: string;
 
-  /*
-  @IsString()
-  opening_date: string;
-  */
-
   @IsString()
   @IsNotEmpty()
   status: string;
@@ -51,11 +46,6 @@ export class CreateContractBidDto {
   @IsOptional()
   closing_date: string;
 
-  /*
-  @IsNumber()
-  @IsNotEmpty()
-  valued_at: number;
-  */
   @IsString()
   @IsOptional()
   award_date: string;

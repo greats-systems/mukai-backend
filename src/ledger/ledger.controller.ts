@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -6,7 +7,8 @@ import {
   Patch,
   Param,
   Delete,
-  NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import * as LedgerService from './ledger.service';
 import * as CreateLedgerDto from './dto/create-ledger.dto';
@@ -26,16 +28,49 @@ export class CommodityController {
     private readonly commodityService: LedgerService.CommodityService,
   ) {}
   @Post()
-  create(@Body() createCommodityDto: CreateLedgerDto.CreateCommodityDto) {
-    return this.commodityService.createCommodity(createCommodityDto);
+  async create(@Body() createCommodityDto: CreateLedgerDto.CreateCommodityDto) {
+    const response =
+      await this.commodityService.createCommodity(createCommodityDto);
+
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
+
   @Get()
-  findAll() {
-    return this.commodityService.findAllCommodities();
+  async findAll() {
+    const response = await this.commodityService.findAllCommodities();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
   @Get(':commodity_id')
-  findOne(@Param('commidity_id') commodity_id: string) {
-    return this.commodityService.viewCommodity(commodity_id);
+  async findOne(@Param('commidity_id') commodity_id: string) {
+    const response = await this.commodityService.viewCommodity(commodity_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -45,31 +80,83 @@ export class ContractController {
     private readonly contractService: LedgerService.ContractService,
   ) {}
   @Post()
-  create(@Body() createContractDto: CreateLedgerDto.CreateContractDto) {
-    return this.contractService.createContract(createContractDto);
+  async create(@Body() createContractDto: CreateLedgerDto.CreateContractDto) {
+    const response =
+      await this.contractService.createContract(createContractDto);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.contractService.findAllContracts();
+  async findAll() {
+    const response = await this.contractService.findAllContracts();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':contract_id')
-  findOne(@Param('contract_id') contract_id: string) {
-    return this.contractService.viewContract(contract_id);
+  async findOne(@Param('contract_id') contract_id: string) {
+    const response = await this.contractService.viewContract(contract_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Patch(':contract_id')
-  update(
+  async update(
     @Param('contract_id') contract_id: string,
     @Body() updateContractDto: UpdateLedgerDto.UpdateContractDto,
   ) {
-    return this.contractService.updateContract(contract_id, updateContractDto);
+    const response = await this.contractService.updateContract(
+      contract_id,
+      updateContractDto,
+    );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Delete(':contract_id')
-  delete(@Param('contract_id') contract_id: string) {
-    return this.contractService.deleteContract(contract_id);
+  async delete(@Param('contract_id') contract_id: string) {
+    const response = await this.contractService.deleteContract(contract_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -79,31 +166,92 @@ export class ContractBidController {
     private readonly contractBidService: LedgerService.ContractBidService,
   ) {}
   @Post()
-  create(@Body() createContractBidDto: CreateLedgerDto.CreateContractBidDto) {
-    return this.contractBidService.createContractBid(createContractBidDto);
+  async create(
+    @Body() createContractBidDto: CreateLedgerDto.CreateContractBidDto,
+  ) {
+    const response =
+      await this.contractBidService.createContractBid(createContractBidDto);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+
+    if (response['statusCode'] == 403) {
+      throw new HttpException(response['message'], HttpStatus.FORBIDDEN);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 404) {
+      throw new HttpException(response['message'], HttpStatus.NOT_FOUND);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.contractBidService.findAllBids();
+  async findAll() {
+    const response = await this.contractBidService.findAllBids();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':bid_id')
-  findOne(@Param('bid_id') bid_id: string) {
-    return this.contractBidService.viewBid(bid_id);
+  async findOne(@Param('bid_id') bid_id: string) {
+    const response = await this.contractBidService.viewBid(bid_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Patch(':bid_id')
-  update(
+  async update(
     @Param('bid_id') bid_id: string,
     @Body() updateContractBidDto: UpdateLedgerDto.UpdateContractBidDto,
   ) {
-    return this.contractBidService.updateBid(bid_id, updateContractBidDto);
+    const response = await this.contractBidService.updateBid(
+      bid_id,
+      updateContractBidDto,
+    );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Delete(':bid_id')
-  delete(@Param('bid_id') bid_id: string) {
-    return this.contractBidService.deleteBid(bid_id);
+  async delete(@Param('bid_id') bid_id: string) {
+    const response = await this.contractBidService.deleteBid(bid_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -114,18 +262,49 @@ export class ProducerController {
   ) {}
 
   @Post()
-  create(@Body() createProducerDto: CreateLedgerDto.CreateProducerDto) {
-    return this.producerService.createProducer(createProducerDto);
+  async create(@Body() createProducerDto: CreateLedgerDto.CreateProducerDto) {
+    const response =
+      await this.producerService.createProducer(createProducerDto);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.producerService.findAllProducers();
+  async findAll() {
+    const response = await this.producerService.findAllProducers();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':producer_id')
-  findOne(@Param('producer_id') producer_id: string) {
-    return this.producerService.viewProducer(producer_id);
+  async findOne(@Param('producer_id') producer_id: string) {
+    const response = await this.producerService.viewProducer(producer_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -136,18 +315,55 @@ export class ProviderController {
   ) {}
 
   @Post()
-  create(@Body() createProviderDto: CreateLedgerDto.CreateProviderDto) {
-    return this.providerService.createProvider(createProviderDto);
+  async create(@Body() createProviderDto: CreateLedgerDto.CreateProviderDto) {
+    const response =
+      await this.providerService.createProvider(createProviderDto);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 422) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.providerService.findAllProviders();
+  async findAll() {
+    const response = await this.providerService.findAllProviders();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':provider_id')
-  findOne(@Param('provider_id') provider_id: string) {
-    return this.providerService.viewProvider(provider_id);
+  async findOne(@Param('provider_id') provider_id: string) {
+    const response = await this.providerService.viewProvider(provider_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -158,40 +374,90 @@ export class ProviderProductsController {
   ) {}
 
   @Post()
-  create(
+  async create(
     @Body()
     createProviderProductsDto: CreateLedgerDto.CreateProviderProductsDto,
   ) {
-    return this.providerProductsService.createProviderProduct(
+    const response = await this.providerProductsService.createProviderProduct(
       createProviderProductsDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.providerProductsService.findAllProducts();
+  async findAll() {
+    const response = await this.providerProductsService.findAllProducts();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':product_id')
-  findOne(@Param('product_id') product_id: string) {
-    return this.providerProductsService.viewProviderProducts(product_id);
+  async findOne(@Param('product_id') product_id: string) {
+    const response =
+      await this.providerProductsService.viewProviderProducts(product_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Patch(':product_id')
-  update(
+  async update(
     @Param('product_id') product_id: string,
     @Body()
     updateProviderProductsDto: UpdateLedgerDto.UpdateProviderProductsDto,
   ) {
-    return this.providerProductsService.updateProviderProducts(
+    const response = await this.providerProductsService.updateProviderProducts(
       product_id,
       updateProviderProductsDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Delete(':product_id')
   delete(@Param('product_id') product_id: string) {
-    return this.providerProductsService.deleteProviderProducts(product_id);
+    const response =
+      this.providerProductsService.deleteProviderProducts(product_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -202,40 +468,90 @@ export class ProviderServicesController {
   ) {}
 
   @Post()
-  create(
+  async create(
     @Body()
     createProviderServicesDto: CreateLedgerDto.CreateProviderServicesDto,
   ) {
-    return this.providerServicesService.createProviderService(
+    const response = await this.providerServicesService.createProviderService(
       createProviderServicesDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.providerServicesService.findAllServices();
+  async findAll() {
+    const response = await this.providerServicesService.findAllServices();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':service_id')
-  findOne(@Param('service_id') service_id: string) {
-    return this.providerServicesService.viewProviderServices(service_id);
+  async findOne(@Param('service_id') service_id: string) {
+    const response =
+      await this.providerServicesService.viewProviderServices(service_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Patch(':service_id')
-  update(
+  async update(
     @Param('service_id') service_id: string,
     @Body()
     updateProviderServicesDto: UpdateLedgerDto.UpdateProviderServicesDto,
   ) {
-    return this.providerServicesService.updateProviderServices(
+    const response = await this.providerServicesService.updateProviderServices(
       service_id,
       updateProviderServicesDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Delete(':service_id')
-  delete(@Param('service_id') service_id: string) {
-    return this.providerServicesService.deleteProviderServices(service_id);
+  async delete(@Param('service_id') service_id: string) {
+    const response =
+      await this.providerServicesService.deleteProviderServices(service_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -244,22 +560,45 @@ export class TraderController {
   constructor(private readonly traderService: LedgerService.TraderService) {}
 
   @Post()
-  create(@Body() createTraderDto: CreateLedgerDto.CreateTraderDto) {
-    return this.traderService.createTrader(createTraderDto);
+  async create(@Body() createTraderDto: CreateLedgerDto.CreateTraderDto) {
+    const response = await this.traderService.createTrader(createTraderDto);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
-  findAll() {
-    return this.traderService.findAllTraders();
+  async findAll() {
+    const response = await this.traderService.findAllTraders();
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':trader_id') // This expects a PATH parameter
   async findOne(@Param('trader_id') trader_id: string) {
-    const result = await this.traderService.viewTrader(trader_id);
-    if (!result) {
-      throw new NotFoundException(`Trader ${trader_id} not found`);
+    const response = await this.traderService.viewTrader(trader_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
-    return result;
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
 
@@ -269,27 +608,57 @@ export class TraderInventoryController {
     private readonly traderInventoryService: LedgerService.TraderInventoryService,
   ) {}
   @Post()
-  create(
+  async create(
     @Body() createTraderInventoryDto: CreateLedgerDto.CreateTraderInventoryDto,
   ) {
-    return this.traderInventoryService.createTraderInventory(
+    const response = await this.traderInventoryService.createTraderInventory(
       createTraderInventoryDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get(':trader_id')
-  findAll(@Param('trader_id') trader_id: string) {
-    return this.traderInventoryService.viewInventory(trader_id);
+  async findAll(@Param('trader_id') trader_id: string) {
+    const response = await this.traderInventoryService.viewInventory(trader_id);
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
-  @Patch(':inventory_id')
-  update(
-    @Param('inventory_id') inventory_id: string,
+  @Patch(':commodity_id')
+  async update(
+    @Param('commodity_id') commodity_id: string,
     updateTraderInventoryDto: UpdateLedgerDto.UpdateTraderInventoryDto,
   ) {
-    return this.traderInventoryService.updateInventory(
-      inventory_id,
+    const response = await this.traderInventoryService.updateInventory(
+      commodity_id,
       updateTraderInventoryDto,
     );
+    if (response['statusCode'] == 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] == 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

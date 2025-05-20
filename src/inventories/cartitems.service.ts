@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
 
 @Injectable()

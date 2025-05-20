@@ -60,3 +60,4 @@ script*.sh
 backups/
 supabase/
 supabase-project/
+*.sql

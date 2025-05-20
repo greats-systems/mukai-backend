@@ -25,7 +25,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
     UserModule,
-    LedgerModule,
+    LedgerModule,OrdersModule, MessagingsModule, InventoriesModule
   ],
   controllers: [
     AppController,

@@ -1,17 +1,83 @@
-import { PartialType } from '@nestjs/swagger';
+import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { CreateDemandOrderDto, CreateOrderDto } from './create-order.dto';
 
 // src/demand-order/dto/demand-order-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { ProfileResponseDto } from 'src/user/dto/create-user.dto';
 import { InventoryResponseDto } from 'src/inventories/dto/update-inventory.dto';
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
+import { CreateDemandRequestInventoryDto, CreateDemandRequestOfferDto } from 'src/inventories/dto/create-inventory.dto';
 
 
 export class UpdateOrderDto extends PartialType(CreateOrderDto) { }
+export class UpdateDemandOrderDto extends PartialType(CreateDemandOrderDto) {
 
+
+
+    @IsString()
+    id?: string;
+
+    @ApiProperty({ description: 'Order category', example: 'retail' })
+    @IsNotEmpty()
+    @IsString()
+    category: string;
+
+    @ApiProperty({ description: 'ID of the sales person handling the order', example: '2884ed1c-9a32-46c9-bb9d-954f40abd69c' })
+    @IsNotEmpty()
+    @IsString()
+    provider_id: string;
+
+    @ApiProperty({ description: 'ID of the customer placing the order', example: '56619657-0c47-40ee-8711-aee9b8f98122' })
+    @IsNotEmpty()
+    @IsString()
+    customer_id: string;
+
+    @ApiProperty({
+        description: 'Current status of the order',
+        example: 'processing',
+        enum: ['pending', 'processing', 'completed', 'cancelled']
+    })
+    @IsNotEmpty()
+    @IsString()
+    status: string;
+
+    @ApiPropertyOptional({ description: 'Amount bid by client', example: 50.0, default: 0.0 })
+    @IsOptional()
+    @IsNumber()
+    customer_price_offer?: number;
+
+    @ApiPropertyOptional({ description: 'Amount bid by client', example: 50.0, default: 0.0 })
+    @IsOptional()
+    @IsNumber()
+    provider_price_offer?: number;
+
+    @ApiPropertyOptional({ description: 'Amount agreed by provider and final provider', example: 50.0, default: 0.0 })
+    @IsOptional()
+    @IsNumber()
+    price_locked?: number;
+
+    @ApiPropertyOptional({ description: 'Amount bid by providers', example: [50.0], default: [0.0] })
+    @IsOptional()
+    @IsNumber()
+    market_prices?: [number];
+
+    @ApiProperty({ type: () => CreateDemandRequestInventoryDto, description: 'Ordered item details' })
+    item?: CreateDemandRequestInventoryDto;
+
+    @ApiProperty({ type: () => CreateDemandRequestOfferDto, description: 'Ordered offer details' })
+    offer?: CreateDemandRequestOfferDto;
+
+    @ApiProperty({
+        description: 'Payment method used',
+        example: 'credit_card',
+        enum: ['cash', 'credit_card', 'bank_transfer', 'mobile_payment']
+    })
+
+    @IsNotEmpty()
+    @IsString()
+    payment_method: string;
+}
 export class DemandOrderResponseDto {
-    @ApiProperty({ description: 'Auto-incremented primary key', example: 1 })
-    collectionId: number;
 
     @ApiProperty({ description: 'Order category', example: 'retail' })
     category: string;
@@ -67,4 +133,3 @@ export class DemandOrderResponseDto {
     @ApiProperty({ description: 'Order last update timestamp', example: '2023-01-01T00:00:00.000Z' })
     updatedAt: Date;
 }
-export class UpdateDemandOrderDto extends PartialType(CreateDemandOrderDto) { }

@@ -22,13 +22,13 @@ async function bootstrap() {
   const documentFactory = () =>
     SwaggerModule.createDocument(app, config, options);
   SwaggerModule.setup('api', app, documentFactory);
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // remove non-whitelisted properties
-      forbidNonWhitelisted: true, // throw errors for non-whitelisted properties
-      transform: true, // automatically transform payloads to DTO instances
-    }),
-  );
+  // app.useGlobalPipes(
+  //   new ValidationPipe({
+  //     whitelist: true, // remove non-whitelisted properties
+  //     forbidNonWhitelisted: true, // throw errors for non-whitelisted properties
+  //     transform: true, // automatically transform payloads to DTO instances
+  //   }),
+  // );
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0', () => {
     console.log('server connected');

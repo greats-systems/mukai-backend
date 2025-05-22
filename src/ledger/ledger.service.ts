@@ -1,8 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
-/* eslint-disable @typescript-eslint/no-base-to-string */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Injectable, Logger } from '@nestjs/common';
 import {
   Commodity,
@@ -27,7 +23,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CommodityService {
   private readonly logger = initLogger(CommodityService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createCommodity(
     createCommodityDto: CreateLedgerDto.CreateCommodityDto,
@@ -101,7 +97,7 @@ export class CommodityService {
 @Injectable()
 export class ContractBidService {
   private readonly logger = initLogger(ContractBidService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createContractBid(
     createContractBidDto: CreateLedgerDto.CreateContractBidDto,
@@ -283,7 +279,7 @@ export class ContractBidService {
 @Injectable()
 export class ContractService {
   private readonly logger = initLogger(ContractService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createContract(
     createContractDto: CreateLedgerDto.CreateContractDto,
@@ -464,7 +460,7 @@ export class ContractService {
 @Injectable()
 export class ProducerService {
   private readonly logger = initLogger(ProducerService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createProducer(
     createProducerDto: CreateLedgerDto.CreateProducerDto,
@@ -536,7 +532,7 @@ export class ProducerService {
 @Injectable()
 export class ProviderService {
   private readonly logger = initLogger(ProviderService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createProvider(
     createProviderDto: CreateLedgerDto.CreateProviderDto,
@@ -674,7 +670,7 @@ export class ProviderService {
 @Injectable()
 export class ProviderProductsService {
   private readonly logger = initLogger(ProviderProductsService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createProviderProduct(
     createProviderProductDto: CreateLedgerDto.CreateProviderProductsDto,
@@ -828,7 +824,7 @@ export class ProviderProductsService {
 @Injectable()
 export class ProviderServicesService {
   private readonly logger = initLogger(ProviderServicesService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createProviderService(
     createProviderServiceDto: CreateLedgerDto.CreateProviderServicesDto,
@@ -979,7 +975,7 @@ export class ProviderServicesService {
 @Injectable()
 export class TraderService {
   private readonly logger = initLogger(TraderService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createTrader(
     createTraderDto: CreateLedgerDto.CreateTraderDto,
@@ -1045,7 +1041,7 @@ export class TraderService {
 @Injectable()
 export class TraderInventoryService {
   private readonly logger = initLogger(TraderInventoryService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createTraderInventory(
     createTraderInventoryDto: CreateLedgerDto.CreateTraderInventoryDto,

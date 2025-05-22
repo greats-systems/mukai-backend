@@ -1,26 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNodeDto } from './dto/create-node.dto';
-import { UpdateNodeDto } from './dto/update-node.dto';
+import { NodeMessagingService } from './messaging.service';
+import { NotificationDto } from 'src/messagings/dto/create-messaging.dto';
 
 @Injectable()
 export class NodesService {
-  create(createNodeDto: CreateNodeDto) {
+    constructor(private readonly messagingNodeService: NodeMessagingService) {}
+
+  async broadcastMessageToParties(notificationDto: NotificationDto) {
+    await this.messagingNodeService.sendNotificationToMultipleTokens(notificationDto)
     return 'This action adds a new node';
   }
 
-  findAll() {
-    return `This action returns all nodes`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} node`;
-  }
-
-  update(id: number, updateNodeDto: UpdateNodeDto) {
-    return `This action updates a #${id} node`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} node`;
-  }
 }

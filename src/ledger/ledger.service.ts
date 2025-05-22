@@ -576,7 +576,7 @@ export class ProviderService {
       }
 
       // A provider must provide at least 1 product or service
-      if (!provider.product_name && provider.service_name) {
+      if (!provider.product_name && !provider.service_name) {
         return new ErrorResponseDto(
           422,
           'At least one product or service is required',

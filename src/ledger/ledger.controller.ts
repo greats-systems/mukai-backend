@@ -44,6 +44,7 @@ export class CommodityController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -58,6 +59,7 @@ export class CommodityController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
   @Get(':commodity_id')
   async findOne(@Param('commidity_id') commodity_id: string) {
@@ -71,6 +73,7 @@ export class CommodityController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -95,6 +98,7 @@ export class ContractController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -109,6 +113,7 @@ export class ContractController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':contract_id')
@@ -123,6 +128,7 @@ export class ContractController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Patch(':contract_id')
@@ -143,6 +149,7 @@ export class ContractController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Delete(':contract_id')
@@ -157,6 +164,7 @@ export class ContractController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -190,6 +198,7 @@ export class ContractBidController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -204,6 +213,7 @@ export class ContractBidController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':bid_id')
@@ -218,6 +228,7 @@ export class ContractBidController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Patch(':bid_id')
@@ -238,6 +249,7 @@ export class ContractBidController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Delete(':bid_id')
@@ -252,6 +264,7 @@ export class ContractBidController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -277,6 +290,7 @@ export class ProducerController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -291,6 +305,7 @@ export class ProducerController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':producer_id')
@@ -305,6 +320,7 @@ export class ProducerController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -336,6 +352,7 @@ export class ProviderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -350,6 +367,7 @@ export class ProviderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':provider_id')
@@ -364,6 +382,7 @@ export class ProviderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -393,6 +412,7 @@ export class ProviderProductsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -407,6 +427,7 @@ export class ProviderProductsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':product_id')
@@ -422,6 +443,7 @@ export class ProviderProductsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Patch(':product_id')
@@ -443,6 +465,7 @@ export class ProviderProductsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Delete(':product_id')
@@ -458,6 +481,7 @@ export class ProviderProductsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -487,6 +511,7 @@ export class ProviderServicesController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -501,6 +526,7 @@ export class ProviderServicesController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':service_id')
@@ -516,6 +542,7 @@ export class ProviderServicesController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Patch(':service_id')
@@ -537,6 +564,7 @@ export class ProviderServicesController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Delete(':service_id')
@@ -552,6 +580,7 @@ export class ProviderServicesController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -571,6 +600,7 @@ export class TraderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get()
@@ -585,6 +615,7 @@ export class TraderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':trader_id') // This expects a PATH parameter
@@ -599,6 +630,7 @@ export class TraderController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }
 
@@ -626,6 +658,7 @@ export class TraderInventoryController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Get(':trader_id')
@@ -640,6 +673,7 @@ export class TraderInventoryController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 
   @Patch(':commodity_id')
@@ -660,5 +694,6 @@ export class TraderInventoryController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    return response;
   }
 }

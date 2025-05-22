@@ -17,6 +17,9 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema
+    console.log('email', email);
+    console.log('password', password);
+
     const { data: user, error } = await this.postgresRest
       .auth_client('users')
       .select('*')
@@ -268,7 +271,7 @@ export class AuthService {
 
   async updateFCM(profile: Profile) {
     console.log('updateFCM', profile);
-    
+
     const now = new Date().toISOString();
     const { error: profileError, data: profileData } = await this.postgresRest
       .from('profiles')
@@ -278,7 +281,7 @@ export class AuthService {
       }).eq('id', profile.id);
 
     if (profileError) {
-    console.log('updateFCM profileError', profileError);
+      console.log('updateFCM profileError', profileError);
 
       return {
         status: 'account not updated',

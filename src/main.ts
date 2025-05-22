@@ -21,7 +21,7 @@ async function bootstrap() {
   };
   const documentFactory = () =>
     SwaggerModule.createDocument(app, config, options);
-  SwaggerModule.setup('api', app, documentFactory);
+  SwaggerModule.setup('docs/api', app, documentFactory);
   // app.useGlobalPipes(
   //   new ValidationPipe({
   //     whitelist: true, // remove non-whitelisted properties
@@ -30,7 +30,7 @@ async function bootstrap() {
   //   }),
   // );
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0', () => {
+  await app.listen(process.env.PORT ?? 4000, '0.0.0.0', () => {
     console.log('server connected');
   });
 }

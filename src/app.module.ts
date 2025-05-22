@@ -18,6 +18,8 @@ import { MessagingsModule } from './messagings/messagings.module';
 import { FirebaseModule } from './common/firebase/firebase.module';
 import { InventoriesModule } from './inventories/inventories.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { NodesModule } from './nodes/nodes.module';
+import { TradingservicesModule } from './tradingservices/tradingservices.module';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
     UserModule,
-    LedgerModule,OrdersModule, MessagingsModule, InventoriesModule
+    LedgerModule,OrdersModule, MessagingsModule, InventoriesModule, NodesModule, TradingservicesModule
   ],
   controllers: [
     AppController,

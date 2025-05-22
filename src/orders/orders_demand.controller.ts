@@ -1,5 +1,5 @@
 // src/demand-order/demand-order.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DemandOrderResponseDto, UpdateDemandOrderDto } from './dto/update-order.dto';
@@ -34,7 +34,7 @@ export class DemandOrderController {
     return this.demandOrderService.findAll();
   }
 
-  @Get(':id')
+  @Get('get-order:id')
   @ApiOperation({ summary: 'Get a specific demand order by ID' })
   @ApiResponse({
     status: 200,
@@ -46,7 +46,7 @@ export class DemandOrderController {
     return this.demandOrderService.findOne(id);
   }
 
-  @Patch(':id')
+  @Put('update-order/:id')
   @ApiOperation({ summary: 'Update a demand order' })
   @ApiResponse({
     status: 200,
@@ -58,7 +58,7 @@ export class DemandOrderController {
     return this.demandOrderService.update(id, updateDemandOrderDto);
   }
 
-  @Delete(':id')
+  @Delete('delete-order:id')
   @ApiOperation({ summary: 'Delete a demand order' })
   @ApiResponse({ status: 204, description: 'The order has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Order not found.' })

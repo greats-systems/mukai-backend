@@ -8,7 +8,6 @@ const firebaseProvider = {
     provide: 'FIREBASE_APP',
     inject: [ConfigService],
     useFactory: () => {
-        console.log('serviceAccount', serviceAccount);
         return admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
         });

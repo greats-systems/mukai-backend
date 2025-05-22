@@ -2,8 +2,8 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Profile } from 'src/user/entities/user.entity';
-import { Inventory } from 'src/inventories/entities/inventory.entity';
-import { CartItem } from 'src/inventories/entities/cart-item.entity';
+import { Inventory } from 'src/tradingservices/entities/inventory.entity';
+import { CartItem } from 'src/tradingservices/entities/cart-item.entity';
 import { Order } from 'src/orders/entities/order.entity';
 // import { Profile } from '../../profile/entities/profile.entity';
 // import { Product } from '../../product/entities/product.entity';

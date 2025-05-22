@@ -6,12 +6,15 @@ import { CreateDemandOrderDto } from './dto/create-order.dto';
 import { MessagingsService } from 'src/messagings/messagings.service';
 import { UserService } from 'src/user/user.service';
 import { StringHelper } from 'src/helpers/string.helper';
+import { NodesService } from 'src/nodes/nodes.service';
+import { NotificationDto } from 'src/messagings/dto/create-messaging.dto';
 
 @Injectable()
 export class OrdersDemandService {
   private readonly logger = new Logger(PostgresRest.name);
 
   constructor(
+    private readonly nodesService: NodesService,
     private readonly postgresRest: PostgresRest,
     private readonly messagingsService: MessagingsService,
     private readonly userService: UserService,
@@ -19,49 +22,51 @@ export class OrdersDemandService {
   async createOrderDemand(createOrderDto: CreateDemandOrderDto) {
     try {
       const order = createOrderDto
+      let mesg = new NotificationDto()
+      mesg.body = 'mesage'
+      this.nodesService.broadcastMessageToParties(mesg)
+      // console.log('createOrderDto order', order);
 
-      console.log('createOrderDto order', order);
-
-      var inventory_item = createOrderDto.item
-      delete createOrderDto.item
-      console.log('createOrderDto', createOrderDto);
-      const { error: reqError, data: resData } = await this.postgresRest
-        .from('demands_requests')
-        .insert(createOrderDto)
-        .select()
-        .single()
+      // var inventory_item = createOrderDto.item
+      // delete createOrderDto.item
+      // console.log('createOrderDto', createOrderDto);
+      // const { error: reqError, data: resData } = await this.postgresRest
+      //   .from('demands_requests')
+      //   .insert(createOrderDto)
+      //   .select()
+      //   .single()
 
 
-      if (resData) {
-        order['id'] = resData.id
-        order['item'] = inventory_item
-        inventory_item!['order_id'] = resData.id
+      // if (resData) {
+      //   order['id'] = resData.id
+      //   order['item'] = inventory_item
+      //   inventory_item!['order_id'] = resData.id
 
-        await this.postgresRest
-          .from('demand_request_items')
-          .insert(inventory_item);
-        //broadcast to profiles by order category and location
+      //   await this.postgresRest
+      //     .from('demand_request_items')
+      //     .insert(inventory_item);
+      //   //broadcast to profiles by order category and location
 
-        console.log('createOrderDto order', order);
-        await this.broadcastDemand(order)
-        const { data: orderData } = await this.postgresRest
-          .from('demands_requests')
-          .select('*, demand_request_items(*)').eq('id', resData.id).single();
-        return {
-          status: 'success',
-          message: 'order created successfully',
-          data: orderData,
-          error: null,
-        };
-      } else if (reqError) {
-        console.log('createOrderDto reqError', reqError);
-        return {
-          status: 'failed',
-          message: reqError,
-          data: null,
-          error: reqError,
-        };
-      }
+      //   console.log('createOrderDto order', order);
+      //   await this.broadcastDemand(order)
+      //   const { data: orderData } = await this.postgresRest
+      //     .from('demands_requests')
+      //     .select('*, demand_request_items(*)').eq('id', resData.id).single();
+      //   return {
+      //     status: 'success',
+      //     message: 'order created successfully',
+      //     data: orderData,
+      //     error: null,
+      //   };
+      // } else if (reqError) {
+      //   console.log('createOrderDto reqError', reqError);
+      //   return {
+      //     status: 'failed',
+      //     message: reqError,
+      //     data: null,
+      //     error: reqError,
+      //   };
+      // }
 
     } catch (error) {
       console.log('createOrderDto error', error);
@@ -291,6 +296,9 @@ export class OrdersDemandService {
 
 
         // Send notifications
+        let mesg = new NotificationDto()
+        mesg.body = 'mesage'
+        this.nodesService.broadcastMessageToParties(mesg)
         await this.messagingsService.sendNotificationToMultipleTokens({
           tokens: validTokens,
           title: `${createOrderDto.item?.name.toUpperCase() || 'NEW'} DEMAND BROADCAST`,

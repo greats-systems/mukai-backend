@@ -40,6 +40,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "firebase-admin": "^13.4.0",
+    "hyperledger": "^0.0.1",
     "nestjs-supabase-auth": "^1.0.9",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",

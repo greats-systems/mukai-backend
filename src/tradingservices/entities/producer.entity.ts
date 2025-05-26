@@ -1,5 +1,5 @@
-export class Tradingservice {
-  trader_id: string;
+export class Producer {
+  producer_id: string;
   first_name: string;
   last_name: string;
   address: string;

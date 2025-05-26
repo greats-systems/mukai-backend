@@ -1,7 +1,7 @@
 // src/demand-order/dto/create-demand-order.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { CreateDemandRequestInventoryDto } from 'src/tradingservices/dto/create-inventory.dto';
+import { CreateDemandRequestInventoryDto } from 'src/tradingservices/dto/create/create-inventory.dto';
 import { InventoryResponseDto } from 'src/tradingservices/dto/update-inventory.dto';
 export class CreateOrderDto { }
 

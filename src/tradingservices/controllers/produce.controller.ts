@@ -7,9 +7,11 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { ProduceService } from '../services/produce.service';
-import { ProduceInput, ProduceResponse } from 'src/nodes/dto/produce.dto';
+import { ProduceInput, ProduceResponse, UpdateProduceDto } from 'src/nodes/dto/produce.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 
@@ -57,9 +59,9 @@ export class ProduceController {
     }
     return response;
   }
-  @Get(':commodity_id')
-  async findOne(@Param('commidity_id') commodity_id: string) {
-    const response = await this.produceService.viewCommodity(commodity_id);
+  @Get(':produce_id')
+  async findOne(@Param('produce_id') produce_id: string) {
+    const response = await this.produceService.viewProduce(produce_id);
     if (response['statusCode'] == 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -70,5 +72,17 @@ export class ProduceController {
       );
     }
     return response;
+  }
+
+  @Patch(':produce_id')
+  async update(@Param('produce_id') produce_id: string, @Body() updateProduceDto: UpdateProduceDto) {
+    const response = await this.produceService.updateProduce(produce_id, updateProduceDto)
+    return response
+  }
+
+  @Delete(':produce_id')
+  async delete(@Param(':produce_id') produce_id: string) {
+    const response = await this.produceService.deleteProduce(produce_id)
+    return response
   }
 }

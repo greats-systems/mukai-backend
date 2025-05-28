@@ -2,7 +2,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { CreateDemandRequestInventoryDto } from 'src/tradingservices/dto/create/create-inventory.dto';
+<<<<<<< Updated upstream
 import { InventoryResponseDto } from 'src/tradingservices/dto/update-inventory.dto';
+=======
+import { InventoryResponseDto } from 'src/tradingservices/dto/update/update-inventory.dto';
+>>>>>>> Stashed changes
 export class CreateOrderDto { }
 
 export class CreateDemandOrderDto {

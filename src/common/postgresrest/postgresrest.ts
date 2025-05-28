@@ -36,6 +36,7 @@ export class PostgresRest {
   private initializeClient() {
     this.logger.log('Initializing PostgresRest client...');
     const DB_REST_URL =
+<<<<<<< Updated upstream
       this.configService.get<string>('ENV') == 'local'
         ? this.configService.get<string>('LOCAL_SUPABASE_URL')
         : this.configService.get<string>('PROD_DB_REST_URL');
@@ -43,6 +44,16 @@ export class PostgresRest {
       this.configService.get<string>('ENV') == 'local'
         ? this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY')
         : this.configService.get<string>('PROD_SERVICE_ROLE_KEY');
+=======
+      this.configService.get<string>('ENV') === 'local'
+        ? this.configService.get<string>('LOCAL_DB_REST_URL')
+        : this.configService.get<string>('PROD_DB_REST_URL');
+    const SERVICE_ROLE_KEY =
+      this.configService.get<string>('ENV') === 'local'
+        ? this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY')
+        : this.configService.get<string>('PROD_SERVICE_ROLE_KEY');
+    console.log(DB_REST_URL);
+>>>>>>> Stashed changes
 
     if (!DB_REST_URL) {
       throw new Error('DB_REST_URL configuration is not defined');

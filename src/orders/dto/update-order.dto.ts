@@ -6,7 +6,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ProfileResponseDto } from 'src/user/dto/create-user.dto';
 import { InventoryResponseDto } from 'src/tradingservices/dto/update-inventory.dto';
 import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
-import { CreateDemandRequestInventoryDto, CreateDemandRequestOfferDto } from 'src/tradingservices/dto/create-inventory.dto';
+import { CreateDemandRequestInventoryDto, CreateDemandRequestOfferDto } from 'src/tradingservices/dto/create/create-inventory.dto';
 
 
 export class UpdateOrderDto extends PartialType(CreateOrderDto) { }

@@ -1,25 +1,40 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
-import * as LedgerController from './ledger/ledger.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
-import { LedgerModule } from './ledger/ledger.module';
 
-import {
-  // PostgresRestHandlerGuard,
-  PostgresRestHandlerModule,
-} from './common/postgresrest';
-// import { APP_GUARD } from '@nestjs/core';
+import { PostgresRestHandlerModule } from './common/postgresrest';
 import { OrdersModule } from './orders/orders.module';
-import { NotificationsService } from './notifications/notifications.service';
 import { MessagingsModule } from './messagings/messagings.module';
-import { FirebaseModule } from './common/firebase/firebase.module';
-import { InventoriesModule } from './inventories/inventories.module';
-import { OrganizationsModule } from './organizations/organizations.module';
 import { NodesModule } from './nodes/nodes.module';
-import { TradingservicesModule } from './tradingservices/tradingservices.module';
+import { CommodityController } from './tradingservices/controllers/commodity.controller';
+import { ContractBidController } from './tradingservices/controllers/contract-bid.controller';
+import { ContractController } from './tradingservices/controllers/contract.controller';
+import { ProducerController } from './tradingservices/controllers/producer.controller';
+import { ProviderController } from './tradingservices/controllers/provider.controller';
+import { ProviderProductsController } from './tradingservices/controllers/provider-products.controller';
+import { ProviderServicesController } from './tradingservices/controllers/provider-services.controller';
+import { TradingservicesController } from './tradingservices/controllers/tradingservices.controller';
+import { TraderInventoryController } from './tradingservices/controllers/trader-inventory.controller';
+import { TradingservicesModule } from './tradingservices/modules/tradingservices.module';
+import { CommodityModule } from './tradingservices/modules/commodity.module';
+import { ContractBidModule } from './tradingservices/modules/contract-bid.module';
+import { ContractModule } from './tradingservices/modules/contract.module';
+import { ProducerModule } from './tradingservices/modules/producer.module';
+import { ProviderModule } from './tradingservices/modules/provider.module';
+import { ProviderProductsModule } from './tradingservices/modules/provider-products.module';
+import { ProviderServicesModule } from './tradingservices/modules/provider-services.module';
+import { TraderInventoryService } from './tradingservices/services/trader-inventory.service';
+import { CommodityService } from './tradingservices/services/commodity.service';
+import { ContractBidService } from './tradingservices/services/contract-bidding.service';
+import { ContractService } from './tradingservices/services/contracts.service';
+import { ProducerService } from './tradingservices/services/producers.service';
+import { ProviderProductsService } from './tradingservices/services/provider-products.service';
+import { ProviderService } from './tradingservices/services/provider.service';
+import { ProviderServicesService } from './tradingservices/services/provider-services.service';
+import { TradingservicesService } from './tradingservices/services/tradingservices.service';
 
 @Module({
   imports: [
@@ -27,22 +42,41 @@ import { TradingservicesModule } from './tradingservices/tradingservices.module'
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true }),
     UserModule,
-    LedgerModule,OrdersModule, MessagingsModule, InventoriesModule, NodesModule, TradingservicesModule
+    OrdersModule,
+    MessagingsModule,
+    NodesModule,
+    CommodityModule,
+    ContractBidModule,
+    ContractModule,
+    ProducerModule,
+    ProviderModule,
+    ProviderProductsModule,
+    ProviderServicesModule,
+    TradingservicesModule,
   ],
   controllers: [
     AppController,
-    LedgerController.CommodityController,
-    LedgerController.ContractBidController,
-    LedgerController.ContractController,
-    LedgerController.ProducerController,
-    LedgerController.ProviderController,
-    LedgerController.ProviderProductsController,
-    LedgerController.ProviderServicesController,
-    LedgerController.TraderController,
-    LedgerController.TraderInventoryController,
+    CommodityController,
+    ContractBidController,
+    ContractController,
+    ProducerController,
+    ProviderController,
+    ProviderProductsController,
+    ProviderServicesController,
+    TradingservicesController,
+    TraderInventoryController,
   ],
   providers: [
     AppService,
+    CommodityService,
+    ContractBidService,
+    ContractService,
+    ProducerService,
+    ProviderService,
+    ProviderProductsService,
+    ProviderServicesService,
+    TradingservicesService,
+    TraderInventoryService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

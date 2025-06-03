@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Injectable, Logger } from '@nestjs/common';
@@ -29,14 +32,16 @@ export class ProducerService {
       const { data, error } = await this.postgresrest
         .from('Producer')
         .insert(producer)
+        .select()
         .single();
       if (data) {
         return data as Producer;
       } else {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(400, error?.message.toString());
       }
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      console.log(error);
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -52,7 +57,7 @@ export class ProducerService {
       return data as Producer[];
     } catch (error) {
       this.logger.error('Exception in findAllProducers', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -77,7 +82,7 @@ export class ProducerService {
         `Exception in viewProducer for id ${producer_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }

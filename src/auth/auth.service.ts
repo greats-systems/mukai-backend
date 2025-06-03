@@ -1,6 +1,11 @@
-import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -13,7 +18,7 @@ export class AuthService {
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema
@@ -60,17 +65,19 @@ export class AuthService {
           message: 'User not found',
           access_token: null,
           error: userError,
-          user: null
+          user: null,
         };
       }
       console.log(' validate_profile user.id', user.id);
       // 3. Get profile with store information
       const { data: profileData, error: profileError } = await this.postgresRest
-        .from('profiles')  // Explicit schema
-        .select(`
+        .from('profiles') // Explicit schema
+        .select(
+          `
         *,
         stores (*)
-      `)
+      `,
+        )
         .eq('id', user.id)
         .single();
 
@@ -80,14 +87,14 @@ export class AuthService {
           message: 'Profile not found',
           access_token: null,
           error: profileError,
-          user: null
+          user: null,
         };
       }
 
       const newPayload = {
         email: user.email,
         sub: user.id,
-        role: user.role
+        role: user.role,
       };
       const newToken = this.jwtService.sign(newPayload);
 
@@ -98,19 +105,20 @@ export class AuthService {
         user: {
           ...profileData,
           email: user.email,
-          role: user.role
-        }
+          role: user.role,
+        },
       };
-
     } catch (error) {
-      if (error instanceof UnauthorizedException ||
-        error instanceof NotFoundException) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
         return {
           status: 'failed',
           message: 'Profile not found',
           access_token: null,
           error: error,
-          user: null
+          user: null,
         };
       }
       return {
@@ -118,7 +126,7 @@ export class AuthService {
         message: 'Failed to fetch profile',
         access_token: null,
         error: error,
-        user: null
+        user: null,
       };
     }
   }
@@ -132,18 +140,20 @@ export class AuthService {
     const payload = {
       email: user.email,
       sub: user.id,
-      role: user.role
+      role: user.role,
     };
     const { error: profileError, data: profileData } = await this.postgresRest
       .from('profiles')
-      .select('*, stores(*)').eq('id', user.id).single();
+      .select('*, stores(*)')
+      .eq('id', user.id)
+      .single();
     const response_data = {
       status: 'account authenticated',
       message: 'account authenticated successfully',
       access_token: this.jwtService.sign(payload),
       user: profileData,
       error: null,
-    }
+    };
     return response_data;
   }
 
@@ -171,9 +181,8 @@ export class AuthService {
       role: 'authenticated',
       raw_user_meta_data: { first_name: signupDto.first_name },
       created_at: now,
-      updated_at: now
-    }
-
+      updated_at: now,
+    };
 
     // Create auth user in auth.users
     const { data: newAuthUser, error: authError } = await this.postgresRest
@@ -202,7 +211,7 @@ export class AuthService {
         passport_url: signupDto.passport_url,
         avatar: signupDto.avatar,
         created_at: now,
-        updated_at: now
+        updated_at: now,
       });
 
     if (profileError) {
@@ -215,7 +224,7 @@ export class AuthService {
     const payload = {
       email: newAuthUser.email,
       sub: newAuthUser.id,
-      role: newAuthUser.role
+      role: newAuthUser.role,
     };
 
     return {
@@ -228,11 +237,10 @@ export class AuthService {
         first_name: signupDto.first_name,
         last_name: signupDto.last_name,
         account_type: signupDto.account_type,
-        role: newAuthUser.role
+        role: newAuthUser.role,
       },
       data: payload,
       error: null,
-
     };
   }
   async update(profile: Profile) {
@@ -250,8 +258,9 @@ export class AuthService {
         national_id_url: profile.national_id_url,
         passport_url: profile.passport_url,
         avatar: profile.avatar,
-        updated_at: now
-      }).eq('id', profile.id);
+        updated_at: now,
+      })
+      .eq('id', profile.id);
 
     if (profileError) {
       return {
@@ -277,8 +286,9 @@ export class AuthService {
       .from('profiles')
       .update({
         push_token: profile.push_token,
-        updated_at: now
-      }).eq('id', profile.id);
+        updated_at: now,
+      })
+      .eq('id', profile.id);
 
     if (profileError) {
       console.log('updateFCM profileError', profileError);

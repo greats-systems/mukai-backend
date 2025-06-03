@@ -45,7 +45,7 @@ export class CommodityService {
         return new ErrorResponseDto(400, 'Failed to create commodity');
       }
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -57,13 +57,13 @@ export class CommodityService {
 
       if (error) {
         this.logger.error('Error fetching commodities', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Commodity[];
     } catch (error) {
       this.logger.error('Exception in findAllCommodities', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -79,7 +79,7 @@ export class CommodityService {
 
       if (error) {
         this.logger.error(`Error fetching commodity ${commodity_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Commodity;
@@ -88,7 +88,7 @@ export class CommodityService {
         `Exception in viewCommodity for id ${commodity_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -155,7 +155,7 @@ export class ContractBidService {
 
       if (error) {
         console.error(error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return newBid as ContractBid;
     } catch (error) {
@@ -172,7 +172,7 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error('Error fetching contract bids', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ContractBid[];
     } catch (error) {
@@ -193,7 +193,7 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error(`Error fetching contract bid ${provider_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       if (data) {
@@ -203,7 +203,7 @@ export class ContractBidService {
       return false;
     } catch (error) {
       this.logger.error(`Exception in viewBid for id ${provider_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -217,13 +217,13 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error(`Error fetching contract bid ${bid_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ContractBid;
     } catch (error) {
       this.logger.error(`Exception in viewBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -246,12 +246,12 @@ export class ContractBidService {
         .single();
       if (error) {
         this.logger.error(`Error updating bid ${bid_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ContractBid;
     } catch (error) {
       this.logger.error(`Exception in updateBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -270,7 +270,7 @@ export class ContractBidService {
       return true;
     } catch (error) {
       this.logger.error(`Exception in deleteBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -328,7 +328,7 @@ export class ContractService {
 
       return new_contract as Contract;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -344,7 +344,7 @@ export class ContractService {
       return data as Contract[];
     } catch (error) {
       this.logger.error('Exception in findAllContracts', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -360,7 +360,7 @@ export class ContractService {
 
       if (error) {
         this.logger.error(`Error fetching contract for ${producer_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       if (data) {
@@ -373,7 +373,7 @@ export class ContractService {
         `Exception in viewContract for id ${producer_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -389,7 +389,7 @@ export class ContractService {
 
       if (error) {
         this.logger.error(`Error fetching contract ${contract_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Contract;
@@ -398,7 +398,7 @@ export class ContractService {
         `Exception in viewContract for id ${contract_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -419,7 +419,7 @@ export class ContractService {
         .single();
       if (error) {
         this.logger.error(`Error updating contract ${contract_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as Contract;
     } catch (error) {
@@ -427,7 +427,7 @@ export class ContractService {
         `Exception in updateContract for id ${contract_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -479,10 +479,10 @@ export class ProducerService {
       if (data) {
         return data as Producer;
       } else {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -492,13 +492,13 @@ export class ProducerService {
 
       if (error) {
         this.logger.error('Error fetching producers', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Producer[];
     } catch (error) {
       this.logger.error('Exception in findAllProducers', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -514,7 +514,7 @@ export class ProducerService {
 
       if (error) {
         this.logger.error(`Error fetching producer ${producer_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Producer;
@@ -523,7 +523,7 @@ export class ProducerService {
         `Exception in viewProducer for id ${producer_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -618,7 +618,7 @@ export class ProviderService {
 
       return new_provider as Provider;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -630,13 +630,13 @@ export class ProviderService {
 
       if (error) {
         this.logger.error('Error fetching providers', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Provider[];
     } catch (error) {
       this.logger.error('Exception in findAllProviders', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -652,7 +652,7 @@ export class ProviderService {
 
       if (error) {
         this.logger.error(`Error fetching provider ${provider_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Provider;
@@ -661,7 +661,7 @@ export class ProviderService {
         `Exception in viewProvider for id ${provider_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -700,7 +700,7 @@ export class ProviderProductsService {
       }
       return data as ProviderProducts;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -712,13 +712,13 @@ export class ProviderProductsService {
 
       if (error) {
         this.logger.error('Error fetching products', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ProviderProducts[];
     } catch (error) {
       this.logger.error('Exception in findAllProducts', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -733,7 +733,7 @@ export class ProviderProductsService {
 
       if (error) {
         this.logger.error(`Error fetching product ${product_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ProviderProducts[];
@@ -742,7 +742,7 @@ export class ProviderProductsService {
         `Exception in viewProviderProducts for id ${product_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -756,14 +756,14 @@ export class ProviderProductsService {
         .eq('provider_id', provider_id)
         .single();
       if (error) {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       if (data) {
         return true;
       }
       return false;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -783,7 +783,7 @@ export class ProviderProductsService {
         .single();
       if (error) {
         this.logger.error(`Error updating products ${product_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ProviderProducts;
     } catch (error) {
@@ -791,7 +791,7 @@ export class ProviderProductsService {
         `Exception in updateProviderProducts for id ${product_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -806,7 +806,7 @@ export class ProviderProductsService {
 
       if (error) {
         this.logger.error(`Error deleting product ${product_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return true;
@@ -815,7 +815,7 @@ export class ProviderProductsService {
         `Exception in deleteProviderProducts for id ${product_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -846,11 +846,11 @@ export class ProviderServicesService {
         .insert(service)
         .single();
       if (error) {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ProviderServices;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -862,13 +862,13 @@ export class ProviderServicesService {
 
       if (error) {
         this.logger.error('Error fetching services', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ProviderServices[];
     } catch (error) {
       this.logger.error('Exception in findAllServices', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -884,7 +884,7 @@ export class ProviderServicesService {
 
       if (error) {
         this.logger.error(`Error fetching service ${service_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ProviderServices[];
@@ -893,7 +893,7 @@ export class ProviderServicesService {
         `Exception in viewProviderService for id ${service_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -907,14 +907,14 @@ export class ProviderServicesService {
         .eq('provider_id', provider_id)
         .single();
       if (error) {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       if (data) {
         return true;
       }
       return false;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -934,7 +934,7 @@ export class ProviderServicesService {
         .single();
       if (error) {
         this.logger.error(`Error updating services ${service_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ProviderServices;
     } catch (error) {
@@ -942,7 +942,7 @@ export class ProviderServicesService {
         `Exception in updateProviderServices for id ${service_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -957,7 +957,7 @@ export class ProviderServicesService {
 
       if (error) {
         this.logger.error(`Error deleting service ${service_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return true;
@@ -966,7 +966,7 @@ export class ProviderServicesService {
         `Exception in deleteProviderServices for id ${service_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -994,10 +994,10 @@ export class TraderService {
       if (data) {
         return data as Trader;
       } else {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -1007,13 +1007,13 @@ export class TraderService {
 
       if (error) {
         this.logger.error('Error fetching producers', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Trader[];
     } catch (error) {
       this.logger.error('Exception in findAllTraders', error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -1026,13 +1026,13 @@ export class TraderService {
         .single();
 
       if (error) {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Trader;
     } catch (error) {
       this.logger.error(`Trader lookup failed`, { trader_id, error });
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }
@@ -1065,11 +1065,11 @@ export class TraderInventoryService {
         .insert(inventory)
         .single();
       if (error) {
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as TraderInventory;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -1085,7 +1085,7 @@ export class TraderInventoryService {
 
       if (error) {
         this.logger.error(`Error fetching inventory ${trader_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as TraderInventory[];
@@ -1094,7 +1094,7 @@ export class TraderInventoryService {
         `Exception in viewInventory for id ${trader_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -1109,14 +1109,14 @@ export class TraderInventoryService {
 
       if (error) {
         this.logger.error(`Error fetching inventory ${commodity_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       if (data) {
         return true;
       }
       return false;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -1135,7 +1135,7 @@ export class TraderInventoryService {
         .single();
       if (error) {
         this.logger.error(`Error updating inventory ${commodity_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as TraderInventory;
     } catch (error) {
@@ -1143,7 +1143,7 @@ export class TraderInventoryService {
         `Exception in updateInventory for id ${commodity_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }

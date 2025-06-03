@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -68,7 +69,7 @@ export class ContractService {
 
       return new_contract as Contract;
     } catch (error) {
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -118,7 +119,7 @@ export class ContractService {
 
       if (error) {
         this.logger.error(`Error fetching contract for ${producer_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       if (data) {
@@ -131,7 +132,7 @@ export class ContractService {
         `Exception in viewContract for id ${producer_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -147,7 +148,7 @@ export class ContractService {
 
       if (error) {
         this.logger.error(`Error fetching contract ${contract_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as Contract;
@@ -156,7 +157,7 @@ export class ContractService {
         `Exception in viewContract for id ${contract_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -177,7 +178,7 @@ export class ContractService {
         .single();
       if (error) {
         this.logger.error(`Error updating contract ${contract_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as Contract;
     } catch (error) {
@@ -185,7 +186,7 @@ export class ContractService {
         `Exception in updateContract for id ${contract_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 

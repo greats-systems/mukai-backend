@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-base-to-string */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -76,7 +79,7 @@ export class ContractBidService {
 
       if (error) {
         console.error(error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return newBid as ContractBid;
     } catch (error) {
@@ -93,7 +96,7 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error('Error fetching contract bids', error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ContractBid[];
     } catch (error) {
@@ -114,7 +117,7 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error(`Error fetching contract bid ${provider_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       if (data) {
@@ -124,7 +127,7 @@ export class ContractBidService {
       return false;
     } catch (error) {
       this.logger.error(`Exception in viewBid for id ${provider_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -138,13 +141,13 @@ export class ContractBidService {
 
       if (error) {
         this.logger.error(`Error fetching contract bid ${bid_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
 
       return data as ContractBid;
     } catch (error) {
       this.logger.error(`Exception in viewBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -167,12 +170,12 @@ export class ContractBidService {
         .single();
       if (error) {
         this.logger.error(`Error updating bid ${bid_id}`, error);
-        return new ErrorResponseDto(500, error.message.toString());
+        return new ErrorResponseDto(500, error.toString());
       }
       return data as ContractBid;
     } catch (error) {
       this.logger.error(`Exception in updateBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 
@@ -191,7 +194,7 @@ export class ContractBidService {
       return true;
     } catch (error) {
       this.logger.error(`Exception in deleteBid for id ${bid_id}`, error);
-      return new ErrorResponseDto(500, error.message.toString());
+      return new ErrorResponseDto(500, error.toString());
     }
   }
 }

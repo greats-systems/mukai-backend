@@ -35,6 +35,7 @@ import { ProviderProductsService } from './tradingservices/services/provider-pro
 import { ProviderService } from './tradingservices/services/provider.service';
 import { ProviderServicesService } from './tradingservices/services/provider-services.service';
 import { TradingservicesService } from './tradingservices/services/tradingservices.service';
+import { ProduceModule } from './tradingservices/modules/produce.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TradingservicesService } from './tradingservices/services/tradingservic
     MessagingsModule,
     NodesModule,
     CommodityModule,
+    ProduceModule,
     ContractBidModule,
     ContractModule,
     ProducerModule,
@@ -53,6 +55,7 @@ import { TradingservicesService } from './tradingservices/services/tradingservic
     ProviderProductsModule,
     ProviderServicesModule,
     TradingservicesModule,
+    
   ],
   controllers: [
     AppController,

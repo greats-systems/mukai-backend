@@ -10,10 +10,10 @@ import {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
-    .setTitle('Commodity Distribution Network')
-    .setDescription('Activity and Nodes API Documentation')
+    .setTitle('FreeTrader API Docs')
+    .setDescription('FreeTrader Distribution Network Activity and Nodes API Documentation')
     .setVersion('1.0')
-    .addTag('simplyledgers')
+    .addTag('Controllers REST API')
     .build();
 
   const options: SwaggerDocumentOptions = {

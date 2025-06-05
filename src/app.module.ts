@@ -41,7 +41,7 @@ import { ProduceModule } from './tradingservices/modules/produce.module';
   imports: [
     PostgresRestHandlerModule,
     AuthModule,
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     UserModule,
     OrdersModule,
     MessagingsModule,

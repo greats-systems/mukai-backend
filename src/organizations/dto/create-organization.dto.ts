@@ -4,7 +4,7 @@ import {
     IsString, IsNumber, IsOptional, IsNotEmpty, IsArray
 } from 'class-validator';
 import { CartItemResponseDto } from 'src/tradingservices/dto/cart-item-response.dto';
-import { InventoryResponseDto } from 'src/tradingservices/dto/update-inventory.dto';
+import { InventoryResponseDto } from 'src/tradingservices/dto/update/update-inventory.dto';
 import { ProfileResponseDto } from 'src/user/dto/create-user.dto';
 
 export class CreateBusinessDto {

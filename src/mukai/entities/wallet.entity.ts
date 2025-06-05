@@ -1,5 +1,5 @@
 export class Wallet {
-    id: uuid;
+    id: string;
     holding_account: string;
     address: string;
     status: string;
@@ -9,9 +9,9 @@ export class Wallet {
     provider: string;
     default_currency: string;
     business_id: string;
-    is_shared: bool;
-    is_active: bool;
-    is_sub_wallet: bool;
-    profile_id: uuid;
-    coop_id: uuid;
+    is_shared: boolean;
+    is_active: boolean;
+    is_sub_wallet: boolean;
+    profile_id: string;
+    coop_id: string;
 }

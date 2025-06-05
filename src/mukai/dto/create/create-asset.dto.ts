@@ -1,69 +1,71 @@
-export class CreatAssetDto {
-    @IsString()
-    @IsOptional()
-    id?: uuid;
+import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
-    @IsString()
-    @IsOptional()
-    holding_account?: string;
+export class CreateAssetDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
 
-    @IsString()
-    @IsOptional()
-    valuation_currency?: string;
+  @IsString()
+  @IsOptional()
+  holding_account?: string;
 
-    @IsNumber()
-    @IsOptional()
-    fiat_value?: double;
+  @IsString()
+  @IsOptional()
+  valuation_currency?: string;
 
-    @IsNumber()
-    @IsOptional()
-    token_value?: double;
+  @IsNumber()
+  @IsOptional()
+  fiat_value?: number;
 
-    @IsString()
-    @IsOptional()
-    governing_board?: text;
+  @IsNumber()
+  @IsOptional()
+  token_value?: number;
 
-    @IsString()
-    @IsOptional()
-    last_transaction_timestamp?: string;
+  @IsString()
+  @IsOptional()
+  governing_board?: string;
 
-    @IsString()
-    @IsOptional()
-    verifiable_certificate_issuer_id?: string;
+  @IsString()
+  @IsOptional()
+  last_transaction_timestamp?: string;
 
-    @IsString()
-    @IsOptional()
-    legal_documents?: string;
+  @IsString()
+  @IsOptional()
+  verifiable_certificate_issuer_id?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    has_verifiable_certificate?: bool;
+  @IsString()
+  @IsOptional()
+  legal_documents?: string;
 
-    @IsBoolean()
-    @IsOptional()
-    is_valuated?: bool;
+  @IsBoolean()
+  @IsOptional()
+  has_verifiable_certificate?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    is_minted?: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_valuated?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    is_shared?: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_minted?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    is_active?: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_shared?: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    has_document?: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_active?: boolean;
 
-    @IsString()
-    @IsOptional()
-    status?: string;
+  @IsBoolean()
+  @IsOptional()
+  has_document?: boolean;
 
-    @IsString()
-    @IsOptional()
-    profile_id?: uuid;
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @IsString()
+  @IsOptional()
+  profile_id?: string;
 }

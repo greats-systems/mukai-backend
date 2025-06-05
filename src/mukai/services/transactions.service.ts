@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
+import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
+import { Transaction } from '../entities/transaction.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class TransactionsService {
-  private readonly logger = initLogger(TransactionsService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(TransactionsService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTransaction(
     createTransactionDto: CreateTransactionDto,
@@ -14,17 +23,17 @@ export class TransactionsService {
       /*
       const Transaction = new Transaction();
 
-      Transaction.id ?: uuid;
+      Transaction.id ?: string;
       Transaction.handling_smart_contract ?: string;
       Transaction.is_collateral_required ?: boolean;
-      Transaction.requesting_account ?: uuid;
-      Transaction.offering_account ?: uuid;
-      Transaction.collateral_Transaction_id ?: uuid;
+      Transaction.requesting_account ?: string;
+      Transaction.offering_account ?: string;
+      Transaction.collateral_Transaction_id ?: string;
       Transaction.payment_due ?: string;
       Transaction.payment_terms ?: string;
       Transaction.amount ?: string;
       Transaction.payments_handling_wallet_id ?: string;
-      Transaction.collateral_Transaction_handler_id ?: uuid;
+      Transaction.collateral_Transaction_handler_id ?: string;
       Transaction.collateral_Transaction_handler_fee ?: string;
 
       Transaction.provider_id = createTransactionDto.provider_id;
@@ -48,7 +57,7 @@ export class TransactionsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.Transaction);
+        return new ErrorResponseDto(400, error.message);
       }
       return data as Transaction;
     } catch (error) {
@@ -64,7 +73,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error('Error fetching Transactions', error);
-        return new ErrorResponseDto(400, error.Transaction);
+        return new ErrorResponseDto(400, error.message);
       }
 
       return data as Transaction[];
@@ -74,26 +83,22 @@ export class TransactionsService {
     }
   }
 
-  async viewTransaction(
-    id: string,
-  ): Promise<Transaction | ErrorResponseDto> {
+  async viewTransaction(id: string): Promise<Transaction | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('transactions')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Transaction ${id}`, error);
-        return new ErrorResponseDto(400, error.Transaction);
+        return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Transaction[];
+      return data as Transaction;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewTransaction for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewTransaction for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -111,38 +116,31 @@ export class TransactionsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Transactions ${id}`, error);
-        return new ErrorResponseDto(400, error.Transaction);
+        return new ErrorResponseDto(400, error.message);
       }
       return data as Transaction;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateTransaction for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateTransaction for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteTransaction(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteTransaction(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('transactions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Transaction ${id}`, error);
-        return new ErrorResponseDto(400, error.Transaction);
+        return new ErrorResponseDto(400, error.message);
       }
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteTransaction for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteTransaction for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

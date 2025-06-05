@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
+import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
+import { UpdateCooperativeMemberRequestDto } from '../dto/update/update-cooperative-member-request.dto';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class CooperativeMemberRequestsService {
-  private readonly logger = initLogger(CooperativeMemberRequestsService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(CooperativeMemberRequestsService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createCooperativeMemberRequest(
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
@@ -14,17 +23,17 @@ export class CooperativeMemberRequestsService {
       /*
       const CooperativeMemberRequest = new CooperativeMemberRequest();
 
-      CooperativeMemberRequest.id ?: uuid;
+      CooperativeMemberRequest.id ?: string;
       CooperativeMemberRequest.handling_smart_contract ?: string;
       CooperativeMemberRequest.is_collateral_required ?: boolean;
-      CooperativeMemberRequest.requesting_account ?: uuid;
-      CooperativeMemberRequest.offering_account ?: uuid;
-      CooperativeMemberRequest.collateral_CooperativeMemberRequest_id ?: uuid;
+      CooperativeMemberRequest.requesting_account ?: string;
+      CooperativeMemberRequest.offering_account ?: string;
+      CooperativeMemberRequest.collateral_CooperativeMemberRequest_id ?: string;
       CooperativeMemberRequest.payment_due ?: string;
       CooperativeMemberRequest.payment_terms ?: string;
       CooperativeMemberRequest.amount ?: string;
       CooperativeMemberRequest.payments_handling_wallet_id ?: string;
-      CooperativeMemberRequest.collateral_CooperativeMemberRequest_handler_id ?: uuid;
+      CooperativeMemberRequest.collateral_CooperativeMemberRequest_handler_id ?: string;
       CooperativeMemberRequest.collateral_CooperativeMemberRequest_handler_fee ?: string;
 
       CooperativeMemberRequest.provider_id = createCooperativeMemberRequestDto.provider_id;
@@ -56,7 +65,9 @@ export class CooperativeMemberRequestsService {
     }
   }
 
-  async findAllCooperativeMemberRequests(): Promise<CooperativeMemberRequest[] | ErrorResponseDto> {
+  async findAllCooperativeMemberRequests(): Promise<
+    CooperativeMemberRequest[] | ErrorResponseDto
+  > {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -81,14 +92,18 @@ export class CooperativeMemberRequestsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
-        this.logger.error(`Error fetching CooperativeMemberRequest ${id}`, error);
+        this.logger.error(
+          `Error fetching CooperativeMemberRequest ${id}`,
+          error,
+        );
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as CooperativeMemberRequest[];
+      return data as CooperativeMemberRequest;
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMemberRequest for id ${id}`,
@@ -110,7 +125,10 @@ export class CooperativeMemberRequestsService {
         .select()
         .single();
       if (error) {
-        this.logger.error(`Error updating CooperativeMemberRequests ${id}`, error);
+        this.logger.error(
+          `Error updating CooperativeMemberRequests ${id}`,
+          error,
+        );
         return new ErrorResponseDto(400, error.message);
       }
       return data as CooperativeMemberRequest;
@@ -130,10 +148,14 @@ export class CooperativeMemberRequestsService {
       const { error } = await this.postgresrest
         .from('cooperative_member_requests')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
-        this.logger.error(`Error deleting CooperativeMemberRequest ${id}`, error);
+        this.logger.error(
+          `Error deleting CooperativeMemberRequest ${id}`,
+          error,
+        );
         return new ErrorResponseDto(400, error.message);
       }
 

@@ -1,15 +1,15 @@
 export class Transaction {
-    id: uuid;
-    account_id: uuid;
-    transaction_cost: int;
-    transaction_type: string;
-    category: string;
-    created_date: string;
-    amount: string;
-    name: string;
-    owner: string;
-    narrative: string;
-    salt: string;
-    receiving_wallet: uuid;
-    sending_wallet: uuid;
+  id: string;
+  account_id: string;
+  transaction_cost: number;
+  transaction_type: string;
+  category: string;
+  created_date: string;
+  amount: string;
+  name: string;
+  owner: string;
+  narrative: string;
+  salt: string;
+  receiving_wallet: string;
+  sending_wallet: string;
 }

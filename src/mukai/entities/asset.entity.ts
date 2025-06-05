@@ -1,19 +1,19 @@
 export class Asset {
-    id: uuid;
+    id: string;
     holding_account: string;
         valuation_currency: string;
-        fiat_value: double;
-        token_value: double;
-        governing_board: text;
+        fiat_value: number;
+        token_value: number;
+        governing_board: string;
         last_transaction_timestamp: string;
         verifiable_certificate_issuer_id: string;
         legal_documents: string;
-        has_verifiable_certificate: bool;
-        is_valuated: bool;
-        is_minted: bool;
-        is_shared: bool;
-        is_active: bool;
+        has_verifiable_certificate: boolean;
+        is_valuated: boolean;
+        is_minted: boolean;
+        is_shared: boolean;
+        is_active: boolean;
         has_document:bool;
         status: string;
-        profile_id: uuid;
+        profile_id: string;
 }

@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateMessageDto } from '../dto/create/create-message.dto';
+import { UpdateMessageDto } from '../dto/update/update-message.dto';
+import { Message } from '../entities/message.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class MessagesService {
-  private readonly logger = initLogger(MessagesService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(MessagesService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createMessage(
     createMessageDto: CreateMessageDto,
@@ -14,17 +23,17 @@ export class MessagesService {
       /*
       const Message = new Message();
 
-      Message.id ?: uuid;
+      Message.id ?: string;
       Message.handling_smart_contract ?: string;
       Message.is_collateral_required ?: boolean;
-      Message.requesting_account ?: uuid;
-      Message.offering_account ?: uuid;
-      Message.collateral_Message_id ?: uuid;
+      Message.requesting_account ?: string;
+      Message.offering_account ?: string;
+      Message.collateral_Message_id ?: string;
       Message.payment_due ?: string;
       Message.payment_terms ?: string;
       Message.amount ?: string;
       Message.payments_handling_wallet_id ?: string;
-      Message.collateral_Message_handler_id ?: uuid;
+      Message.collateral_Message_handler_id ?: string;
       Message.collateral_Message_handler_fee ?: string;
 
       Message.provider_id = createMessageDto.provider_id;
@@ -58,9 +67,7 @@ export class MessagesService {
 
   async findAllMessages(): Promise<Message[] | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest
-        .from('messages')
-        .select();
+      const { data, error } = await this.postgresrest.from('messages').select();
 
       if (error) {
         this.logger.error('Error fetching Messages', error);
@@ -74,26 +81,22 @@ export class MessagesService {
     }
   }
 
-  async viewMessage(
-    id: string,
-  ): Promise<Message | ErrorResponseDto> {
+  async viewMessage(id: string): Promise<Message | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('messages')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Message ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Message[];
+      return data as Message;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewMessage for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewMessage for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -115,22 +118,18 @@ export class MessagesService {
       }
       return data as Message;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateMessage for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateMessage for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteMessage(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteMessage(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('messages')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Message ${id}`, error);
@@ -139,10 +138,7 @@ export class MessagesService {
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteMessage for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteMessage for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

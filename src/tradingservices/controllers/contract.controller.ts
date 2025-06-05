@@ -224,7 +224,7 @@ export class ContractController {
   })
   @ApiOkResponse({
     description: 'Contract deleted successfully',
-    type: Boolean,
+    type: boolean,
   })
   @ApiNotFoundResponse({
     description: 'Contract not found',

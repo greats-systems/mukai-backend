@@ -1,7 +1,7 @@
 export class Chat {
-    id: uuid;
+    id: string;
     ref_key: string;
-    reciever_id: uuid;
+    reciever_id: string;
     receiver_avatar_id: string;
     receiver_first_name: string;
     receiver_last_name: string;

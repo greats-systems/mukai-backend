@@ -1,11 +1,11 @@
 export class CooperativeMemberRequest {
-    id: uuid;
+    id: string;
     updated_at: string;
-    coop_id: uuid;
-    member_id: uuid;
+    coop_id: string;
+    member_id: string;
     request_type: string;
     status: string;
-    resolved_by: uuid;
+    resolved_by: string;
     message: string;
     profile_first_name: string;
     profile_last_name: string;

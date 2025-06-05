@@ -160,7 +160,7 @@ export class ContractBidController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Bid deleted successfully',
-    type: Boolean,
+    type: boolean,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,

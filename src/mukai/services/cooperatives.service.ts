@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
+import { Cooperative } from '../entities/cooperative.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class CooperativesService {
-  private readonly logger = initLogger(CooperativesService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(CooperativesService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
@@ -14,17 +23,17 @@ export class CooperativesService {
       /*
       const Cooperative = new Cooperative();
 
-      Cooperative.id ?: uuid;
+      Cooperative.id ?: string;
       Cooperative.handling_smart_contract ?: string;
       Cooperative.is_collateral_required ?: boolean;
-      Cooperative.requesting_account ?: uuid;
-      Cooperative.offering_account ?: uuid;
-      Cooperative.collateral_Cooperative_id ?: uuid;
+      Cooperative.requesting_account ?: string;
+      Cooperative.offering_account ?: string;
+      Cooperative.collateral_Cooperative_id ?: string;
       Cooperative.payment_due ?: string;
       Cooperative.payment_terms ?: string;
       Cooperative.amount ?: string;
       Cooperative.payments_handling_wallet_id ?: string;
-      Cooperative.collateral_Cooperative_handler_id ?: uuid;
+      Cooperative.collateral_Cooperative_handler_id ?: string;
       Cooperative.collateral_Cooperative_handler_fee ?: string;
 
       Cooperative.provider_id = createCooperativeDto.provider_id;
@@ -74,26 +83,26 @@ export class CooperativesService {
     }
   }
 
-  async viewCooperative(
-    id: string,
-  ): Promise<Cooperative | ErrorResponseDto> {
+  async viewCooperative(id: string): Promise<Cooperative | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Cooperative ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Cooperative[];
+      if (!data) {
+        return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
+      }
+
+      return data as Cooperative;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewCooperative for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -115,22 +124,18 @@ export class CooperativesService {
       }
       return data as Cooperative;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateCooperative for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteCooperative(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteCooperative(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('cooperatives')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Cooperative ${id}`, error);
@@ -139,10 +144,7 @@ export class CooperativesService {
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteCooperative for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

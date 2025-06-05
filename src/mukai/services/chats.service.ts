@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateChatDto } from '../dto/create/create-chat.dto';
+import { UpdateChatDto } from '../dto/update/update-chat.dto';
+import { Chat } from '../entities/chat.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class ChatsService {
-  private readonly logger = initLogger(ChatsService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(ChatsService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createChat(
     createChatDto: CreateChatDto,
@@ -14,17 +23,17 @@ export class ChatsService {
       /*
       const Chat = new Chat();
 
-      Chat.id ?: uuid;
+      Chat.id ?: string;
       Chat.handling_smart_contract ?: string;
       Chat.is_collateral_required ?: boolean;
-      Chat.requesting_account ?: uuid;
-      Chat.offering_account ?: uuid;
-      Chat.collateral_Chat_id ?: uuid;
+      Chat.requesting_account ?: string;
+      Chat.offering_account ?: string;
+      Chat.collateral_Chat_id ?: string;
       Chat.payment_due ?: string;
       Chat.payment_terms ?: string;
       Chat.amount ?: string;
       Chat.payments_handling_wallet_id ?: string;
-      Chat.collateral_Chat_handler_id ?: uuid;
+      Chat.collateral_Chat_handler_id ?: string;
       Chat.collateral_Chat_handler_fee ?: string;
 
       Chat.provider_id = createChatDto.provider_id;
@@ -43,7 +52,7 @@ export class ChatsService {
         */
 
       const { data, error } = await this.postgresrest
-        from('chats')
+        .from('chats')
         .insert(createChatDto)
         .single();
       if (error) {
@@ -58,9 +67,7 @@ export class ChatsService {
 
   async findAllChats(): Promise<Chat[] | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest
-        from('chats')
-        .select();
+      const { data, error } = await this.postgresrest.from('chats').select();
 
       if (error) {
         this.logger.error('Error fetching Chats', error);
@@ -74,26 +81,22 @@ export class ChatsService {
     }
   }
 
-  async viewChat(
-    id: string,
-  ): Promise<Chat | ErrorResponseDto> {
+  async viewChat(id: string): Promise<Chat | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        from('chats')
+        .from('chats')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Chat ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Chat[];
+      return data as Chat;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewChat for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -104,7 +107,7 @@ export class ChatsService {
   ): Promise<Chat | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        from('chats')
+        .from('chats')
         .update(updateChatDto)
         .eq('id', id)
         .select()
@@ -115,22 +118,18 @@ export class ChatsService {
       }
       return data as Chat;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateChat for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteChat(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteChat(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
-        from('chats')
+        .from('chats')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Chat ${id}`, error);
@@ -139,10 +138,7 @@ export class ChatsService {
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteChat for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

@@ -1,5 +1,5 @@
 export class Organization {
-    id: uuid;
+    id: string;
     trading_name: string;
     account_type: string;
     specialization: string;

@@ -1,11 +1,22 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+// import { Logger, Injectable } from "@nestjs/common";
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+// import { Logger } from 'typeorm';
+import { UpdateAssetDto } from '../dto/update/update-asset.dto';
+import { Asset } from '../entities/asset.entity';
+import { CreateAssetDto } from '../dto/create/create-asset.dto';
+import { Injectable, Logger } from '@nestjs/common';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class AssetsService {
-  private readonly logger = initLogger(AssetsService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(AssetsService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createAsset(
     createAssetDto: CreateAssetDto,
@@ -14,17 +25,17 @@ export class AssetsService {
       /*
       const Asset = new Asset();
 
-      Asset.id ?: uuid;
+      Asset.id ?: string;
       Asset.handling_smart_contract ?: string;
       Asset.is_collateral_required ?: boolean;
-      Asset.requesting_account ?: uuid;
-      Asset.offering_account ?: uuid;
-      Asset.collateral_asset_id ?: uuid;
+      Asset.requesting_account ?: string;
+      Asset.offering_account ?: string;
+      Asset.collateral_asset_id ?: string;
       Asset.payment_due ?: string;
       Asset.payment_terms ?: string;
       Asset.amount ?: string;
       Asset.payments_handling_wallet_id ?: string;
-      Asset.collateral_asset_handler_id ?: uuid;
+      Asset.collateral_asset_handler_id ?: string;
       Asset.collateral_asset_handler_fee ?: string;
 
       Asset.provider_id = createAssetDto.provider_id;
@@ -58,9 +69,7 @@ export class AssetsService {
 
   async findAllAssets(): Promise<Asset[] | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest
-        .from('assets')
-        .select();
+      const { data, error } = await this.postgresrest.from('assets').select();
 
       if (error) {
         this.logger.error('Error fetching Assets', error);
@@ -74,26 +83,22 @@ export class AssetsService {
     }
   }
 
-  async viewAsset(
-    id: string,
-  ): Promise<Asset | ErrorResponseDto> {
+  async viewAsset(id: string): Promise<Asset | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('assets')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Asset ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Asset[];
+      return data as Asset;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewAsset for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewAsset for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -115,22 +120,18 @@ export class AssetsService {
       }
       return data as Asset;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateAsset for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateAsset for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteAsset(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteAsset(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('assets')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Asset ${id}`, error);
@@ -139,10 +140,7 @@ export class AssetsService {
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteAsset for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteAsset for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

@@ -1,61 +1,63 @@
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
+
 export class CreateWalletDto {
-    @IsStirng()
-    @IsOptional()
-    id: uuid;
+  @IsString()
+  @IsOptional()
+  id: string;
 
-    @IsStirng()
-    @IsOptional()
-    holding_account: string;
+  @IsString()
+  @IsOptional()
+  holding_account: string;
 
-    @IsStirng()
-    @IsOptional()
-    address: string;
+  @IsString()
+  @IsOptional()
+  address: string;
 
-    @IsStirng()
-    @IsOptional()
-    status: string;
+  @IsString()
+  @IsOptional()
+  status: string;
 
-    @IsStirng()
-    @IsOptional()
-    balance: string;
+  @IsString()
+  @IsOptional()
+  balance: string;
 
-    @IsStirng()
-    @IsOptional()
-    last_transaction_timestamp: string;
+  @IsString()
+  @IsOptional()
+  last_transaction_timestamp: string;
 
-    @IsStirng()
-    @IsOptional()
-    parent_wallet_id: string;
+  @IsString()
+  @IsOptional()
+  parent_wallet_id: string;
 
-    @IsStirng()
-    @IsOptional()
-    provider: string;
+  @IsString()
+  @IsOptional()
+  provider: string;
 
-    @IsStirng()
-    @IsOptional()
-    default_currency: string;
+  @IsString()
+  @IsOptional()
+  default_currency: string;
 
-    @IsStirng()
-    @IsOptional()
-    business_id: string;
+  @IsString()
+  @IsOptional()
+  business_id: string;
 
-    @IsBoolean()
-    @IsOptional()
-    is_shared: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_shared: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    is_active: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_active: boolean;
 
-    @IsBoolean()
-    @IsOptional()
-    is_sub_wallet: bool;
+  @IsBoolean()
+  @IsOptional()
+  is_sub_wallet: boolean;
 
-    @IsStirng()
-    @IsOptional()
-    profile_id: uuid;
+  @IsString()
+  @IsOptional()
+  profile_id: string;
 
-    @IsStirng()
-    @IsOptional()
-    coop_id: uuid;
+  @IsString()
+  @IsOptional()
+  coop_id: string;
 }

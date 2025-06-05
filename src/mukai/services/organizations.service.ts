@@ -1,11 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
+import { Logger, Injectable } from '@nestjs/common';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { PostgresRest } from 'src/common/postgresrest';
+import { CreateOrganizationDto } from 'src/organizations/dto/create-organization.dto';
+import { UpdateOrganizationDto } from 'src/organizations/dto/update-organization.dto';
+import { Organization } from '../entities/organization.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
 export class OrganizationsService {
-  private readonly logger = initLogger(OrganizationsService.name);
-  constructor(private readonly postgresrest: PostgresRest) { }
+  private readonly logger = initLogger(OrganizationsService);
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createOrganization(
     createOrganizationDto: CreateOrganizationDto,
@@ -14,17 +23,17 @@ export class OrganizationsService {
       /*
       const Organization = new Organization();
 
-      Organization.id ?: uuid;
+      Organization.id ?: string;
       Organization.handling_smart_contract ?: string;
       Organization.is_collateral_required ?: boolean;
-      Organization.requesting_account ?: uuid;
-      Organization.offering_account ?: uuid;
-      Organization.collateral_Organization_id ?: uuid;
+      Organization.requesting_account ?: string;
+      Organization.offering_account ?: string;
+      Organization.collateral_Organization_id ?: string;
       Organization.payment_due ?: string;
       Organization.payment_terms ?: string;
       Organization.amount ?: string;
       Organization.payments_handling_wallet_id ?: string;
-      Organization.collateral_Organization_handler_id ?: uuid;
+      Organization.collateral_Organization_handler_id ?: string;
       Organization.collateral_Organization_handler_fee ?: string;
 
       Organization.provider_id = createOrganizationDto.provider_id;
@@ -48,7 +57,7 @@ export class OrganizationsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.Organization);
+        return new ErrorResponseDto(400, error.message);
       }
       return data as Organization;
     } catch (error) {
@@ -64,7 +73,7 @@ export class OrganizationsService {
 
       if (error) {
         this.logger.error('Error fetching Organizations', error);
-        return new ErrorResponseDto(400, error.Organization);
+        return new ErrorResponseDto(400, error.message);
       }
 
       return data as Organization[];
@@ -74,26 +83,22 @@ export class OrganizationsService {
     }
   }
 
-  async viewOrganization(
-    id: string,
-  ): Promise<Organization | ErrorResponseDto> {
+  async viewOrganization(id: string): Promise<Organization | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('organizations')
         .select()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Organization ${id}`, error);
-        return new ErrorResponseDto(400, error.Organization);
+        return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Organization[];
+      return data as Organization;
     } catch (error) {
-      this.logger.error(
-        `Exception in viewOrganization for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in viewOrganization for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -111,38 +116,31 @@ export class OrganizationsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Organizations ${id}`, error);
-        return new ErrorResponseDto(400, error.Organization);
+        return new ErrorResponseDto(400, error.message);
       }
       return data as Organization;
     } catch (error) {
-      this.logger.error(
-        `Exception in updateOrganization for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in updateOrganization for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteOrganization(
-    id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  async deleteOrganization(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('organizations')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting Organization ${id}`, error);
-        return new ErrorResponseDto(400, error.Organization);
+        return new ErrorResponseDto(400, error.message);
       }
 
       return true;
     } catch (error) {
-      this.logger.error(
-        `Exception in deleteOrganization for id ${id}`,
-        error,
-      );
+      this.logger.error(`Exception in deleteOrganization for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

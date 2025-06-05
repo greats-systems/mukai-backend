@@ -61,8 +61,8 @@ export class ProfileSeeder {
         : 'Unknown';
 
       const profile: Profile = {
-        id: uuidv4(),
-        auth_user_id: uuidv4(),
+        id: stringv4(),
+        auth_user_id: stringv4(),
         created_at: new Date().toISOString(),
         first_name: `User${i + 1}`,
         last_name: `Lastname${i + 1}`,

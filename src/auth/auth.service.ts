@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
@@ -195,24 +196,30 @@ export class AuthService {
       throw new Error(`Auth user creation failed: ${authError.message}`);
     }
 
+    const profileData = {
+      id: userId,
+      email: signupDto.email,
+      phone: signupDto.phone,
+      first_name: signupDto.first_name,
+      last_name: signupDto.last_name,
+      account_type: signupDto.account_type,
+      dob: signupDto.dob,
+      gender: signupDto.gender,
+      wallet_id: signupDto.wallet_id,
+      cooperative_id: signupDto.cooperative_id,
+      business_id: signupDto.business_id,
+      affiliations: signupDto.affiliations,
+      coop_account_id: signupDto.coop_account_id,
+      push_token: signupDto.push_token,
+      avatar: signupDto.avatar,
+      national_id_url: signupDto.national_id_url,
+      passport_url: signupDto.passport_url,
+    };
+
     // Create profile in public.profiles
     const { error: profileError } = await this.postgresRest
       .from('profiles')
-      .insert({
-        id: userId,
-        auth_user_id: userId,
-        email: signupDto.email,
-        first_name: signupDto.first_name,
-        last_name: signupDto.last_name,
-        phone: signupDto.phone,
-        account_type: signupDto.account_type,
-        push_token: signupDto.push_token,
-        national_id_url: signupDto.national_id_url,
-        passport_url: signupDto.passport_url,
-        avatar: signupDto.avatar,
-        created_at: now,
-        updated_at: now,
-      });
+      .insert(profileData);
 
     if (profileError) {
       // Rollback auth user creation if profile fails
@@ -237,6 +244,17 @@ export class AuthService {
         first_name: signupDto.first_name,
         last_name: signupDto.last_name,
         account_type: signupDto.account_type,
+        dob: signupDto.dob,
+        gender: signupDto.gender,
+        wallet_id: signupDto.wallet_id,
+        cooperative_id: signupDto.cooperative_id,
+        business_id: signupDto.business_id,
+        affiliations: signupDto.affiliations,
+        coop_account_id: signupDto.coop_account_id,
+        push_token: signupDto.push_token,
+        avatar: signupDto.avatar,
+        national_id_url: signupDto.national_id_url,
+        passport_url: signupDto.passport_url,
         role: newAuthUser.role,
       },
       data: payload,
@@ -250,14 +268,22 @@ export class AuthService {
     const { error: profileError } = await this.postgresRest
       .from('profiles')
       .update({
+        email: profile.email,
+        phone: profile.phone,
         first_name: profile.first_name,
         last_name: profile.last_name,
-        phone: profile.phone,
         account_type: profile.account_type,
+        dob: profile.dob,
+        gender: profile.gender,
+        wallet_id: profile.wallet_id,
+        cooperative_id: profile.cooperative_id,
+        business_id: profile.business_id,
+        affiliations: profile.affiliations,
+        coop_account_id: profile.coop_account_id,
         push_token: profile.push_token,
+        avatar: profile.avatar,
         national_id_url: profile.national_id_url,
         passport_url: profile.passport_url,
-        avatar: profile.avatar,
         updated_at: now,
       })
       .eq('id', profile.id);

@@ -6,34 +6,34 @@ import { v4 as uuidv4 } from 'uuid';
 import { Profile } from './entities/user.entity';
 
 @Injectable()
-export class ProfileSeeder {
-  private readonly logger = new Logger(ProfileSeeder.name);
+export class MukaiProfileSeeder {
+  private readonly logger = new Logger(MukaiProfileSeeder.name);
 
   constructor(private readonly postgresrest: PostgresRest) {}
 
-  async seedProfiles(): Promise<void> {
+  async seedMukaiProfiles(): Promise<void> {
     try {
       this.logger.log('Starting profile seeding...');
 
-      const profiles = this.generateMockProfiles(10);
+      const mukaiProfiles = this.generateMockMukaiProfiles(10);
 
       const { error } = await this.postgresrest
-        .from('profiles')
-        .insert(profiles);
+        .from('MukaiProfiles')
+        .insert(mukaiProfiles);
 
       if (error) {
-        throw new Error(`Failed to seed profiles: ${error.message}`);
+        throw new Error(`Failed to seed MukaiProfiles: ${error.message}`);
       }
 
-      this.logger.log('Successfully seeded 10 profiles');
+      this.logger.log('Successfully seeded 10 MukaiProfiles');
     } catch (error) {
       this.logger.error('Profile seeding failed', error.stack);
       throw error;
     }
   }
 
-  private generateMockProfiles(count: number): Profile[] {
-    const mockProfiles: Profile[] = [];
+  private generateMockMukaiProfiles(count: number): Profile[] {
+    const mockMukaiProfiles: Profile[] = [];
     for (let i = 0; i < count; i++) {
       const profile: Profile = {
         id: uuidv4(),
@@ -92,8 +92,8 @@ export class ProfileSeeder {
         tenant_id: `tenant_${i + 1}`,
         main_business_uid: `business_uid_${i + 1}`,
       };
-      mockProfiles.push(profile);
+      mockMukaiProfiles.push(profile);
     }
-    return mockProfiles;
+    return mockMukaiProfiles;
   }
 }

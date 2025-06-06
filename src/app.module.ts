@@ -35,6 +35,33 @@ import { ProviderProductsService } from './tradingservices/services/provider-pro
 import { ProviderService } from './tradingservices/services/provider.service';
 import { ProviderServicesService } from './tradingservices/services/provider-services.service';
 import { TradingservicesService } from './tradingservices/services/tradingservices.service';
+import { AgreementModule } from './mukai/modules/agreement.module';
+import { WalletModule } from './mukai/modules/wallet.module';
+import { TransactionModule } from './mukai/modules/transaction.module';
+import { OrganizationModule } from './mukai/modules/organization.module';
+import { MessageModule } from './mukai/modules/message.module';
+import { CooperativeModule } from './mukai/modules/cooperative.module';
+import { CooperativeMemberRequestModule } from './mukai/modules/cooperative-member-request.module';
+import { ChatModule } from './mukai/modules/chat.module';
+import { AssetModule } from './mukai/modules/asset.module';
+import { AgreementsController } from './mukai/controllers/agreements.controller';
+import { WalletsController } from './mukai/controllers/wallets.controller';
+import { TransactionsController } from './mukai/controllers/transactions.controller';
+import { OrganizationsController } from './mukai/controllers/organizations.controller';
+import { MessagesController } from './mukai/controllers/messages.controller';
+import { CooperativesController } from './mukai/controllers/cooperatives.controller';
+import { CooperativeMemberRequestsController } from './mukai/controllers/cooperative_member_requests.controller';
+import { ChatsController } from './mukai/controllers/chats.controller';
+import { AssetsController } from './mukai/controllers/assets.controller';
+import { AgreementsService } from './mukai/services/agreements.service';
+import { WalletsService } from './mukai/services/wallets.service';
+import { TransactionsService } from './mukai/services/transactions.service';
+import { OrganizationsService } from './mukai/services/organizations.service';
+import { MessagesService } from './mukai/services/messages.service';
+import { CooperativesService } from './mukai/services/cooperatives.service';
+import { CooperativeMemberRequestsService } from './mukai/services/cooperative_member_requests.service';
+import { ChatsService } from './mukai/services/chats.service';
+import { AssetsService } from './mukai/services/assets.service';
 
 @Module({
   imports: [
@@ -53,6 +80,15 @@ import { TradingservicesService } from './tradingservices/services/tradingservic
     ProviderProductsModule,
     ProviderServicesModule,
     TradingservicesModule,
+    AgreementModule,
+    WalletModule,
+    TransactionModule,
+    OrganizationModule,
+    MessageModule,
+    CooperativeModule,
+    CooperativeMemberRequestModule,
+    ChatModule,
+    AssetModule,
   ],
   controllers: [
     AppController,
@@ -65,6 +101,15 @@ import { TradingservicesService } from './tradingservices/services/tradingservic
     ProviderServicesController,
     TradingservicesController,
     TraderInventoryController,
+    AgreementsController,
+    WalletsController,
+    TransactionsController,
+    OrganizationsController,
+    MessagesController,
+    CooperativesController,
+    CooperativeMemberRequestsController,
+    ChatsController,
+    AssetsController,
   ],
   providers: [
     AppService,
@@ -77,6 +122,15 @@ import { TradingservicesService } from './tradingservices/services/tradingservic
     ProviderServicesService,
     TradingservicesService,
     TraderInventoryService,
+    AgreementsService,
+    WalletsService,
+    TransactionsService,
+    OrganizationsService,
+    MessagesService,
+    CooperativesService,
+    CooperativeMemberRequestsService,
+    ChatsService,
+    AssetsService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

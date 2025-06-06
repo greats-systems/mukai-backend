@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
+import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -13,7 +14,7 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
   @Put('update-account/:id')
-  async update(@Body() profile: Profile) {
+  async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
   }
   @Put('update-fcm/:id')

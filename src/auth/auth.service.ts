@@ -13,13 +13,24 @@ import { SignupDto } from './dto/signup.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
+import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
+import { createClient } from '@supabase/supabase-js';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private supabaseAdmin;
+
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.supabaseAdmin = createClient(
+      this.configService.get<string>('LOCAL_SUPABASE_URL') || '',
+      this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY') || '',
+    );
+  }
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema
@@ -158,10 +169,114 @@ export class AuthService {
     return response_data;
   }
 
+  // async signup(signupDto: SignupDto) {
+  //   // Check if user exists in auth.users
+  //   const { data: existingUser } = await this.postgresRest
+  //     .auth_client('users')
+  //     .select('id')
+  //     .eq('email', signupDto.email)
+  //     .limit(1)
+  //     .single();
+
+  //   if (existingUser) {
+  //     throw new UnauthorizedException('Email already in use');
+  //   }
+
+  //   // Hash password and generate UUID
+  //   const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+  //   const userId = uuidv4();
+  //   const now = new Date().toISOString();
+  //   const user_data = {
+  //     id: userId,
+  //     email: signupDto.email,
+  //     encrypted_password: hashedPassword,
+  //     role: 'authenticated',
+  //     raw_user_meta_data: { first_name: signupDto.first_name },
+  //     created_at: now,
+  //     updated_at: now,
+  //   };
+
+  //   // Create auth user in auth.users
+  //   const { data: newAuthUser, error: authError } = await this.postgresRest
+  //     .auth_client('users')
+  //     .insert(user_data)
+  //     .select('id, email, role, raw_user_meta_data')
+  //     .single();
+
+  //   if (authError) {
+  //     throw new Error(`Auth user creation failed: ${authError.message}`);
+  //   }
+
+  //   const profileData = {
+  //     id: userId,
+  //     email: signupDto.email,
+  //     phone: signupDto.phone,
+  //     first_name: signupDto.first_name,
+  //     last_name: signupDto.last_name,
+  //     account_type: signupDto.account_type,
+  //     dob: signupDto.dob,
+  //     gender: signupDto.gender,
+  //     wallet_id: signupDto.wallet_id,
+  //     cooperative_id: signupDto.cooperative_id,
+  //     business_id: signupDto.business_id,
+  //     affiliations: signupDto.affiliations,
+  //     coop_account_id: signupDto.coop_account_id,
+  //     push_token: signupDto.push_token,
+  //     avatar: signupDto.avatar,
+  //     national_id_url: signupDto.national_id_url,
+  //     passport_url: signupDto.passport_url,
+  //   };
+
+  //   // Create profile in public.profiles
+  //   const { error: profileError } = await this.postgresRest
+  //     .from('profiles')
+  //     .insert(profileData);
+
+  //   if (profileError) {
+  //     // Rollback auth user creation if profile fails
+  //     await this.postgresRest.from('users').delete().eq('id', userId);
+  //     throw new Error(`Profile creation failed: ${profileError.message}`);
+  //   }
+
+  //   // Generate JWT
+  //   const payload = {
+  //     email: newAuthUser.email,
+  //     sub: newAuthUser.id,
+  //     role: newAuthUser.role,
+  //   };
+
+  //   return {
+  //     status: 'account created',
+  //     message: 'account created successfully',
+  //     access_token: this.jwtService.sign(payload),
+  //     user: {
+  //       id: newAuthUser.id,
+  //       email: newAuthUser.email,
+  //       first_name: signupDto.first_name,
+  //       last_name: signupDto.last_name,
+  //       account_type: signupDto.account_type,
+  //       dob: signupDto.dob,
+  //       gender: signupDto.gender,
+  //       wallet_id: signupDto.wallet_id,
+  //       cooperative_id: signupDto.cooperative_id,
+  //       business_id: signupDto.business_id,
+  //       affiliations: signupDto.affiliations,
+  //       coop_account_id: signupDto.coop_account_id,
+  //       push_token: signupDto.push_token,
+  //       avatar: signupDto.avatar,
+  //       national_id_url: signupDto.national_id_url,
+  //       passport_url: signupDto.passport_url,
+  //       role: newAuthUser.role,
+  //     },
+  //     data: payload,
+  //     error: null,
+  //   };
+  // }
+
   async signup(signupDto: SignupDto) {
     // Check if user exists in auth.users
-    const { data: existingUser } = await this.postgresRest
-      .auth_client('users')
+    const { data: existingUser } = await this.supabaseAdmin
+      .from('users')
       .select('id')
       .eq('email', signupDto.email)
       .limit(1)
@@ -184,16 +299,13 @@ export class AuthService {
       created_at: now,
       updated_at: now,
     };
-
+    console.log(user_data);
     // Create auth user in auth.users
-    const { data: newAuthUser, error: authError } = await this.postgresRest
-      .auth_client('users')
-      .insert(user_data)
-      .select('id, email, role, raw_user_meta_data')
-      .single();
+    const { data: newAuthUser, error: authError } =
+      await this.supabaseAdmin.auth.admin.createUser(user_data);
 
     if (authError) {
-      throw new Error(`Auth user creation failed: ${authError.message}`);
+      console.log(authError);
     }
 
     const profileData = {
@@ -261,7 +373,8 @@ export class AuthService {
       error: null,
     };
   }
-  async update(profile: Profile) {
+
+  async update(profile: MukaiProfile) {
     const now = new Date().toISOString();
     // Create profile in public.profiles
 

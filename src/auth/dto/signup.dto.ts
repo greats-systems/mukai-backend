@@ -1,34 +1,23 @@
 // signup.dto.ts
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  MinLength,
-  Matches,
-} from 'class-validator';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class SignupDto {
   @IsEmail()
-  @IsNotEmpty()
   email: string;
 
   @IsString()
-  @IsNotEmpty()
   @MinLength(2)
   phone: string;
 
   @IsString()
-  @IsNotEmpty()
   @MinLength(2)
   first_name: string;
 
   @IsString()
-  @IsNotEmpty()
   @MinLength(2)
   last_name: string;
 
   @IsString()
-  @IsNotEmpty()
   @MinLength(2)
   account_type: string;
 
@@ -66,11 +55,10 @@ export class SignupDto {
   passport_url: string;
 
   @IsString()
-  @IsNotEmpty()
   @MinLength(8)
-  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
-    message:
-      'Password must contain at least one lowercase, uppercase, and number',
-  })
+  // @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
+  //   message:
+  //     'Password must contain at least one lowercase, uppercase, and number',
+  // })
   password: string;
 }

@@ -144,29 +144,63 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    console.log('loginDto', loginDto);
+    try {
+      // 1. First authenticate the user with email/password
+      const {
+        data: { user, session },
+        error: authError,
+      } = await this.supabaseAdmin.auth.signInWithPassword({
+        email: loginDto.email,
+        password: loginDto.password,
+      });
 
-    const payload = {
-      email: user.email,
-      sub: user.id,
-      role: user.role,
-    };
-    const { error: profileError, data: profileData } = await this.postgresRest
-      .from('profiles')
-      .select('*, stores(*)')
-      .eq('id', user.id)
-      .single();
-    const response_data = {
-      status: 'account authenticated',
-      message: 'account authenticated successfully',
-      access_token: this.jwtService.sign(payload),
-      user: profileData,
-      error: null,
-    };
-    return response_data;
+      if (authError || !user) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      // 2. Get additional user profile data if needed
+      const { data: profileData, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select('*, stores(*)')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        // You might choose to continue without profile data
+      }
+
+      // 3. Create JWT payload
+      const payload = {
+        email: user.email,
+        sub: user.id,
+        role: user.role || 'authenticated', // Default role if not specified
+      };
+
+      // 4. Prepare response
+      const response_data = {
+        status: 'account authenticated',
+        message: 'account authenticated successfully',
+        access_token: this.jwtService.sign(payload),
+        refresh_token: session?.refresh_token, // Include refresh token if needed
+        user: {
+          ...(profileData || {}),
+          email: user.email,
+          id: user.id,
+          role: user.role,
+        },
+        error: null,
+      };
+
+      return response_data;
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Login failed');
+    }
   }
 
   // async signup(signupDto: SignupDto) {
@@ -302,7 +336,14 @@ export class AuthService {
     console.log(user_data);
     // Create auth user in auth.users
     const { data: newAuthUser, error: authError } =
-      await this.supabaseAdmin.auth.admin.createUser(user_data);
+      await this.supabaseAdmin.auth.admin.createUser({
+        email: signupDto.email,
+        password: signupDto.password,
+        email_confirm: true, // This skips the verification email
+        user_metadata: {
+          first_name: signupDto.first_name,
+        },
+      });
 
     if (authError) {
       console.log(authError);

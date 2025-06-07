@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Put } from '@nestjs/common';
+import { Controller, Post, Body, Put, Param, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -22,8 +22,13 @@ export class AuthController {
     return this.authService.updateFCM(profile);
   }
   @Post('login')
+  @HttpCode(200)
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+  @Post('logout/:id')
+  async logout(@Param() id: string) {
+    return this.authService.logout(id);
   }
   @Post('validate-profile')
   async validate_profile(@Body() accessToken: AccessAccountDto) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Controller,
   Get,
@@ -96,9 +97,10 @@ export class CooperativeMemberRequestsController {
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    const response = await this.cooperativeMemberRequestsService.deleteCooperativeMemberRequest(
-      id,
-    );
+    const response =
+      await this.cooperativeMemberRequestsService.deleteCooperativeMemberRequest(
+        id,
+      );
     if (response === true) {
       return { message: 'Deletion successful' };
     }

@@ -20,47 +20,38 @@ export class CooperativeMemberRequestsService {
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
   ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
     try {
-      /*
-      const CooperativeMemberRequest = new CooperativeMemberRequest();
+      // Check if user with member_id already exists
+      const { data: existingRequest, error: checkError } =
+        await this.postgresrest
+          .from('cooperative_member_requests')
+          .select()
+          .eq('member_id', createCooperativeMemberRequestDto.member_id)
+          .single();
 
-      CooperativeMemberRequest.id ?: string;
-      CooperativeMemberRequest.handling_smart_contract ?: string;
-      CooperativeMemberRequest.is_collateral_required ?: boolean;
-      CooperativeMemberRequest.requesting_account ?: string;
-      CooperativeMemberRequest.offering_account ?: string;
-      CooperativeMemberRequest.collateral_CooperativeMemberRequest_id ?: string;
-      CooperativeMemberRequest.payment_due ?: string;
-      CooperativeMemberRequest.payment_terms ?: string;
-      CooperativeMemberRequest.amount ?: string;
-      CooperativeMemberRequest.payments_handling_wallet_id ?: string;
-      CooperativeMemberRequest.collateral_CooperativeMemberRequest_handler_id ?: string;
-      CooperativeMemberRequest.collateral_CooperativeMemberRequest_handler_fee ?: string;
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is the "not found" error code
+        this.logger.error('Error checking existing member request', checkError);
+        return new ErrorResponseDto(400, checkError.message);
+      }
 
-      CooperativeMemberRequest.provider_id = createCooperativeMemberRequestDto.provider_id;
-      CooperativeMemberRequest.CooperativeMemberRequest_name = createCooperativeMemberRequestDto.CooperativeMemberRequest_name;
-      CooperativeMemberRequest.unit_measure = createCooperativeMemberRequestDto.unit_measure;
-      CooperativeMemberRequest.unit_price = createCooperativeMemberRequestDto.unit_price;
-      CooperativeMemberRequest.max_capacity = createCooperativeMemberRequestDto.max_capacity;
-
-      // Check if the given CooperativeMemberRequest already exists
-      if (await this.checkIfProductExists(CooperativeMemberRequest.provider_id)) {
+      if (existingRequest) {
         return new ErrorResponseDto(
-          409,
-          'You have already registered this CooperativeMemberRequest',
+          400,
+          'A request for this member already exists',
         );
       }
-        */
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .insert(createCooperativeMemberRequestDto)
         .single();
       if (error) {
-        console.log(error);
+        this.logger.error('Error creating cooperative member request', error);
         return new ErrorResponseDto(400, error.message);
       }
       return data as CooperativeMemberRequest;
     } catch (error) {
+      this.logger.error('Exception in createCooperativeMemberRequest', error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -169,4 +160,3 @@ export class CooperativeMemberRequestsService {
     }
   }
 }
-

@@ -20,42 +20,12 @@ export class ChatsService {
     createChatDto: CreateChatDto,
   ): Promise<Chat | ErrorResponseDto> {
     try {
-      /*
-      const Chat = new Chat();
-
-      Chat.id ?: string;
-      Chat.handling_smart_contract ?: string;
-      Chat.is_collateral_required ?: boolean;
-      Chat.requesting_account ?: string;
-      Chat.offering_account ?: string;
-      Chat.collateral_Chat_id ?: string;
-      Chat.payment_due ?: string;
-      Chat.payment_terms ?: string;
-      Chat.amount ?: string;
-      Chat.payments_handling_wallet_id ?: string;
-      Chat.collateral_Chat_handler_id ?: string;
-      Chat.collateral_Chat_handler_fee ?: string;
-
-      Chat.provider_id = createChatDto.provider_id;
-      Chat.Chat_name = createChatDto.Chat_name;
-      Chat.unit_measure = createChatDto.unit_measure;
-      Chat.unit_price = createChatDto.unit_price;
-      Chat.max_capacity = createChatDto.max_capacity;
-
-      // Check if the given Chat already exists
-      if (await this.checkIfProductExists(Chat.provider_id)) {
-        return new ErrorResponseDto(
-          409,
-          'You have already registered this Chat',
-        );
-      }
-        */
-
       const { data, error } = await this.postgresrest
         .from('chats')
         .insert(createChatDto)
         .single();
       if (error) {
+        console.log('createChat error:');
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Logger, Injectable } from '@nestjs/common';
@@ -20,45 +21,16 @@ export class TransactionsService {
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction | ErrorResponseDto> {
     try {
-      /*
-      const Transaction = new Transaction();
-
-      Transaction.id ?: string;
-      Transaction.handling_smart_contract ?: string;
-      Transaction.is_collateral_required ?: boolean;
-      Transaction.requesting_account ?: string;
-      Transaction.offering_account ?: string;
-      Transaction.collateral_Transaction_id ?: string;
-      Transaction.payment_due ?: string;
-      Transaction.payment_terms ?: string;
-      Transaction.amount ?: string;
-      Transaction.payments_handling_wallet_id ?: string;
-      Transaction.collateral_Transaction_handler_id ?: string;
-      Transaction.collateral_Transaction_handler_fee ?: string;
-
-      Transaction.provider_id = createTransactionDto.provider_id;
-      Transaction.Transaction_name = createTransactionDto.Transaction_name;
-      Transaction.unit_measure = createTransactionDto.unit_measure;
-      Transaction.unit_price = createTransactionDto.unit_price;
-      Transaction.max_capacity = createTransactionDto.max_capacity;
-
-      // Check if the given Transaction already exists
-      if (await this.checkIfProductExists(Transaction.provider_id)) {
-        return new ErrorResponseDto(
-          409,
-          'You have already registered this Transaction',
-        );
-      }
-        */
-
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(createTransactionDto)
+        .select()
         .single();
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
+      console.log(data);
       return data as Transaction;
     } catch (error) {
       return new ErrorResponseDto(500, error);

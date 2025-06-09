@@ -20,37 +20,6 @@ export class WalletsService {
     createWalletDto: CreateWalletDto,
   ): Promise<Wallet | ErrorResponseDto> {
     try {
-      /*
-      const Wallet = new Wallet();
-
-      Wallet.id ?: string;
-      Wallet.handling_smart_contract ?: string;
-      Wallet.is_collateral_required ?: boolean;
-      Wallet.requesting_account ?: string;
-      Wallet.offering_account ?: string;
-      Wallet.collateral_Wallet_id ?: string;
-      Wallet.payment_due ?: string;
-      Wallet.payment_terms ?: string;
-      Wallet.amount ?: string;
-      Wallet.payments_handling_wallet_id ?: string;
-      Wallet.collateral_Wallet_handler_id ?: string;
-      Wallet.collateral_Wallet_handler_fee ?: string;
-
-      Wallet.provider_id = createWalletDto.provider_id;
-      Wallet.message_name = createWalletDto.message_name;
-      Wallet.unit_measure = createWalletDto.unit_measure;
-      Wallet.unit_price = createWalletDto.unit_price;
-      Wallet.max_capacity = createWalletDto.max_capacity;
-
-      // Check if the given Wallet already exists
-      if (await this.checkIfProductExists(Wallet.provider_id)) {
-        return new ErrorResponseDto(
-          409,
-          'You have already registered this Wallet',
-        );
-      }
-        */
-
       const { data, error } = await this.postgresrest
         .from('wallets')
         .insert(createWalletDto)

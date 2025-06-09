@@ -5,7 +5,7 @@ export class Transaction {
   transaction_type: string;
   category: string;
   created_date: string;
-  amount: string;
+  amount: number;
   name: string;
   owner: string;
   narrative: string;

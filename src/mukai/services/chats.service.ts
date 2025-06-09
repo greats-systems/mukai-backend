@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Logger, Injectable } from '@nestjs/common';
@@ -6,6 +7,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateChatDto } from '../dto/create/create-chat.dto';
 import { UpdateChatDto } from '../dto/update/update-chat.dto';
 import { Chat } from '../entities/chat.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -19,10 +21,18 @@ export class ChatsService {
   async createChat(
     createChatDto: CreateChatDto,
   ): Promise<Chat | ErrorResponseDto> {
+    console.warn(createChatDto);
     try {
+      const processedDto = {
+        ...createChatDto,
+        receiver_id: createChatDto.receiver_id || uuidv4(),
+        profile_id: createChatDto.profile_id || uuidv4(),
+        receiver_avatar_id: createChatDto.receiver_avatar_id || uuidv4(),
+        profile_avatar_id: createChatDto.profile_avatar_id || uuidv4(),
+      };
       const { data, error } = await this.postgresrest
         .from('chats')
-        .insert(createChatDto)
+        .insert(processedDto)
         .single();
       if (error) {
         console.log('createChat error:');

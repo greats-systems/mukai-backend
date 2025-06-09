@@ -25,9 +25,9 @@ export class CreateTransactionDto {
   @IsOptional()
   created_date: string;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  amount: string;
+  amount: number;
 
   @IsString()
   @IsOptional()

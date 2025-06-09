@@ -17,6 +17,7 @@ import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
+import { error } from 'console';
 
 @Injectable()
 export class AuthService {
@@ -398,6 +399,33 @@ export class AuthService {
     }
   }
 
+  async getProfiles(): Promise<Profile[]> {
+    try {
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        // .ilike('id', `%${suffix}`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return []; // Return empty array rather than throwing if no profiles found
+      }
+
+      return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
   async update(profile: MukaiProfile) {
     const now = new Date().toISOString();
     // Create profile in public.profiles
@@ -475,6 +503,61 @@ export class AuthService {
 
   async logout(userId: string) {
     try {
+      // Validate userId is a non-empty string
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        throw new Error('Invalid user ID provided');
+      }
+
+      // 1. Invalidate the user's session in Supabase
+      const { error: authError } =
+        await this.supabaseAdmin.auth.admin.signOut(userId);
+
+      if (authError) {
+        console.error('Supabase logout error:', authError);
+        throw new Error(authError.message || 'Failed to invalidate session');
+      }
+
+      // 2. Clear user's push token (optional)
+      try {
+        const now = new Date().toISOString();
+        const { error: profileError } = await this.postgresRest
+          .from('profiles')
+          .update({
+            push_token: null,
+            updated_at: now,
+          })
+          .eq('id', userId);
+
+        if (profileError) {
+          console.warn('Profile update warning during logout:', profileError);
+          // Non-critical failure - continue with logout
+        }
+      } catch (updateError) {
+        console.warn('Non-critical error during profile cleanup:', updateError);
+      }
+
+      console.log('Successfully logged out user:', userId);
+      return {
+        status: 'success',
+        message: 'Logged out successfully',
+        error: null,
+      };
+    } catch (error) {
+      console.error('Logout failed for user:', userId, 'Error:', error);
+
+      // Return more detailed error information
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Logout failed',
+        error: error,
+      };
+    }
+  }
+  /*
+  async logout(userId: string) {
+    console.log('logout id:');
+    console.log(userId['id']);
+    try {
       // 1. Invalidate the user's session in Supabase
       const { error: authError } =
         await this.supabaseAdmin.auth.admin.signOut(userId);
@@ -510,4 +593,5 @@ export class AuthService {
       throw new Error('Logout failed');
     }
   }
+  */
 }

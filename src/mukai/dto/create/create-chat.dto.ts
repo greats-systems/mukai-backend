@@ -1,51 +1,51 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class CreateChatDto {
-  @IsString()
   @IsOptional()
+  @IsUUID()
   id?: string;
 
+  @IsNotEmpty()
   @IsString()
-  @IsOptional()
-  ref_key?: string;
+  ref_key: string;
 
-  @IsString()
   @IsOptional()
-  reciever_id?: string;
+  @IsUUID()
+  receiver_id?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUUID()
   receiver_avatar_id?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   receiver_first_name?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   receiver_last_name?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUUID()
   profile_id?: string;
 
-  @IsString()
   @IsOptional()
+  @IsUUID()
   profile_avatar_id?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   profile_first_name?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   profile_last_name?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   most_recent_content?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   most_recent_content_format?: string;
 }

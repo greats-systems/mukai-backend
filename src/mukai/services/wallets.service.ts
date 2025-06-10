@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Logger, Injectable } from '@nestjs/common';
@@ -23,6 +24,7 @@ export class WalletsService {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .insert(createWalletDto)
+        .select()
         .single();
       if (error) {
         console.log(error);
@@ -55,7 +57,7 @@ export class WalletsService {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select()
-        .eq('id', id)
+        .eq('profile_id', id)
         .single();
 
       if (error) {
@@ -88,6 +90,94 @@ export class WalletsService {
       return data as Wallet;
     } catch (error) {
       this.logger.error(`Exception in updateWallet for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateReceiverBalance(
+    receiving_wallet_id: string,
+    amount: number,
+  ): Promise<Wallet | ErrorResponseDto> {
+    try {
+      const { data: balanceData, error: balanceError } = await this.postgresrest
+        .from('wallets')
+        .select('balance')
+        .eq('id', receiving_wallet_id)
+        .single();
+      if (balanceError) {
+        this.logger.error(
+          `Error fetching balance ${receiving_wallet_id}`,
+          balanceError,
+        );
+        return new ErrorResponseDto(400, balanceError.message);
+      }
+      const balance = parseFloat(balanceData['balance']);
+      const { data: updateData, error: updateError } = await this.postgresrest
+        .from('wallets')
+        .update({
+          balance: balance + amount,
+        })
+        .eq('id', receiving_wallet_id)
+        .select()
+        .single();
+      if (updateError) {
+        this.logger.error(
+          `Error fetching balance ${receiving_wallet_id}`,
+          updateError,
+        );
+        return new ErrorResponseDto(400, updateError.message);
+      }
+
+      return updateData as Wallet;
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateBalance for id ${receiving_wallet_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateSenderBalance(
+    sending_wallet_id: string,
+    amount: number,
+  ): Promise<Wallet | ErrorResponseDto> {
+    try {
+      const { data: balanceData, error: balanceError } = await this.postgresrest
+        .from('wallets')
+        .select('balance')
+        .eq('id', sending_wallet_id)
+        .single();
+      if (balanceError) {
+        this.logger.error(
+          `Error fetching balance ${sending_wallet_id}`,
+          balanceError,
+        );
+        return new ErrorResponseDto(400, balanceError.message);
+      }
+      const balance = parseFloat(balanceData['balance']);
+      const { data: updateData, error: updateError } = await this.postgresrest
+        .from('wallets')
+        .update({
+          balance: balance - amount,
+        })
+        .eq('id', sending_wallet_id)
+        .select()
+        .single();
+      if(updateError){
+        this.logger.error(
+          `Error fetching balance ${sending_wallet_id}`,
+          updateError,
+        );
+        return new ErrorResponseDto(400, updateError.message);
+      }
+
+      return updateData as Wallet;
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateBalance for id ${sending_wallet_id}`,
+        error,
+      );
       return new ErrorResponseDto(500, error);
     }
   }

@@ -3,6 +3,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -310,6 +313,7 @@ export class AuthService {
       const now = new Date().toISOString();
       const user_data = {
         id: newAuthUser.user.id,
+        id_text: newAuthUser.user.id,
         email: signupDto.email,
         encrypted_password: hashedPassword,
         role: 'authenticated',
@@ -426,6 +430,33 @@ export class AuthService {
     }
   }
 
+  async getProfilesLike(id: string): Promise<Profile[]> {
+    try {
+      // Convert to lowercase for case-insensitive searc
+      const searchTerm = id.toLowerCase();
+
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        // Cast UUID to text for pattern matching
+        .ilike('id_text', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      return data?.length ? (data as Profile[]) : [];
+    } catch (error) {
+      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while searching profiles',
+      );
+    }
+  }
+
   async update(profile: MukaiProfile) {
     const now = new Date().toISOString();
     // Create profile in public.profiles
@@ -503,55 +534,55 @@ export class AuthService {
 
   async logout(userId: string) {
     try {
-      // Validate userId is a non-empty string
-      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-        throw new Error('Invalid user ID provided');
+      // 1. Validate the user ID format
+      if (!this.isValidUuid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
       }
 
-      // 1. Invalidate the user's session in Supabase
-      const { error: authError } =
-        await this.supabaseAdmin.auth.admin.signOut(userId);
+      // 2. First get the current user session to verify
+      const {
+        data: { user },
+        error: userError,
+      } = await this.supabaseAdmin.auth.admin.getUserById(userId);
+
+      if (userError || !user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // 3. Invalidate ALL sessions for this user
+      // const { error: authError } =
+      //   await this.supabaseAdmin.auth.admin.signOut(userId);
+      const { error: authError } = await this.supabaseAdmin.auth.signOut();
 
       if (authError) {
-        console.error('Supabase logout error:', authError);
-        throw new Error(authError.message || 'Failed to invalidate session');
+        throw new Error(`Session invalidation failed: ${authError.message}`);
       }
 
-      // 2. Clear user's push token (optional)
-      try {
-        const now = new Date().toISOString();
-        const { error: profileError } = await this.postgresRest
-          .from('profiles')
-          .update({
-            push_token: null,
-            updated_at: now,
-          })
-          .eq('id', userId);
+      // 4. Clear local profile data (optional)
+      const now = new Date().toISOString();
+      await this.postgresRest
+        .from('profiles')
+        .update({ push_token: null, updated_at: now })
+        .eq('id', userId);
 
-        if (profileError) {
-          console.warn('Profile update warning during logout:', profileError);
-          // Non-critical failure - continue with logout
-        }
-      } catch (updateError) {
-        console.warn('Non-critical error during profile cleanup:', updateError);
-      }
-
-      console.log('Successfully logged out user:', userId);
       return {
         status: 'success',
         message: 'Logged out successfully',
         error: null,
       };
     } catch (error) {
-      console.error('Logout failed for user:', userId, 'Error:', error);
-
-      // Return more detailed error information
-      return {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Logout failed',
-        error: error,
-      };
+      console.error('Logout error:', error);
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Logout failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
+  }
+
+  private isValidUuid(uuid: string): boolean {
+    const regex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(uuid);
   }
   /*
   async logout(userId: string) {

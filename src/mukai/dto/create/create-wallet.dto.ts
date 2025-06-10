@@ -19,7 +19,7 @@ export class CreateWalletDto {
 
   @IsString()
   @IsOptional()
-  balance: string;
+  balance: number;
 
   @IsString()
   @IsOptional()

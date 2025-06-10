@@ -7,6 +7,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
+import { WalletsService } from './wallets.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -15,7 +16,10 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly walletsService: WalletsService,
+  ) {}
 
   async createTransaction(
     createTransactionDto: CreateTransactionDto,
@@ -31,6 +35,16 @@ export class TransactionsService {
         return new ErrorResponseDto(400, error.message);
       }
       console.log(data);
+      const debitResponse = await this.walletsService.updateSenderBalance(
+        createTransactionDto.sending_wallet,
+        createTransactionDto.amount,
+      );
+      const creditResponse = await this.walletsService.updateReceiverBalance(
+        createTransactionDto.receiving_wallet,
+        createTransactionDto.amount,
+      );
+      console.log(debitResponse);
+      console.log(creditResponse);
       return data as Transaction;
     } catch (error) {
       return new ErrorResponseDto(500, error);

@@ -52,6 +52,7 @@ export class WalletsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const response = await this.walletsService.viewWallet(id);
+    /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -61,6 +62,7 @@ export class WalletsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    */
     return response;
   }
 

@@ -21,6 +21,10 @@ export class AuthController {
   async getProfiles() {
     return this.authService.getProfiles();
   }
+  @Get('profiles/like/:id')
+  async getProfilesLike(@Param('id') id: string) {
+    return this.authService.getProfilesLike(id);
+  }
 
   @Post('create-account')
   async signup(@Body() signupDto: SignupDto) {

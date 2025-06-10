@@ -3,7 +3,7 @@ export class Wallet {
   holding_account: string;
   address: string;
   status: string;
-  balance: string;
+  balance: number;
   last_transaction_timestamp: string;
   parent_wallet_id: string;
   provider: string;

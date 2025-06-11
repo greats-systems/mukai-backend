@@ -22,4 +22,4 @@ export class InnBucks extends Payment {}
 
 export class OMari extends Payment {}
 
-export class 
+// export class

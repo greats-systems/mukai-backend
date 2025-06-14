@@ -1,63 +1,72 @@
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray } from 'class-validator';
 
 export class CreateWalletDto {
   @IsString()
   @IsOptional()
-  id: string;
+  id?: string;
 
   @IsString()
   @IsOptional()
-  holding_account: string;
+  holding_account?: string;
 
   @IsString()
   @IsOptional()
-  address: string;
+  address?: string;
 
   @IsString()
   @IsOptional()
-  status: string;
+  status?: string;
 
   @IsString()
   @IsOptional()
-  balance: number;
+  balance?: number;
 
   @IsString()
   @IsOptional()
-  last_transaction_timestamp: string;
+  last_transaction_timestamp?: string;
 
   @IsString()
   @IsOptional()
-  parent_wallet_id: string;
+  parent_wallet_id?: string;
 
   @IsString()
   @IsOptional()
-  provider: string;
+  provider?: string;
 
   @IsString()
   @IsOptional()
-  default_currency: string;
+  default_currency?: string;
 
   @IsString()
   @IsOptional()
-  business_id: string;
+  business_id?: string;
 
   @IsBoolean()
   @IsOptional()
-  is_shared: boolean;
+  is_shared?: boolean;
 
   @IsBoolean()
   @IsOptional()
-  is_active: boolean;
+  is_active?: boolean;
 
   @IsBoolean()
   @IsOptional()
-  is_sub_wallet: boolean;
+  is_sub_wallet?: boolean;
 
   @IsString()
   @IsOptional()
-  profile_id: string;
+  profile_id?: string;
 
   @IsString()
   @IsOptional()
-  coop_id: string;
+  coop_id?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  is_group_wallet?: boolean;
+
+  @IsString()
+  @IsArray()
+  @IsOptional()
+  children_wallets?: string[];
 }

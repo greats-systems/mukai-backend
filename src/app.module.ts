@@ -62,6 +62,18 @@ import { CooperativesService } from './mukai/services/cooperatives.service';
 import { CooperativeMemberRequestsService } from './mukai/services/cooperative_member_requests.service';
 import { ChatsService } from './mukai/services/chats.service';
 import { AssetsService } from './mukai/services/assets.service';
+import { GroupModule } from './mukai/modules/group.module';
+import { GroupService } from './mukai/services/group.service';
+import { GroupsController } from './mukai/controllers/group.controller';
+import { SpendingConditionsModule } from './mukai/modules/spending-conditions.module';
+import { SpendingConditionsController } from './mukai/controllers/spending-conditions.controller';
+import { SpendingConditionsService } from './mukai/services/spending-conditions.service';
+import { EscrowController } from './mukai/controllers/escrow.controller';
+import { EscrowService } from './mukai/services/escrow.service';
+import { EscrowModule } from './mukai/modules/escrow.module';
+import { LoanModule } from './mukai/modules/loan.module';
+import { LoanController } from './mukai/controllers/loan.controller';
+import { LoanService } from './mukai/services/loan.servce';
 
 @Module({
   imports: [
@@ -89,6 +101,11 @@ import { AssetsService } from './mukai/services/assets.service';
     CooperativeMemberRequestModule,
     ChatModule,
     AssetModule,
+    GroupModule,
+    SpendingConditionsModule,
+    EscrowModule,
+    LoanModule,
+    CooperativeMemberRequestModule,
   ],
   controllers: [
     AppController,
@@ -110,6 +127,11 @@ import { AssetsService } from './mukai/services/assets.service';
     CooperativeMemberRequestsController,
     ChatsController,
     AssetsController,
+    GroupsController,
+    SpendingConditionsController,
+    EscrowController,
+    LoanController,
+    CooperativeMemberRequestsController,
   ],
   providers: [
     AppService,
@@ -131,6 +153,11 @@ import { AssetsService } from './mukai/services/assets.service';
     CooperativeMemberRequestsService,
     ChatsService,
     AssetsService,
+    GroupService,
+    SpendingConditionsService,
+    EscrowService,
+    LoanService,
+    CooperativeMemberRequestsService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

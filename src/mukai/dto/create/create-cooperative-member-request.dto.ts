@@ -48,4 +48,8 @@ export class CreateCooperativeMemberRequestDto {
   @IsString()
   @IsOptional()
   most_recent_content_format?: string;
+
+  @IsString()
+  @IsOptional()
+  group_id: string;
 }

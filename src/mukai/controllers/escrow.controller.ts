@@ -10,34 +10,31 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { WalletsService } from '../services/wallets.service';
-import { CreateWalletDto } from '../dto/create/create-wallet.dto';
-import { UpdateWalletDto } from '../dto/update/update-wallet.dto';
+import { CreateEscrowDto } from '../dto/create/create-escrow.dto';
+import { UpdateEscrowDto } from '../dto/update/update-escrow.dto';
+import { EscrowService } from '../services/escrow.service';
 
-@Controller('wallets')
-export class WalletsController {
-  constructor(private readonly walletsService: WalletsService) {}
+@Controller('escrows')
+export class EscrowController {
+  constructor(private readonly escrowService: EscrowService) {}
 
   @Post()
-  async create(@Body() createWalletDto: CreateWalletDto) {
-    const response = await this.walletsService.createWallet(createWalletDto);
+  async create(@Body() createEscrowDto: CreateEscrowDto) {
+    const response = await this.escrowService.createEscrow(createEscrowDto);
     /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
     if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new HttpException(response['message'], HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    */
+      */
     return response;
   }
 
   @Get()
   async findAll() {
-    const response = await this.walletsService.findAllWallets();
+    const response = await this.escrowService.findAllEscrows();
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -52,8 +49,7 @@ export class WalletsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const response = await this.walletsService.viewWallet(id);
-    /*
+    const response = await this.escrowService.viewEscrow(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -63,39 +59,15 @@ export class WalletsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
-    return response;
-  }
-
-  @Get(':id')
-  async findChildrenWallets(
-    @Param('parent_wallet_id') parent_wallet_id: string,
-  ) {
-    const response =
-      await this.walletsService.viewChildrenWallets(parent_wallet_id);
-    /*
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    */
     return response;
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() updateWalletDto: UpdateWalletDto,
+    @Body() updateEscrowDto: UpdateEscrowDto,
   ) {
-    const response = await this.walletsService.updateWallet(
-      id,
-      updateWalletDto,
-    );
+    const response = await this.escrowService.updateEscrow(id, updateEscrowDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -110,7 +82,7 @@ export class WalletsController {
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
-    const response = await this.walletsService.deleteWallet(id);
+    const response = await this.escrowService.deleteEscrow(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

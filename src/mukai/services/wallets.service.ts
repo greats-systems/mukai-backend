@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -66,6 +67,45 @@ export class WalletsService {
       }
 
       return data as Wallet;
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewChildrenWallets(parent_wallet_id: string): Promise<Wallet[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select('children_wallets')
+        .eq('id', parent_wallet_id);
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${parent_wallet_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Wallet[];
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${parent_wallet_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewProfileWalletID(id: string): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select('id')
+        .eq('profile_id', id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object;
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
       return new ErrorResponseDto(500, error);

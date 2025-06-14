@@ -14,4 +14,6 @@ export class Wallet {
   is_sub_wallet: boolean;
   profile_id: string;
   coop_id: string;
+  is_group_wallet: boolean;
+  children_wallets: string[];
 }

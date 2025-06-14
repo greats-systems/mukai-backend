@@ -1,115 +1,117 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Logger, Injectable } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
-import { CreateAgreementDto } from '../dto/create/create-agreement.dto';
-import { UpdateAgreementDto } from '../dto/update/update-agreement.dto';
-import { Agreement } from '../entities/agreement.entity';
+import { CreateLoanDto } from '../dto/create/create-loan.dto';
+import { UpdateLoanDto } from '../dto/update/update-loan.dto';
+import { Loan } from '../entities/loan.entity';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
-export class AgreementsService {
-  private readonly logger = initLogger(AgreementsService);
+export class LoanService {
+  private readonly logger = initLogger(LoanService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
-  async createAgreement(
-    createAgreementDto: CreateAgreementDto,
-  ): Promise<Agreement | ErrorResponseDto> {
+  async createLoan(
+    createLoanDto: CreateLoanDto,
+  ): Promise<Loan | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('agreements')
-        .insert(createAgreementDto)
+        .from('loan')
+        .insert(createLoanDto)
         .single();
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Agreement;
+      return data as Loan;
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async findAllAgreements(): Promise<Agreement[] | ErrorResponseDto> {
+  async findAllLoans(): Promise<Loan[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('agreements')
-        .select();
+        .from('loan')
+        .select()
+        .order('created_at', { ascending: false });
 
       if (error) {
-        this.logger.error('Error fetching agreements', error);
+        this.logger.error('Error fetching loan', error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Agreement[];
+      return data as Loan[];
     } catch (error) {
-      this.logger.error('Exception in findAllAgreements', error);
+      this.logger.error('Exception in findAllLoan', error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewAgreement(id: string): Promise<Agreement[] | ErrorResponseDto> {
+  async viewLoan(id: string): Promise<Loan[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('agreements')
+        .from('loan')
         .select()
         .eq('id', id)
         .single();
 
       if (error) {
-        this.logger.error(`Error fetching agreement ${id}`, error);
+        this.logger.error(`Error fetching group ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Agreement[];
+      return data as Loan[];
     } catch (error) {
-      this.logger.error(`Exception in viewAgreement for id ${id}`, error);
+      this.logger.error(`Exception in viewLoan for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async updateAgreement(
+  async updateLoan(
     id: string,
-    updateAgreementDto: UpdateAgreementDto,
-  ): Promise<Agreement | ErrorResponseDto> {
+    updateLoanDto: UpdateLoanDto,
+  ): Promise<Loan | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('agreements')
-        .update(updateAgreementDto)
+        .from('loan')
+        .update(updateLoanDto)
         .eq('id', id)
         .select()
         .single();
       if (error) {
-        this.logger.error(`Error updating agreements ${id}`, error);
+        this.logger.error(`Error updating loan ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Agreement;
+      return data as Loan;
     } catch (error) {
-      this.logger.error(`Exception in updateAgreement for id ${id}`, error);
+      this.logger.error(`Exception in updateLoan for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteAgreement(id: string): Promise<boolean | ErrorResponseDto> {
+  async deleteLoan(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
-        .from('agreements')
+        .from('loan')
         .delete()
         .eq('id', id)
         .single();
 
       if (error) {
-        this.logger.error(`Error deleting agreement ${id}`, error);
+        this.logger.error(`Error deleting group ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
       return true;
     } catch (error) {
-      this.logger.error(`Exception in deleteAgreement for id ${id}`, error);
+      this.logger.error(`Exception in deleteLoan for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

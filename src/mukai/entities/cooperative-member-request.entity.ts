@@ -11,4 +11,5 @@ export class CooperativeMemberRequest {
   profile_last_name: string;
   most_recent_content: string;
   most_recent_content_format: string;
+  group_id: string;
 }

@@ -132,6 +132,34 @@ export class CooperativeMemberRequestsService {
     }
   }
 
+  async updateCooperativeMemberRequestByMemberID(
+    id: string,
+    updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
+  ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .update(updateCooperativeMemberRequestDto)
+        .eq('member_id', id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(
+          `Error updating CooperativeMemberRequests ${id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+      return data as CooperativeMemberRequest;
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateCooperativeMemberRequest for id ${id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async deleteCooperativeMemberRequest(
     id: string,
   ): Promise<boolean | ErrorResponseDto> {

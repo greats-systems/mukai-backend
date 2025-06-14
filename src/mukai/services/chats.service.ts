@@ -25,7 +25,7 @@ export class ChatsService {
     try {
       const processedDto = {
         ...createChatDto,
-        receiver_id: createChatDto.receiver_id || uuidv4(),
+        // receiver_id: createChatDto.receiver_id || uuidv4(),
         profile_id: createChatDto.profile_id || uuidv4(),
         receiver_avatar_id: createChatDto.receiver_avatar_id || uuidv4(),
         profile_avatar_id: createChatDto.profile_avatar_id || uuidv4(),

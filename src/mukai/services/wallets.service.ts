@@ -31,6 +31,8 @@ export class WalletsService {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
+      // TODO: Create a new toronet wallet for the user
+      
       return data as Wallet;
     } catch (error) {
       return new ErrorResponseDto(500, error);

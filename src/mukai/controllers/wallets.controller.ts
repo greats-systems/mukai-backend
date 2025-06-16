@@ -63,12 +63,9 @@ export class WalletsController {
     return response;
   }
 
-  @Get(':parent_wallet_id')
-  async findChildrenWallets(
-    @Param('parent_wallet_id') parent_wallet_id: string,
-  ) {
-    const response =
-      await this.walletsService.viewChildrenWallets(parent_wallet_id);
+  @Get(':wallet_id')
+  async findChildrenWallets(@Param('wallet_id') wallet_id: string) {
+    const response = await this.walletsService.viewChildrenWallets(wallet_id);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
@@ -82,7 +79,7 @@ export class WalletsController {
     return response;
   }
 
-  @Get(':parent_wallet_id')
+  @Get(':wallet_id')
   async viewProfileWalletID(@Param('profile_id') profile_id: string) {
     const response = await this.walletsService.viewProfileWalletID(profile_id);
 

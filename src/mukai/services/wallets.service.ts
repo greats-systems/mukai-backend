@@ -73,21 +73,22 @@ export class WalletsService {
     }
   }
 
-  async viewChildrenWallets(parent_wallet_id: string): Promise<Wallet[] | ErrorResponseDto> {
+  async viewChildrenWallets(wallet_id: string): Promise<Wallet[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select('children_wallets')
-        .eq('id', parent_wallet_id);
+        .eq('id', wallet_id)
+        .eq('is_group_wallet', true);
 
       if (error) {
-        this.logger.error(`Error fetching Wallet ${parent_wallet_id}`, error);
+        this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
       return data as Wallet[];
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${parent_wallet_id}`, error);
+      this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

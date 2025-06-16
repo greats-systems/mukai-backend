@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UUID } from 'crypto';
 
 export class CreateGroupDto {
   @ApiPropertyOptional({
@@ -16,7 +17,7 @@ export class CreateGroupDto {
   })
   @IsOptional()
   @IsUUID()
-  id?: string;
+  id?: UUID;
 
   @IsUUID()
   @IsOptional()

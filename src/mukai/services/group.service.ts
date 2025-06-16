@@ -40,13 +40,12 @@ export class GroupService {
       const { data: createGroupResponse, error } = await this.postgresrest
         .from('group')
         .insert(createGroupDto)
+        .select()
         .single();
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      //   return data as Group;
-      //   let i: number;
       const walletIDs: string[] = [];
       for (const member of createGroupDto.members || []) {
         const groupMemberWalletsJson = await walletsService.viewProfileWalletID(
@@ -62,6 +61,7 @@ export class GroupService {
       createWalletDto.balance = 100;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
+      createWalletDto.group_id = createGroupDto.id;
       createWalletDto.children_wallets = walletIDs;
       const walletResponse = await walletsService.createWallet(createWalletDto);
 

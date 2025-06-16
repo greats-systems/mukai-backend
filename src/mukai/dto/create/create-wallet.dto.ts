@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsArray,
 } from 'class-validator';
+import { UUID } from 'crypto';
 
 export class CreateWalletDto {
   @ApiProperty({
@@ -93,4 +94,8 @@ export class CreateWalletDto {
   @IsArray()
   @IsOptional()
   children_wallets?: string[];
+
+  @IsString()
+  @IsOptional()
+  group_id?: UUID;
 }

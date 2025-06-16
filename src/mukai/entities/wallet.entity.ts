@@ -104,4 +104,10 @@ export class Wallet {
     type: [String],
   })
   children_wallets?: string[];
+
+  @ApiPropertyOptional({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Group ID to which the wallet is linked',
+  })
+  group_id?: string;
 }

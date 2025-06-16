@@ -37,7 +37,7 @@ export class PostgresRest {
     this.logger.log('Initializing PostgresRest client...');
     const DB_REST_URL =
       this.configService.get<string>('ENV') == 'local'
-        ? this.configService.get<string>('LOCAL_SUPABASE_URL')
+        ? this.configService.get<string>('LOCAL_DB_REST_URL')
         : this.configService.get<string>('PROD_DB_REST_URL');
     const SERVICE_ROLE_KEY =
       this.configService.get<string>('ENV') == 'local'

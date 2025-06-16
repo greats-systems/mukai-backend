@@ -57,7 +57,13 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Shell scripts
 script*.sh
+
+# Folders
+dump/
 backups/
 supabase/
 supabase-project/
 *.sql
+
+# Firebase services
+firebase-service-account.json

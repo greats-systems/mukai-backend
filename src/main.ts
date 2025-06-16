@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+// import { ValidationPipe } from '@nestjs/common';
 import {
   SwaggerModule,
   DocumentBuilder,
@@ -22,15 +22,15 @@ async function bootstrap() {
   const documentFactory = () =>
     SwaggerModule.createDocument(app, config, options);
   SwaggerModule.setup('docs/api', app, documentFactory);
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // remove non-whitelisted properties
-      forbidNonWhitelisted: true, // throw errors for non-whitelisted properties
-      transform: true, // automatically transform payloads to DTO instances
-    }),
-  );
+  // app.useGlobalPipes(
+  //   new ValidationPipe({
+  //     whitelist: true, // remove non-whitelisted properties
+  //     forbidNonWhitelisted: true, // throw errors for non-whitelisted properties
+  //     transform: true, // automatically transform payloads to DTO instances
+  //   }),
+  // );
 
-  await app.listen(process.env.PORT ?? 4000, '0.0.0.0', () => {
+  await app.listen(process.env.PORT ?? 3001, '0.0.0.0', () => {
     console.log('server connected');
   });
 }

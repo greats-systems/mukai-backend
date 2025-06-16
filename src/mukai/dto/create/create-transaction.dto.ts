@@ -1,55 +1,51 @@
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsNumber,
+  // IsDateString,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateTransactionDto {
+  @ApiProperty({
+    example: 'transfer',
+    description: 'Transaction type',
+    enum: ['transfer', 'deposit', 'withdrawal'],
+    required: true,
+  })
   @IsString()
-  @IsOptional()
-  id: string;
-
-  @IsString()
-  @IsOptional()
-  account_id: string;
-
-  @IsNumber()
-  @IsOptional()
-  transaction_cost: number;
-
-  @IsString()
-  @IsOptional()
   transaction_type: string;
 
-  @IsString()
-  @IsOptional()
-  category: string;
-
-  @IsString()
-  @IsOptional()
-  created_date: string;
-
+  @ApiProperty({
+    example: 100,
+    description: 'Transaction amount',
+    required: true,
+  })
   @IsNumber()
-  @IsOptional()
   amount: number;
 
-  @IsString()
-  @IsOptional()
-  name: string;
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Sending wallet ID',
+    required: true,
+  })
+  @IsUUID()
+  sending_wallet: string;
 
-  @IsString()
+  @ApiPropertyOptional({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Receiving wallet ID',
+  })
   @IsOptional()
-  owner: string;
-
-  @IsString()
-  @IsOptional()
-  narrative: string;
-
-  @IsString()
-  @IsOptional()
-  salt: string;
-
-  @IsString()
-  @IsOptional()
+  @IsUUID()
   receiving_wallet: string;
 
-  @IsString()
+  @ApiPropertyOptional({
+    example: 'Payment for services',
+    description: 'Transaction narrative',
+  })
   @IsOptional()
-  sending_wallet: string;
+  @IsString()
+  narrative?: string;
 }

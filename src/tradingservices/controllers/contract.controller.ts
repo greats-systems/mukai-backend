@@ -36,7 +36,7 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 export class ContractController {
   constructor(private readonly contractService: ContractService) {}
 
-  /**
+  /*
    * Creates a new contract
    * @param createContractDto Data for contract creation
    * @returns Created contract or error
@@ -79,7 +79,7 @@ export class ContractController {
     return response;
   }
 
-  /**
+  /*
    * Retrieves all contracts
    * @returns Array of contracts or error
    * @throws HttpException for error cases
@@ -112,7 +112,7 @@ export class ContractController {
     return response;
   }
 
-  /**
+  /*
    * Retrieves a specific contract by ID
    * @param contract_id ID of the contract to retrieve
    * @returns The requested contract or error
@@ -156,7 +156,7 @@ export class ContractController {
     return response;
   }
 
-  /**
+  /*
    * Updates an existing contract
    * @param contract_id ID of the contract to update
    * @param updateContractDto Data for contract update
@@ -208,7 +208,7 @@ export class ContractController {
     return response;
   }
 
-  /**
+  /*
    * Deletes a contract by ID
    * @param contract_id ID of the contract to delete
    * @returns Success indicator or error

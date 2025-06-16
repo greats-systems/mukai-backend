@@ -1,47 +1,103 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 
 export class CreateCooperativeDto {
-  @IsString()
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Unique identifier for the cooperative (optional)',
+    required: false,
+  })
   @IsOptional()
-  id: string;
+  @IsString()
+  id?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Admin ID who manages the cooperative (optional)',
+    required: false,
+  })
   @IsOptional()
-  admin_id: string;
+  @IsString()
+  admin_id?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'Green Farmers Collective',
+    description: 'Name of the cooperative (optional)',
+    required: false,
+  })
   @IsOptional()
-  name: string;
+  @IsString()
+  name?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'Nairobi',
+    description: 'City where the cooperative is based (optional)',
+    required: false,
+  })
   @IsOptional()
-  city: string;
+  @IsString()
+  city?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'Kenya',
+    description: 'Country where the cooperative is registered (optional)',
+    required: false,
+  })
   @IsOptional()
-  country: string;
+  @IsString()
+  country?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'agriculture',
+    description: 'Business category of the cooperative (optional)',
+    required: false,
+  })
   @IsOptional()
-  category: string;
+  @IsString()
+  category?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'A collective of organic farmers',
+    description: 'Detailed description of the cooperative (optional)',
+    required: false,
+  })
   @IsOptional()
-  description: string;
+  @IsString()
+  description?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'https://example.com/logos/green-farmers.png',
+    description: 'URL to the cooperative logo (optional)',
+    required: false,
+  })
   @IsOptional()
-  logo: string;
+  @IsString()
+  logo?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'To empower sustainable farming communities',
+    description: 'Cooperative vision statement (optional)',
+    required: false,
+  })
   @IsOptional()
-  vision_statement: string;
+  @IsString()
+  vision_statement?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'Providing fair market access to smallholder farmers',
+    description: 'Cooperative mission statement (optional)',
+    required: false,
+  })
   @IsOptional()
-  mission_statement: string;
+  @IsString()
+  mission_statement?: string;
 
-  @IsString()
+  @ApiProperty({
+    example: 'Nairobi County',
+    description: 'Province/state where the cooperative operates (optional)',
+    required: false,
+  })
   @IsOptional()
-  province_state: string;
+  @IsString()
+  province_state?: string;
 }

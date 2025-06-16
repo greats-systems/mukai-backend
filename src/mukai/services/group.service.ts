@@ -111,7 +111,7 @@ export class GroupService {
     }
   }
 
-  async findGroupsForMember(id: string): Promise<object[] | ErrorResponseDto> {
+  async viewGroupsForMember(id: string): Promise<object[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')

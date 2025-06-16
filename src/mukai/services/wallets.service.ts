@@ -92,22 +92,22 @@ export class WalletsService {
     }
   }
 
-  async viewProfileWalletID(id: string): Promise<object | ErrorResponseDto> {
+  async viewProfileWalletID(profile_id: string): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select('id')
-        .eq('profile_id', id)
+        .eq('profile_id', profile_id)
         .single();
 
       if (error) {
-        this.logger.error(`Error fetching Wallet ${id}`, error);
+        this.logger.error(`Error fetching Wallet ${profile_id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
       return data as object;
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${id}`, error);
+      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

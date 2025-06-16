@@ -20,7 +20,7 @@ export class Asset {
   valuation_currency: string;
 
   @ApiProperty({
-    example: 1000.50,
+    example: 1000.5,
     description: 'Fiat value of the asset',
   })
   fiat_value: number;

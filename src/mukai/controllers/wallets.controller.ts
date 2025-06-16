@@ -21,7 +21,6 @@ export class WalletsController {
   @Post()
   async create(@Body() createWalletDto: CreateWalletDto) {
     const response = await this.walletsService.createWallet(createWalletDto);
-    /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -31,7 +30,6 @@ export class WalletsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
     return response;
   }
 
@@ -53,7 +51,6 @@ export class WalletsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const response = await this.walletsService.viewWallet(id);
-    /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -63,17 +60,16 @@ export class WalletsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
     return response;
   }
 
-  @Get(':id')
+  @Get(':parent_wallet_id')
   async findChildrenWallets(
     @Param('parent_wallet_id') parent_wallet_id: string,
   ) {
     const response =
       await this.walletsService.viewChildrenWallets(parent_wallet_id);
-    /*
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -83,7 +79,22 @@ export class WalletsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
+    return response;
+  }
+
+  @Get(':parent_wallet_id')
+  async viewProfileWalletID(@Param('profile_id') profile_id: string) {
+    const response = await this.walletsService.viewProfileWalletID(profile_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     return response;
   }
 

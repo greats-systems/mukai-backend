@@ -100,7 +100,9 @@ export class CooperativeMemberRequestsController {
   @Get(':status')
   async filterByStatus(@Param('status') status: string) {
     const response =
-      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequestStatus(status);
+      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequestStatus(
+        status,
+      );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',

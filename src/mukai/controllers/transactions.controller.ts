@@ -22,7 +22,7 @@ export class TransactionsController {
   async create(@Body() createTransactionDto: CreateTransactionDto) {
     const response =
       await this.transactionsService.createTransaction(createTransactionDto);
-    /*
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -32,7 +32,6 @@ export class TransactionsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-      */
     return response;
   }
 
@@ -54,7 +53,7 @@ export class TransactionsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const response = await this.transactionsService.viewTransaction(id);
-    /*
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -64,7 +63,6 @@ export class TransactionsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
     return response;
   }
 

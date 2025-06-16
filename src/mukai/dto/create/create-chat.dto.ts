@@ -12,7 +12,8 @@ export class CreateChatDto {
   id?: string;
 
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000-987e6543-e21b-43d2-b456-426614174000',
+    example:
+      '123e4567-e89b-12d3-a456-426614174000-987e6543-e21b-43d2-b456-426614174000',
     description: 'Unique reference key for the chat',
     required: true,
   })

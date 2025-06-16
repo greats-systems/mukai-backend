@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -171,7 +172,28 @@ export class CooperativesController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a cooperative' })
-  // @ApiParam
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated cooperative details',
+    type: Cooperative,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cooperative not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async delete(@Param('id') id: string) {
     const response = await this.cooperativesService.deleteCooperative(id);
     if (response['statusCode'] === 400) {

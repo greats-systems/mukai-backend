@@ -1,6 +1,46 @@
-import { IsString, IsOptional, IsBoolean, IsArray } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsBoolean,
+  IsArray,
+} from 'class-validator';
 
 export class CreateWalletDto {
+  @ApiProperty({
+    example: 'USD',
+    description: 'Default currency',
+    required: true,
+  })
+  @IsString()
+  @IsOptional()
+  default_currency?: string;
+
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Associated profile ID',
+  })
+  @IsOptional()
+  @IsUUID()
+  profile_id?: string;
+
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Associated cooperative ID',
+  })
+  @IsOptional()
+  @IsUUID()
+  coop_id?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether wallet is shared',
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_shared?: boolean;
+
   @IsString()
   @IsOptional()
   id?: string;
@@ -35,15 +75,7 @@ export class CreateWalletDto {
 
   @IsString()
   @IsOptional()
-  default_currency?: string;
-
-  @IsString()
-  @IsOptional()
   business_id?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  is_shared?: boolean;
 
   @IsBoolean()
   @IsOptional()
@@ -52,14 +84,6 @@ export class CreateWalletDto {
   @IsBoolean()
   @IsOptional()
   is_sub_wallet?: boolean;
-
-  @IsString()
-  @IsOptional()
-  profile_id?: string;
-
-  @IsString()
-  @IsOptional()
-  coop_id?: string;
 
   @IsBoolean()
   @IsOptional()

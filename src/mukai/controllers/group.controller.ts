@@ -21,20 +21,51 @@ export class GroupsController {
   @Post()
   async create(@Body() createGroupDto: CreateGroupDto) {
     const response = await this.groupsService.createGroup(createGroupDto);
-    /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
     if (response['statusCode'] === 500) {
-      throw new HttpException(response['message'], HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-      */
     return response;
   }
 
   @Get()
   async findAll() {
     const response = await this.groupsService.findAllGroups();
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get(':member_id')
+  async viewGroupsForMember(@Param('member_id') member_id: string) {
+    const response = await this.groupsService.viewGroupsForMember(member_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get(':group_id')
+  async viewGroupWallet(@Param('group_id') group_id: string) {
+    const response = await this.groupsService.viewGroupWallet(group_id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

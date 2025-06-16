@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import {
   Controller,
-  Get,
   Post,
   Body,
-  Param,
   HttpException,
   HttpStatus,
+  Get,
+  Param,
 } from '@nestjs/common';
-import { ProviderService } from '../services/provider.service';
 import { CreateProviderDto } from '../dto/create/create-provider.dto';
+import { ProviderService } from '../services/provider.service';
 
 @Controller('provider')
 export class ProviderController {
@@ -55,9 +56,9 @@ export class ProviderController {
     return response;
   }
 
-  @Get(':provider_id')
-  async findOne(@Param('provider_id') provider_id: string) {
-    const response = await this.providerService.viewProvider(provider_id);
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const response = await this.providerService.viewProvider(id);
     if (response['statusCode'] == 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

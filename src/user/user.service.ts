@@ -104,7 +104,7 @@ export class UserService {
       const { error } = await this.postgresrest
         .from('profiles')
         .delete()
-        .eq('id', id);
+        .eq('id', id).single();
 
       if (error) {
         this.logger.error(`Error deleting user ${id}`, error);

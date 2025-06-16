@@ -44,15 +44,17 @@ export class CreateUserDto {
     one lowercase letter, 
     one number and 
     one special character`,
-    })
-    password: string;
+  })
+  password: string;
 }
 
-
 export class ProfileResponseDto {
-    @ApiProperty({ description: 'Unique identifier for the profile', example: 'CUST-001' })
-    id: string;
+  @ApiProperty({
+    description: 'Unique identifier for the profile',
+    example: 'CUST-001',
+  })
+  id: string;
 
-    // Add other profile fields with appropriate @ApiProperty decorators
-    // ...
+  // Add other profile fields with appropriate @ApiProperty decorators
+  // ...
 }

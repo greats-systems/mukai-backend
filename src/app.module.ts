@@ -85,6 +85,7 @@ import { LoanService } from './mukai/services/loan.servce';
     MessagingsModule,
     NodesModule,
     CommodityModule,
+    ProduceModule,
     ContractBidModule,
     ContractModule,
     ProducerModule,

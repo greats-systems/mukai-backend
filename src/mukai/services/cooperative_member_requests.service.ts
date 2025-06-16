@@ -76,6 +76,27 @@ export class CooperativeMemberRequestsService {
     }
   }
 
+  async findAllCooperativeMemberRequestStatus(
+    status: string,
+  ): Promise<CooperativeMemberRequest[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select()
+        .eq('status', status);
+
+      if (error) {
+        this.logger.error('Error fetching CooperativeMemberRequests', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as CooperativeMemberRequest[];
+    } catch (error) {
+      this.logger.error('Exception in findAllCooperativeMemberRequests', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async viewCooperativeMemberRequest(
     id: string,
   ): Promise<CooperativeMemberRequest | ErrorResponseDto> {

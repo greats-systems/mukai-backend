@@ -74,6 +74,9 @@ import { EscrowModule } from './mukai/modules/escrow.module';
 import { LoanModule } from './mukai/modules/loan.module';
 import { LoanController } from './mukai/controllers/loan.controller';
 import { LoanService } from './mukai/services/loan.servce';
+import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
+import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
+import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
 
 @Module({
   imports: [
@@ -106,6 +109,7 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowModule,
     LoanModule,
     CooperativeMemberRequestModule,
+    CooperativeMemberApprovalsModule,
   ],
   controllers: [
     AppController,
@@ -132,6 +136,7 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowController,
     LoanController,
     CooperativeMemberRequestsController,
+    CooperativeMemberApprovalsController,
   ],
   providers: [
     AppService,
@@ -158,6 +163,7 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowService,
     LoanService,
     CooperativeMemberRequestsService,
+    CooperativeMemberApprovalsService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

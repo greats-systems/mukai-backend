@@ -77,7 +77,7 @@ export class CooperativeMemberRequestsService {
     }
   }
 
-  async findAllCooperativeMemberRequestStatus(
+  async findMemberRequestStatus(
     status: string,
   ): Promise<CooperativeMemberRequest[] | ErrorResponseDto> {
     try {
@@ -126,28 +126,52 @@ export class CooperativeMemberRequestsService {
     }
   }
 
+  async getPendingRequestDetails(
+    member_id: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select('member_id, profiles(*)')
+        .eq('member_id', member_id)
+        .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching CooperativeMemberRequest ${member_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativeMemberRequest for id ${member_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async updateCooperativeMemberRequest(
-    id: string,
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        .eq('id', id)
+        .eq('id', updateCooperativeMemberRequestDto.member_id)
         .select()
         .single();
       if (error) {
-        this.logger.error(
-          `Error updating CooperativeMemberRequests ${id}`,
-          error,
-        );
+        this.logger.error(`Error updating CooperativeMemberRequests`, error);
         return new ErrorResponseDto(400, error.message);
       }
       return data as CooperativeMemberRequest;
     } catch (error) {
       this.logger.error(
-        `Exception in updateCooperativeMemberRequest for id ${id}`,
+        `Exception in updateCooperativeMemberRequest for id`,
         error,
       );
       return new ErrorResponseDto(500, error);

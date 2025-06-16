@@ -8,6 +8,7 @@ import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
 import { WalletsService } from './wallets.service';
+// import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -85,6 +86,33 @@ export class TransactionsService {
       return data as Transaction;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async generateTransactionReport(
+    wallet_id: string,
+    parameters: object,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_wallet_transactions',
+        {
+          p_wallet_id: wallet_id,
+          p_period: parameters['period'],
+          p_trans_type: parameters['transaction_type'],
+          p_currency_filter: parameters['currency'],
+        },
+      );
+
+      if (error) {
+        this.logger.error(`Error fetching Transaction`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error(`Exception in viewTransaction for id`, error);
       return new ErrorResponseDto(500, error);
     }
   }

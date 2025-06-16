@@ -66,6 +66,28 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('report/:wallet_id')
+  async generateTransactionReport(
+    @Param('wallet_id') wallet_id: string,
+    @Body() parameters: object,
+  ) {
+    const response = await this.transactionsService.generateTransactionReport(
+      wallet_id,
+      parameters,
+    );
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Patch(':id')
   async update(
     @Param('id') id: string,

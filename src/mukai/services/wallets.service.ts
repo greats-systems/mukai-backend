@@ -53,20 +53,20 @@ export class WalletsService {
     }
   }
 
-  async viewWallet(id: string): Promise<Wallet | ErrorResponseDto> {
+  async viewWallet(id: string): Promise<Wallet[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select()
         .eq('profile_id', id)
-        .single();
+        // .single();
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Wallet;
+      return data as Wallet[];
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
       return new ErrorResponseDto(500, error);

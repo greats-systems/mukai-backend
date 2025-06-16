@@ -32,7 +32,7 @@ function isErrorResponseDto(obj: any): obj is ErrorResponseDto {
 }
 
 @ApiTags('Cooperative Member Requests')
-@Controller('cooperative-member-requests')
+@Controller('cooperative_member_requests')
 export class CooperativeMemberRequestsController {
   constructor(
     private readonly cooperativeMemberRequestsService: CooperativeMemberRequestsService,
@@ -98,9 +98,9 @@ export class CooperativeMemberRequestsController {
   }
 
   @Get(':status')
-  async filterByStatus(@Param('status') status: string) {
+  async findMemberRequestStatus(@Param('status') status: string) {
     const response =
-      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequestStatus(
+      await this.cooperativeMemberRequestsService.findMemberRequestStatus(
         status,
       );
     if (response instanceof ErrorResponseDto) {
@@ -148,6 +148,44 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
+  @Get('/pending/:member_id')
+  @ApiOperation({
+    summary: 'Get pending request from user who wants to join group',
+  })
+  @ApiParam({
+    name: 'member_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Member ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending request details',
+    type: CooperativeMemberRequest,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No pending requests',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async getPendingRequestDetails(@Param('member_id') member_id: string) {
+    const response =
+      await this.cooperativeMemberRequestsService.getPendingRequestDetails(
+        member_id,
+      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(
+        response.message || 'An error occurred',
+        response.statusCode,
+      );
+    }
+    return response;
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update a member request' })
   @ApiParam({
@@ -177,13 +215,12 @@ export class CooperativeMemberRequestsController {
     type: ErrorResponseDto,
   })
   async update(
-    @Param('id') id: string,
+    // @Param('id') id: string,
     @Body()
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ) {
     const response =
       await this.cooperativeMemberRequestsService.updateCooperativeMemberRequest(
-        id,
         updateCooperativeMemberRequestDto,
       );
     if (response instanceof ErrorResponseDto) {

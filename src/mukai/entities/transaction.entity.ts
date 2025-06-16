@@ -79,4 +79,10 @@ export class Transaction {
     description: 'Sending wallet ID',
   })
   sending_wallet: string;
+
+  @ApiProperty({
+    example: 'usd',
+    description: 'transaction currency',
+  })
+  currency: string;
 }

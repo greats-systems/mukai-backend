@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsUUID,
 } from 'class-validator';
+import { UUID } from 'crypto';
 
 export class CreateTransactionDto {
   @ApiProperty({
@@ -47,7 +48,7 @@ export class CreateTransactionDto {
     required: true,
   })
   @IsUUID()
-  sending_wallet: string;
+  sending_wallet: UUID;
 
   @ApiPropertyOptional({
     example: '987e6543-e21b-43d2-b456-426614174000',

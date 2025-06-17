@@ -67,14 +67,9 @@ export class TransactionsController {
   }
 
   @Get('report/:wallet_id')
-  async generateTransactionReport(
-    @Param('wallet_id') wallet_id: string,
-    @Body() parameters: object,
-  ) {
-    const response = await this.transactionsService.generateTransactionReport(
-      wallet_id,
-      parameters,
-    );
+  async generateTransactionReport(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.generateTransactionReport(wallet_id);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

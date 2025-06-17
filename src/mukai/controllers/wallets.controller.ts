@@ -145,6 +145,41 @@ export class WalletsController {
     return response;
   }
 
+  @Get(':group_id')
+  @ApiOperation({ summary: 'Fetch a wallet by group ID' })
+  @ApiParam({
+    name: 'group_id',
+    description: 'Group ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group wallet retrieved successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async viewGroupWalletID(
+    @Param('group_id') group_id: string,
+    @Body() currencyJson?: { currency?: string },
+  ) {
+    const currency = currencyJson?.currency || 'usd';
+    const response = await this.walletsService.viewGroupWallet(
+      group_id,
+      currency,
+    );
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update a wallet by ID' })
   @ApiParam({

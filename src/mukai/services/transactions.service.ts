@@ -17,15 +17,13 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
-  constructor(
-    private readonly postgresrest: PostgresRest,
-    private readonly walletsService: WalletsService,
-  ) {}
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTransaction(
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction | ErrorResponseDto> {
     try {
+      const walletsService = new WalletsService(this.postgresrest);
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(createTransactionDto)
@@ -36,11 +34,11 @@ export class TransactionsService {
         return new ErrorResponseDto(400, error.message);
       }
       console.log(data);
-      const debitResponse = await this.walletsService.updateSenderBalance(
+      const debitResponse = await walletsService.updateSenderBalance(
         createTransactionDto.sending_wallet,
         createTransactionDto.amount,
       );
-      const creditResponse = await this.walletsService.updateReceiverBalance(
+      const creditResponse = await walletsService.updateReceiverBalance(
         createTransactionDto.receiving_wallet,
         createTransactionDto.amount,
       );
@@ -90,18 +88,65 @@ export class TransactionsService {
     }
   }
 
+  async checkIfSubsPaid(
+    group_wallet_id: string,
+    child_wallet_id: string,
+    month: string = new Date().toLocaleString('default', { month: 'long' }),
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const currentYear = new Date().getFullYear();
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select()
+        .eq('sending_wallet', child_wallet_id)
+        .eq('receiving_wallet', group_wallet_id)
+        .eq('category', 'subscription')
+        .filter(
+          'created_at',
+          'gte',
+          new Date(`${month} 1, ${currentYear}`).toISOString(),
+        )
+        .filter(
+          'created_at',
+          'lte',
+          new Date(`${month} 31, ${currentYear}`).toISOString(),
+        )
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows found
+          return false;
+        }
+        this.logger.error(
+          `Error checking subscription payment for ${month}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return !!data; // Returns true if data exists, false otherwise
+    } catch (error) {
+      this.logger.error(
+        `Exception checking subscription payment for ${month}`,
+        error,
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
   async generateTransactionReport(
     wallet_id: string,
-    parameters: object,
   ): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.rpc(
-        'get_wallet_transactions',
+        'get_user_transaction_totals',
         {
-          p_wallet_id: wallet_id,
-          p_period: parameters['period'],
-          p_trans_type: parameters['transaction_type'],
-          p_currency_filter: parameters['currency'],
+          user_id: wallet_id,
         },
       );
 

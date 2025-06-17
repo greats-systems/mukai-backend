@@ -1,12 +1,10 @@
 import {
-  IsArray,
-  IsObject,
   IsOptional,
   IsString,
   IsUUID,
   IsNumber,
+  IsArray,
 } from 'class-validator';
-import { SignupDto } from 'src/auth/dto/signup.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 
@@ -59,8 +57,8 @@ export class CreateGroupDto {
   @IsNumber()
   monthly_sub?: number;
 
-  @IsObject()
+  @IsString()
   @IsArray()
   @IsOptional()
-  members?: SignupDto[];
+  members: string[];
 }

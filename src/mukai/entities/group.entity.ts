@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SignupDto } from 'src/auth/dto/signup.dto';
 
 export class Group {
   @ApiProperty({
@@ -39,8 +38,9 @@ export class Group {
   monthly_sub?: number;
 
   @ApiPropertyOptional({
-    type: () => [SignupDto],
-    description: 'List of group members',
+    example:
+      '[987e6543-e21b-43d2-b456-426614174000, 8a7e9543-f817be-ab44-5c33-fabc532d, ...]',
+    description: 'List of group member IDs',
   })
-  members?: SignupDto[];
+  members?: string;
 }

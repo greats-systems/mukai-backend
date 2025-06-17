@@ -59,6 +59,7 @@ export class WalletsService {
         .from('wallets')
         .select()
         .eq('profile_id', id)
+        // .eq('created_at', date_trunc('month'))
         // .single();
 
       if (error) {
@@ -89,6 +90,27 @@ export class WalletsService {
       return data as Wallet[];
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewGroupWallet(group_id: string, currency: string = 'usd'): Promise<Wallet | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select()
+        .eq('group_id', group_id)
+        .eq('default_currency', currency)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${group_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Wallet;
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${group_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

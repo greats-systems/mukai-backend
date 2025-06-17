@@ -63,6 +63,30 @@ export class GroupsController {
     return response;
   }
 
+  @Get('subs/:group_id')
+  async checkMemberSubscriptions(
+    @Param('group_id') group_id: string,
+    @Body() period?: { month?: string },
+  ) {
+    const month =
+      period?.month || new Date().toLocaleString('default', { month: 'long' });
+    console.log(month);
+    const response = await this.groupsService.checkMemberSubscriptions(
+      group_id,
+      month,
+    );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':group_id')
   async viewGroupWallet(@Param('group_id') group_id: string) {
     const response = await this.groupsService.viewGroupWallet(group_id);

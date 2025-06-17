@@ -51,6 +51,12 @@ import { LoanService } from './mukai/services/loan.servce';
 import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
 import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
 import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
+import { SubscriberModule } from './wallet/modules/subscriber.module';
+import { SubscriberController } from './wallet/controllers/subscriber.controller';
+import { SubscriberService } from './wallet/services/subscriber.service';
+import { WalletTransactionController } from './wallet/controllers/wallet-transaction.controller';
+import { WalletTransactionModule } from './wallet/modules/wallet-transaction.module';
+import { WalletTransactionService } from './wallet/services/wallet-transaction.service';
 
 @Module({
   imports: [
@@ -86,6 +92,8 @@ import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-
     LoanModule,
     CooperativeMemberRequestModule,
     CooperativeMemberApprovalsModule,
+    SubscriberModule,
+    WalletTransactionModule,
   ],
   controllers: [
     AppController,
@@ -115,6 +123,8 @@ import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-
     LoanController,
     CooperativeMemberRequestsController,
     CooperativeMemberApprovalsController,
+    SubscriberController,
+    WalletTransactionController,
   ],
   providers: [
     AppService,
@@ -144,6 +154,8 @@ import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-
     LoanService,
     CooperativeMemberRequestsService,
     CooperativeMemberApprovalsService,
+    SubscriberService,
+    WalletTransactionService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

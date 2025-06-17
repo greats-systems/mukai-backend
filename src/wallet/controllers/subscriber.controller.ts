@@ -10,9 +10,6 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { CreateSpendingConditionsDto } from '../dto/create/create-spending-conditions.dto';
-import { UpdateSpendingConditionsDto } from '../dto/update/update-spending-conditions.dto';
-import { SpendingConditionsService } from '../services/spending-conditions.service';
 import {
   ApiTags,
   ApiOperation,
@@ -20,22 +17,23 @@ import {
   ApiBody,
   ApiParam,
 } from '@nestjs/swagger';
-import { SpendingConditions } from '../entities/spending-conditions.entity';
+import { CreateSubscriberDto } from '../dto/create/create-subscriber.dto';
+import { UpdateSubscriberDto } from '../dto/update/update-subscriber.dto';
+import { SubscriberService } from '../services/subscriber.service';
+import { Subscriber } from '../entities/subscriber.entity';
 
-@ApiTags('Spending Conditions')
-@Controller('spending-conditions')
-export class SpendingConditionsController {
-  constructor(
-    private readonly spendingConditionsServiceService: SpendingConditionsService,
-  ) {}
+@ApiTags('Subscriber')
+@Controller('subscribers')
+export class SubscriberController {
+  constructor(private readonly subscriberService: SubscriberService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create spending conditions' })
-  @ApiBody({ type: CreateSpendingConditionsDto })
+  @ApiOperation({ summary: 'Create subscriber' })
+  @ApiBody({ type: CreateSubscriberDto })
   @ApiResponse({
     status: 201,
-    description: 'Spending conditions created successfully',
-    type: SpendingConditions,
+    description: 'subscriber created successfully',
+    type: Subscriber,
   })
   @ApiResponse({
     status: 400,
@@ -45,13 +43,9 @@ export class SpendingConditionsController {
     status: 500,
     description: 'Internal server error',
   })
-  async create(
-    @Body() createSpendingConditionsDto: CreateSpendingConditionsDto,
-  ) {
+  async create(@Body() createSubscriberDto: CreateSubscriberDto) {
     const response =
-      await this.spendingConditionsServiceService.createSpendingConditions(
-        createSpendingConditionsDto,
-      );
+      await this.subscriberService.createSubscriber(createSubscriberDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -65,11 +59,11 @@ export class SpendingConditionsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all spending conditions' })
+  @ApiOperation({ summary: 'List all subscribers' })
   @ApiResponse({
     status: 200,
-    description: 'Array of spending conditions',
-    type: [SpendingConditions],
+    description: 'Array of subscribers',
+    type: [Subscriber],
   })
   @ApiResponse({
     status: 400,
@@ -80,8 +74,7 @@ export class SpendingConditionsController {
     description: 'Internal server error',
   })
   async findAll() {
-    const response =
-      await this.spendingConditionsServiceService.findAllSpendingConditions();
+    const response = await this.subscriberService.findAllSubscribers();
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -95,16 +88,16 @@ export class SpendingConditionsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get spending conditions details' })
+  @ApiOperation({ summary: 'Get subscriber details' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Spending conditions ID',
+    description: 'subscriber ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Spending conditions details',
-    type: SpendingConditions,
+    description: 'subscriber details',
+    type: Subscriber,
   })
   @ApiResponse({
     status: 400,
@@ -112,15 +105,14 @@ export class SpendingConditionsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Spending conditions not found',
+    description: 'subscriber not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
   async findOne(@Param('id') id: string) {
-    const response =
-      await this.spendingConditionsServiceService.viewSpendingConditions(id);
+    const response = await this.subscriberService.viewSubscriber(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -134,17 +126,17 @@ export class SpendingConditionsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update spending conditions' })
+  @ApiOperation({ summary: 'Update subscriber' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Spending conditions ID',
+    description: 'subscriber ID',
   })
-  @ApiBody({ type: UpdateSpendingConditionsDto })
+  @ApiBody({ type: UpdateSubscriberDto })
   @ApiResponse({
     status: 200,
-    description: 'Updated spending conditions details',
-    type: SpendingConditions,
+    description: 'Updated subscriber details',
+    type: Subscriber,
   })
   @ApiResponse({
     status: 400,
@@ -152,7 +144,7 @@ export class SpendingConditionsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Spending conditions not found',
+    description: 'subscriber not found',
   })
   @ApiResponse({
     status: 500,
@@ -160,13 +152,12 @@ export class SpendingConditionsController {
   })
   async update(
     @Param('id') id: string,
-    @Body() updateSpendingConditionsDto: UpdateSpendingConditionsDto,
+    @Body() updateSubscriberDto: UpdateSubscriberDto,
   ) {
-    const response =
-      await this.spendingConditionsServiceService.updateSpendingConditions(
-        id,
-        updateSpendingConditionsDto,
-      );
+    const response = await this.subscriberService.updateSubscriber(
+      id,
+      updateSubscriberDto,
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -180,16 +171,16 @@ export class SpendingConditionsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete spending conditions' })
+  @ApiOperation({ summary: 'Delete subscriber' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Spending conditions ID',
+    description: 'subscriber ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Spending conditions deleted successfully',
-    type: SpendingConditions,
+    description: 'subscriber deleted successfully',
+    type: Subscriber,
   })
   @ApiResponse({
     status: 400,
@@ -197,15 +188,14 @@ export class SpendingConditionsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Spending conditions not found',
+    description: 'subscriber not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
   async delete(@Param('id') id: string) {
-    const response =
-      await this.spendingConditionsServiceService.deleteSpendingConditions(id);
+    const response = await this.subscriberService.deleteSubscriber(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

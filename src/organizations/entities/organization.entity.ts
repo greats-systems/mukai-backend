@@ -5,16 +5,9 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Profile } from 'src/user/entities/user.entity';
-import { Inventory } from 'src/tradingservices/entities/inventory.entity';
-// import { CartItem } from 'src/tradingservices/entities/cart-item.entity';
-import { Order } from 'src/orders/entities/order.entity';
-// import { Profile } from '../../profile/entities/profile.entity';
-// import { Product } from '../../product/entities/product.entity';
-// import { CartItem } from '../../cart-item/entities/cart-item.entity';
 export class Organization {}
 
 @Entity()
@@ -214,10 +207,4 @@ export class Business {
   @ApiProperty({ description: 'Review rating', example: 4.8, required: false })
   @Column({ name: 'review_rating', type: 'float', nullable: true })
   review_rating: number;
-
-  @OneToMany(() => Inventory, (product) => product.businessProfile)
-  products: Inventory[];
-
-  @OneToMany(() => Order, (order) => order.provider)
-  sales: Order[];
 }

@@ -59,6 +59,14 @@ export class CreateTransactionDto {
   receiving_wallet: string;
 
   @ApiPropertyOptional({
+    example: '0712345678',
+    description: 'Receiving phone number',
+  })
+  @IsOptional()
+  @IsUUID()
+  receiving_phone?: string;
+
+  @ApiPropertyOptional({
     example: 'payment',
     description: 'Transaction category (e.g., "groceries", "salary")',
   })
@@ -113,4 +121,12 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiPropertyOptional({
+    example: 'ecocash',
+    description: 'Transfer mode',
+  })
+  @IsOptional()
+  @IsString()
+  transfer_mode?: string;
 }

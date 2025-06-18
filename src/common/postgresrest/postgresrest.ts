@@ -47,7 +47,6 @@ export class PostgresRest {
     if (!DB_REST_URL) {
       throw new Error('DB_REST_URL configuration is not defined');
     }
-
     this.clientInstance = new PostgrestClient(DB_REST_URL, {
       headers: {
         apikey: SERVICE_ROLE_KEY as string, // Required for all requests

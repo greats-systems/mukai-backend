@@ -23,10 +23,9 @@ export class SupabaseStrategy extends PassportStrategy(
         ? process.env.LOCAL_SUPABASE_KEY
         : process.env.SUPABASE_SERVICE_ROLE_KEY;
     // const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
-
     if (!supabaseUrl || !supabaseKey) {
       throw new Error(
-        'Missing required Supabase environment variables (SUPABASE_URL, SUPABASE_KEY, SUPABASE_JWT_SECRET)',
+        'Missing required Supabase environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET)',
       );
     }
 

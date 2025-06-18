@@ -2,14 +2,40 @@ import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAssetDto {
+  // @ApiProperty({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Unique identifier for the asset (optional)',
+  //   required: false,
+  // })
+  // @IsString()
+  // @IsOptional()
+  // id?: string;
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Unique identifier for the asset (optional)',
+    example: 'Toyata Fortuner 2025 model',
+    description: 'Descriptive name of the asset (optional)',
     required: false,
   })
   @IsString()
   @IsOptional()
-  id?: string;
+  asset_descriptive_name?: string;
+
+  @ApiProperty({
+    example: 'Red Toyata Fortuner 2025 model with 100000 km on odometer and 2025 registration. It is in good condition and has been well maintained.',
+    description: 'Descriptive description of the asset (optional)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  asset_description?: string;
+
+  @ApiProperty({
+    example: ['https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png', 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png'],  
+    description: 'Asset images URLs (optional)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  asset_images?: string[];
 
   @ApiProperty({
     example: 'account-address-xyz',
@@ -75,13 +101,13 @@ export class CreateAssetDto {
   verifiable_certificate_issuer_id?: string;
 
   @ApiProperty({
-    example: 'document-id-xyz',
+    example: ['document-id-xyz', 'document-id-xyz'],
     description: 'Legal documents associated with the asset (optional)',
     required: false,
   })
   @IsString()
   @IsOptional()
-  legal_documents?: string;
+  legal_documents?: string[];
 
   @ApiProperty({
     example: true,
@@ -135,7 +161,7 @@ export class CreateAssetDto {
   })
   @IsBoolean()
   @IsOptional()
-  has_document?: boolean;
+  has_documents?: boolean;
 
   @ApiProperty({
     example: 'active',
@@ -147,11 +173,20 @@ export class CreateAssetDto {
   status?: string;
 
   @ApiProperty({
-    example: 'profile-id-xyz',
+    example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'Associated profile ID (optional)',
     required: false,
   })
   @IsString()
   @IsOptional()
   profile_id?: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Associated Cooperative ID (optional)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  group_id?: string;
 }

@@ -11,7 +11,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
     .setTitle('FreeTrader API Docs')
-    .setDescription('FreeTrader Distribution Network Activity and Nodes API Documentation')
+    .setDescription(
+      'FreeTrader Distribution Network Activity and Nodes API Documentation',
+    )
     .setVersion('1.0')
     .addTag('Controllers REST API')
     .build();

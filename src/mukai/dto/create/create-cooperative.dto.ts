@@ -1,5 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
+import { UUID } from 'crypto';
 
 export class CreateCooperativeDto {
   @ApiProperty({
@@ -8,8 +15,8 @@ export class CreateCooperativeDto {
     required: false,
   })
   @IsOptional()
-  @IsString()
-  id?: string;
+  @IsUUID()
+  id?: UUID;
 
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
@@ -29,7 +36,7 @@ export class CreateCooperativeDto {
   @IsString()
   name?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'Nairobi',
     description: 'City where the cooperative is based (optional)',
     required: false,
@@ -100,4 +107,20 @@ export class CreateCooperativeDto {
   @IsOptional()
   @IsString()
   province_state?: string;
+
+  @ApiProperty({
+    example: 5,
+    description: 'Subscription paid by each coop member',
+  })
+  @IsNumber()
+  monthly_sub: number;
+
+  @ApiProperty({
+    example:
+      '[987e6543-e21b-43d2-b456-426614174000, 8a7e9543-f817be-ab44-5c33-fabc532d, ...]',
+    description: 'List of group member IDs',
+  })
+  @IsString()
+  @IsArray()
+  members: string[];
 }

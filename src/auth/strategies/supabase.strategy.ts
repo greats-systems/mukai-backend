@@ -21,7 +21,7 @@ export class SupabaseStrategy extends PassportStrategy(
     const supabaseKey =
       process.env.ENV == 'local'
         ? process.env.LOCAL_SUPABASE_KEY
-        : process.env.SUPABASE_KEY;
+        : process.env.SUPABASE_SERVICE_ROLE_KEY;
     // const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
 
     if (!supabaseUrl || !supabaseKey) {

@@ -42,7 +42,7 @@ export class PostgresRest {
     const SERVICE_ROLE_KEY =
       this.configService.get<string>('ENV') == 'local'
         ? this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY')
-        : this.configService.get<string>('PROD_SERVICE_ROLE_KEY');
+        : this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!DB_REST_URL) {
       throw new Error('DB_REST_URL configuration is not defined');

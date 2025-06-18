@@ -21,7 +21,7 @@ export class CreateGroupMemberDto {
     description: 'Unique identifier for the group',
   })
   @IsUUID()
-  group_id: string;
+  cooperative_id: string;
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',

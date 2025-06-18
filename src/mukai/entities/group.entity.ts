@@ -42,5 +42,5 @@ export class Group {
       '[987e6543-e21b-43d2-b456-426614174000, 8a7e9543-f817be-ab44-5c33-fabc532d, ...]',
     description: 'List of group member IDs',
   })
-  members?: string;
+  members?: string[];
 }

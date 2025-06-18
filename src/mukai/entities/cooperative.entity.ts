@@ -66,4 +66,18 @@ export class Cooperative {
     description: 'Province/state where the cooperative operates',
   })
   province_state: string;
+
+  /*
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'ID or the cooperative wallet',
+  })
+  wallet_id: string;
+  */
+
+  @ApiProperty({
+    example: 5,
+    description: 'Subscription paid by each coop member',
+  })
+  monthly_sub: number;
 }

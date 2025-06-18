@@ -25,13 +25,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class GroupService {
   private readonly logger = initLogger(GroupService);
-  constructor(
-    private readonly postgresrest: PostgresRest,
-    // private readonly walletsService: WalletsService,
-    // private readonly cooperativeMemberRequestsService: CooperativeMemberRequestsService,
-    // private readonly createWalletDto: CreateWalletDto,
-    // private readonly cooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
-  ) {}
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -58,7 +52,7 @@ export class GroupService {
       }
 
       for (const member of createGroupDto.members) {
-        createGroupMemberDto.group_id = createGroupResponse['id'];
+        createGroupMemberDto.cooperative_id = createGroupResponse['id'];
         createGroupMemberDto.member_id = member;
         const response =
           await groupMembersService.createGroupMember(createGroupMemberDto);
@@ -82,13 +76,19 @@ export class GroupService {
       createWalletDto.group_id = createGroupDto.id;
       createWalletDto.children_wallets = walletIDs;
       const walletResponse = await walletsService.createWallet(createWalletDto);
+      createTransactionDto.sending_wallet = walletResponse['id'];
+      createTransactionDto.receiving_wallet = walletResponse['id'];
+      createTransactionDto.amount = createWalletDto.balance;
+      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.narrative = 'credit';
+      const transactionResponse =
+        await transactionsService.createTransaction(createTransactionDto);
+      console.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
-        // createTransactionDto.sending_wallet = createWalletDto.group_id;
-        // const transactionResponse = await transactionsService.createTransaction()
-
         cooperativeMemberRequestDto.status = 'in a group';
-        cooperativeMemberRequestDto.group_id = createGroupMemberDto.group_id;        
+        cooperativeMemberRequestDto.group_id =
+          createGroupMemberDto.cooperative_id;
         const updateMemberResponse =
           await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
             member,
@@ -203,10 +203,9 @@ export class GroupService {
       const transactionsService = new TransactionsService(this.postgresrest);
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
-        .from('group')
-        .select('members')
-        .eq('id', group_id)
-        .single();
+        .from('group_members')
+        .select('member_id')
+        .eq('group_id', group_id);
 
       if (membersError) {
         this.logger.error(`Error fetching group ${group_id}`, membersError);
@@ -217,15 +216,8 @@ export class GroupService {
       const receivingWallet = groupWalletJson['id'];
       // console.log(receivingWallet);
 
-      if (membersError) {
-        this.logger.error(`Error fetching group ${group_id}`, membersError);
-        return new ErrorResponseDto(400, membersError);
-      }
-
-      for (const member of membersJson['members'] || []) {
-        const walletJson = await walletService.viewProfileWalletID(
-          member['id'],
-        );
+      for (const member of membersJson['member_id'] || []) {
+        const walletJson = await walletService.viewProfileWalletID(member);
         // console.log(walletJson);
         walletDetails.push(walletJson['id']);
       }

@@ -1,31 +1,37 @@
-import { IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateMessageDto {
+  @ApiProperty({
+    example: 'Hello there!',
+    description: 'Message content',
+    required: true,
+  })
   @IsString()
-  @IsOptional()
-  id: string;
-
-  @IsString()
-  @IsOptional()
-  profile_id: string;
-
-  @IsString()
-  @IsOptional()
   content: string;
 
-  @IsString()
-  @IsOptional()
-  content_format: string;
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Sender profile ID',
+    required: true,
+  })
+  @IsUUID()
+  profile_id: string;
 
-  @IsString()
+  @ApiPropertyOptional({
+    example: 'text',
+    description: 'Content format type',
+    enum: ['text', 'image', 'video'],
+  })
   @IsOptional()
-  message_timestamp: string;
+  @IsString()
+  content_format?: string;
 
-  @IsString()
+  @ApiPropertyOptional({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Chat reference ID',
+  })
   @IsOptional()
-  ref_key: string;
-
-  @IsString()
-  @IsOptional()
-  chat_id: string;
+  @IsUUID()
+  chat_id?: string;
 }

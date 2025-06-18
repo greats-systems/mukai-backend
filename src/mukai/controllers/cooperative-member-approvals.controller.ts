@@ -13,6 +13,8 @@ import {
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
+import { ApiOperation, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 
 @Controller('cooperative-member-approvals')
 export class CooperativeMemberApprovalsController {
@@ -21,6 +23,21 @@ export class CooperativeMemberApprovalsController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new member approval poll' })
+  @ApiBody({ type: CreateCooperativeMemberApprovalsDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Poll created successfully',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async create(
     @Body()
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
@@ -29,18 +46,33 @@ export class CooperativeMemberApprovalsController {
       await this.cooperativeMemberApprovalsService.createCooperativeMemberApprovals(
         createCooperativeMemberApprovalsDto,
       );
-    /*
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
     if (response['statusCode'] === 500) {
-      throw new HttpException(response['message'], HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-      */
     return response;
   }
 
   @Get()
+  @ApiOperation({ summary: 'List all approval polls' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of all polls',
+    type: [CooperativeMemberApprovals],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request parameters',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async findAll() {
     const response =
       await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals();
@@ -57,6 +89,29 @@ export class CooperativeMemberApprovalsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get specific poll details' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Poll ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async findOne(@Param('id') id: string) {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovals(
@@ -75,6 +130,30 @@ export class CooperativeMemberApprovalsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a poll' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Poll ID',
+  })
+  @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async update(
     @Param('id') id: string,
     @Body()
@@ -98,6 +177,28 @@ export class CooperativeMemberApprovalsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a poll' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Poll ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Confirmation of deletion',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
   async delete(@Param('id') id: string) {
     const response =
       await this.cooperativeMemberApprovalsService.deleteCooperativeMemberApprovals(

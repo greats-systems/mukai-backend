@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -8,9 +10,13 @@ import { Group } from '../entities/group.entity';
 import { CreateGroupDto } from '../dto/create/create-group.dto';
 import { UpdateGroupDto } from '../dto/update/update-group.dto';
 import { WalletsService } from './wallets.service';
+import { TransactionsService } from './transactions.service';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
 import { CooperativeMemberRequestsService } from './cooperative_member_requests.service';
+import { GroupMemberService } from './group-members.service';
+import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
+import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -19,39 +25,44 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class GroupService {
   private readonly logger = initLogger(GroupService);
-  constructor(
-    private readonly postgresrest: PostgresRest,
-    // private readonly walletsService: WalletsService,
-    // private readonly cooperativeMemberRequestsService: CooperativeMemberRequestsService,
-    // private readonly createWalletDto: CreateWalletDto,
-    // private readonly cooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
-  ) {}
+  constructor(private readonly postgresrest: PostgresRest) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
   ): Promise<Group | ErrorResponseDto> {
     try {
+      const groupMembersService = new GroupMemberService(this.postgresrest);
+      const createGroupMemberDto = new CreateGroupMemberDto();
       const walletsService = new WalletsService(this.postgresrest);
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
+      const transactionsService = new TransactionsService(this.postgresrest);
+      const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       const cooperativeMemberRequestDto =
         new CreateCooperativeMemberRequestDto();
       const { data: createGroupResponse, error } = await this.postgresrest
         .from('group')
         .insert(createGroupDto)
+        .select()
         .single();
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      //   return data as Group;
-      //   let i: number;
+
+      for (const member of createGroupDto.members) {
+        createGroupMemberDto.cooperative_id = createGroupResponse['id'];
+        createGroupMemberDto.member_id = member;
+        const response =
+          await groupMembersService.createGroupMember(createGroupMemberDto);
+        console.log(response);
+      }
+
       const walletIDs: string[] = [];
       for (const member of createGroupDto.members || []) {
-        const groupMemberWalletsJson = await walletsService.viewProfileWalletID(
-          member.id,
-        );
+        const groupMemberWalletsJson =
+          await walletsService.viewProfileWalletID(member);
         if (groupMemberWalletsJson instanceof ErrorResponseDto) {
           return groupMemberWalletsJson; // Return the error if wallet lookup failed
         }
@@ -62,15 +73,25 @@ export class GroupService {
       createWalletDto.balance = 100;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
+      createWalletDto.group_id = createGroupDto.id;
       createWalletDto.children_wallets = walletIDs;
       const walletResponse = await walletsService.createWallet(createWalletDto);
+      createTransactionDto.sending_wallet = walletResponse['id'];
+      createTransactionDto.receiving_wallet = walletResponse['id'];
+      createTransactionDto.amount = createWalletDto.balance;
+      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.narrative = 'credit';
+      const transactionResponse =
+        await transactionsService.createTransaction(createTransactionDto);
+      console.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
         cooperativeMemberRequestDto.status = 'in a group';
-        cooperativeMemberRequestDto.group_id = member.id;
+        cooperativeMemberRequestDto.group_id =
+          createGroupMemberDto.cooperative_id;
         const updateMemberResponse =
           await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
-            member.id,
+            member,
             cooperativeMemberRequestDto,
           );
         console.log(updateMemberResponse);
@@ -111,7 +132,7 @@ export class GroupService {
     }
   }
 
-  async findGroupsForMember(id: string): Promise<object[] | ErrorResponseDto> {
+  async viewGroupsForMember(id: string): Promise<object[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -165,6 +186,55 @@ export class GroupService {
       }
 
       return data as Group[];
+    } catch (error) {
+      this.logger.error(`Exception in viewGroup for id ${group_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async checkMemberSubscriptions(
+    group_id: string,
+    month: string = new Date().toLocaleString('default', { month: 'long' }),
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      // const memberIDs: string[] = [];
+      const walletDetails: string[] = [];
+      const walletService = new WalletsService(this.postgresrest);
+      const transactionsService = new TransactionsService(this.postgresrest);
+      const subsDict: object[] = [];
+      const { data: membersJson, error: membersError } = await this.postgresrest
+        .from('group_members')
+        .select('member_id')
+        .eq('group_id', group_id);
+
+      if (membersError) {
+        this.logger.error(`Error fetching group ${group_id}`, membersError);
+        return new ErrorResponseDto(400, membersError.message);
+      }
+
+      const groupWalletJson = await walletService.viewGroupWallet(group_id);
+      const receivingWallet = groupWalletJson['id'];
+      // console.log(receivingWallet);
+
+      for (const member of membersJson['member_id'] || []) {
+        const walletJson = await walletService.viewProfileWalletID(member);
+        // console.log(walletJson);
+        walletDetails.push(walletJson['id']);
+      }
+      // console.log(walletDetails);
+
+      for (const id of walletDetails) {
+        const hasPaid = await transactionsService.checkIfSubsPaid(
+          receivingWallet,
+          id,
+          month,
+        );
+        subsDict.push({ member_id: id, has_paid: hasPaid });
+      }
+
+      // console.log(subsDict);
+
+      return subsDict;
     } catch (error) {
       this.logger.error(`Exception in viewGroup for id ${group_id}`, error);
       return new ErrorResponseDto(500, error);

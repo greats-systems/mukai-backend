@@ -3,8 +3,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     IsString, IsNumber, IsOptional, IsNotEmpty, IsArray
 } from 'class-validator';
-import { CartItemResponseDto } from 'src/tradingservices/dto/cart-item-response.dto';
-import { InventoryResponseDto } from 'src/tradingservices/dto/update/update-inventory.dto';
 import { ProfileResponseDto } from 'src/user/dto/create-user.dto';
 
 export class CreateBusinessDto {
@@ -213,12 +211,6 @@ export class BusinessResponseDto {
 
     @ApiProperty({ description: 'Review rating', example: 4.8, required: false })
     review_rating: number;
-
-    @ApiProperty({ type: () => [InventoryResponseDto], required: false })
-    products: InventoryResponseDto[];
-
-    @ApiProperty({ type: () => [CartItemResponseDto], required: false })
-    sales: CartItemResponseDto[];
 }
 
 

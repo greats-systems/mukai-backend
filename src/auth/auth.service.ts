@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -32,8 +33,12 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {
     this.supabaseAdmin = createClient(
-      this.configService.get<string>('LOCAL_SUPABASE_URL') || '',
-      this.configService.get<string>('LOCAL_SERVICE_ROLE_KEY') || '',
+      process.env.ENV == 'local'
+        ? process.env.LOCAL_SUPABASE_URL || ''
+        : process.env.SUPABASE_URL || ''  ,
+      process.env.ENV == 'local'
+        ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
+        : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     );
   }
 

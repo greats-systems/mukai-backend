@@ -10,10 +10,10 @@ import {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
-    .setTitle('FreeTrader API Docs')
-    .setDescription('FreeTrader Distribution Network Activity and Nodes API Documentation')
+    .setTitle('Mukai API Docs')
+    .setDescription('Mukai Savings and Credit Co-operatives Management API Documentation')
     .setVersion('1.0')
-    .addTag('Controllers REST API')
+    .addTag('Controllers REST API v2')
     .build();
 
   const options: SwaggerDocumentOptions = {

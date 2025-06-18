@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -49,6 +47,28 @@ export class GroupMemberService {
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select()
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching group', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as GroupMember[];
+    } catch (error) {
+      this.logger.error('Exception in findAllGroupMember', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async findGroupsContainingMember(
+    member_id: string,
+  ): Promise<GroupMember[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .eq('member_id', member_id)
         .order('created_at', { ascending: false });
 
       if (error) {

@@ -212,7 +212,7 @@ export class GroupService {
         return new ErrorResponseDto(400, membersError.message);
       }
 
-      const groupWalletJson = await walletService.viewGroupWallet(group_id);
+      const groupWalletJson = await walletService.viewCooperativeWallet(group_id);
       const receivingWallet = groupWalletJson['id'];
       // console.log(receivingWallet);
 

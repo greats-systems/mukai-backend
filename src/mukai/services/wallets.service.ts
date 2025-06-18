@@ -118,12 +118,12 @@ export class WalletsService {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select()
-        .eq('group_id', group_id)
+        .eq('group_id', cooperative_id)
         .eq('default_currency', currency)
         .single();
 
       if (error) {
-        this.logger.error(`Error fetching Wallet ${group_id}`, error);
+        this.logger.error(`Error fetching Wallet ${cooperative_id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -133,7 +133,7 @@ export class WalletsService {
         data: data as Wallet,
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${group_id}`, error);
+      this.logger.error(`Exception in viewWallet for id ${cooperative_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

@@ -174,6 +174,109 @@ export class CooperativesService {
     }
   }
 
+  async viewCooperativesForMember(
+    member_id: string,
+  ): Promise<object[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .eq('member_id', member_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching cooperative', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object[];
+    } catch (error) {
+      this.logger.error('Exception in viewCooperativesForMember', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewCooperativeWallet(
+    cooperative_id: string,
+  ): Promise<Cooperative[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select()
+        .eq('group_id', cooperative_id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching group ${cooperative_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Cooperative[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewGroup for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async checkMemberSubscriptions(
+    cooperative_id: string,
+    month: string = new Date().toLocaleString('default', { month: 'long' }),
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      // const memberIDs: string[] = [];
+      const walletDetails: string[] = [];
+      const walletService = new WalletsService(this.postgresrest);
+      const transactionsService = new TransactionsService(this.postgresrest);
+      const subsDict: object[] = [];
+      const { data: membersJson, error: membersError } = await this.postgresrest
+        .from('group_members')
+        .select('member_id')
+        .eq('cooperative_id', cooperative_id);
+
+      if (membersError) {
+        this.logger.error(
+          `Error fetching group ${cooperative_id}`,
+          membersError,
+        );
+        return new ErrorResponseDto(400, membersError.message);
+      }
+
+      const cooperativeWalletJson =
+        await walletService.viewCooperativeWallet(cooperative_id);
+      const receivingWallet = cooperativeWalletJson['id'];
+      // console.log(receivingWallet);
+
+      for (const member of membersJson['member_id'] || []) {
+        const walletJson = await walletService.viewProfileWalletID(member);
+        // console.log(walletJson);
+        walletDetails.push(walletJson['id']);
+      }
+      // console.log(walletDetails);
+
+      for (const id of walletDetails) {
+        const hasPaid = await transactionsService.checkIfSubsPaid(
+          receivingWallet,
+          id,
+          month,
+        );
+        subsDict.push({ member_id: id, has_paid: hasPaid });
+      }
+
+      // console.log(subsDict);
+
+      return subsDict;
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewGroup for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async updateCooperative(
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,

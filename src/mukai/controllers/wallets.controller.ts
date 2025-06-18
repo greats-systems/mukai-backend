@@ -101,6 +101,33 @@ export class WalletsController {
     return response;
   }
 
+  @Get('children_wallets/:id')
+  @ApiOperation({ summary: 'Fetch a single wallet by ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'Wallet ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({ status: 200, description: 'Wallet retrieved successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async viewChildrenWallets(@Param('id') id: string) {
+    const response = await this.walletsService.viewChildrenWallets(id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':wallet_id')
   @ApiOperation({ summary: 'Fetch children wallets of a wallet' })
   @ApiParam({

@@ -163,7 +163,7 @@ export class WalletsController {
     @Body() currencyJson?: { currency?: string },
   ) {
     const currency = currencyJson?.currency || 'usd';
-    const response = await this.walletsService.viewGroupWallet(
+    const response = await this.walletsService.viewCooperativeWallet(
       group_id,
       currency,
     );

@@ -27,7 +27,10 @@ export class CooperativeMemberRequestsService {
         await this.postgresrest
           .from('cooperative_member_requests')
           .select()
-          .eq('member_id', createCooperativeMemberRequestDto.member_id)
+          .match({
+            member_id: createCooperativeMemberRequestDto.member_id,
+            cooperative_id: createCooperativeMemberRequestDto.cooperative_id,
+          })
           .single();
 
       if (checkError && checkError.code !== 'PGRST116') {

@@ -15,6 +15,7 @@ import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperat
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -106,7 +107,7 @@ export class CooperativesService {
 
       for (const member of createCooperativeDto.members || []) {
         cooperativeMemberRequestDto.status = 'in a cooperative';
-        cooperativeMemberRequestDto.group_id =
+        cooperativeMemberRequestDto.cooperative_id =
           createGroupMemberDto.cooperative_id;
         const updateMemberResponse =
           await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
@@ -176,7 +177,7 @@ export class CooperativesService {
 
   async viewCooperativesForMember(
     member_id: string,
-  ): Promise<object[] | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -188,8 +189,12 @@ export class CooperativesService {
         this.logger.error('Error fetching cooperative', error);
         return new ErrorResponseDto(400, error.message);
       }
+      return {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+        data: data as object[],
+      };
 
-      return data as object[];
     } catch (error) {
       this.logger.error('Exception in viewCooperativesForMember', error);
       return new ErrorResponseDto(500, error);

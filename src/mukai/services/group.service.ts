@@ -82,13 +82,18 @@ export class GroupService {
       createWalletDto.group_id = createGroupDto.id;
       createWalletDto.children_wallets = walletIDs;
       const walletResponse = await walletsService.createWallet(createWalletDto);
+      createTransactionDto.sending_wallet = walletResponse['id'];
+      createTransactionDto.receiving_wallet = walletResponse['id'];
+      createTransactionDto.amount = createWalletDto.balance;
+      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.narrative = 'credit';
+      const transactionResponse =
+        await transactionsService.createTransaction(createTransactionDto);
+      console.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
-        createTransactionDto.sending_wallet = createWalletDto.group_id;
-        const transactionResponse = await transactionsService.createTransaction()
-
         cooperativeMemberRequestDto.status = 'in a group';
-        cooperativeMemberRequestDto.group_id = createGroupMemberDto.group_id;        
+        cooperativeMemberRequestDto.group_id = createGroupMemberDto.group_id;
         const updateMemberResponse =
           await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
             member,

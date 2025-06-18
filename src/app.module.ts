@@ -69,6 +69,7 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
     NodesModule,
     /*
     CommodityModule,
+    ProduceModule,
     ContractBidModule,
     ContractModule,
     ProducerModule,

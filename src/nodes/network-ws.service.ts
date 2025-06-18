@@ -17,13 +17,18 @@ export class CoreProduceNetworkWsService implements OnModuleInit, OnModuleDestro
     };
 
     async onModuleInit() {
-        const exists = await this.checkSubscriptionExists('produce_manager');
-        if (exists) {
-            this.connect();
-            this.logger.log('✅ Verified subscription exists via Network REST API');
-        } else {
+        try {
+            const exists = await this.checkSubscriptionExists('produce_manager');
+            if (exists) {
+                this.connect();
+                this.logger.log('✅ Verified subscription exists via Network REST API');
+            } else {
+                this.logger.error('❌ Subscription not found in Network');
+            }  
+        } catch (error) {
             this.logger.error('❌ Subscription not found in Network');
         }
+
     }
 
     private connect() {

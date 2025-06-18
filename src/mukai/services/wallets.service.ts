@@ -8,6 +8,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { UpdateWalletDto } from '../dto/update/update-wallet.dto';
 import { Wallet } from '../entities/wallet.entity';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -20,7 +21,7 @@ export class WalletsService {
 
   async createWallet(
     createWalletDto: CreateWalletDto,
-  ): Promise<Wallet | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
@@ -31,13 +32,17 @@ export class WalletsService {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Wallet;
+      return {
+        statusCode: 201,
+        message: 'Wallet created successfully',
+        data: data as Wallet,
+      };
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async findAllWallets(): Promise<Wallet[] | ErrorResponseDto> {
+  async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.from('wallets').select();
 
@@ -46,14 +51,18 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Wallet[];
+      return {
+        statusCode: 200,
+        message: 'Wallets fetched successfully',
+        data: data as Wallet[],
+      };
     } catch (error) {
       this.logger.error('Exception in findAllWallets', error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewWallet(id: string): Promise<Wallet | ErrorResponseDto> {
+  async viewWallet(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
@@ -61,53 +70,94 @@ export class WalletsService {
         .eq('profile_id', id)
         .single();
 
+        // .eq('created_at', date_trunc('month'))
+        // .single();
+
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Wallet;
+      return {
+        statusCode: 200,
+        message: 'Wallet fetched successfully',
+        data: data as Wallet,
+      };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewChildrenWallets(parent_wallet_id: string): Promise<Wallet[] | ErrorResponseDto> {
+  async viewChildrenWallets(wallet_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select('children_wallets')
-        .eq('id', parent_wallet_id);
+        .eq('id', wallet_id)
+        .eq('is_group_wallet', true);
 
       if (error) {
-        this.logger.error(`Error fetching Wallet ${parent_wallet_id}`, error);
+        this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Wallet[];
+      return {
+        statusCode: 200,
+        message: 'Wallets fetched successfully',
+        data: data as Wallet[],
+      };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${parent_wallet_id}`, error);
+      this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewProfileWalletID(id: string): Promise<object | ErrorResponseDto> {
+  async viewGroupWallet(group_id: string, currency: string = 'usd'): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select()
+        .eq('group_id', cooperative_id)
+        .eq('default_currency', currency)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${cooperative_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return {
+        statusCode: 200,
+        message: 'Wallet fetched successfully',
+        data: data as Wallet,
+      };
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${cooperative_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewProfileWalletID(profile_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
         .select('id')
-        .eq('profile_id', id)
+        .eq('profile_id', profile_id)
         .single();
 
       if (error) {
-        this.logger.error(`Error fetching Wallet ${id}`, error);
+        this.logger.error(`Error fetching Wallet ${profile_id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as object;
+      return {
+        statusCode: 200,
+        message: 'Wallet fetched successfully',
+        data: data as object,
+      };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${id}`, error);
+      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -115,7 +165,7 @@ export class WalletsService {
   async updateWallet(
     id: string,
     updateWalletDto: UpdateWalletDto,
-  ): Promise<Wallet | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')
@@ -127,7 +177,11 @@ export class WalletsService {
         this.logger.error(`Error updating Wallets ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Wallet;
+      return {
+        statusCode: 200,
+        message: 'Wallet updated successfully',
+        data: data as Wallet,
+      };
     } catch (error) {
       this.logger.error(`Exception in updateWallet for id ${id}`, error);
       return new ErrorResponseDto(500, error);
@@ -137,7 +191,7 @@ export class WalletsService {
   async updateReceiverBalance(
     receiving_wallet_id: string,
     amount: number,
-  ): Promise<Wallet | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from('wallets')
@@ -168,7 +222,11 @@ export class WalletsService {
         return new ErrorResponseDto(400, updateError.message);
       }
 
-      return updateData as Wallet;
+      return {
+        statusCode: 200,
+        message: 'Wallet updated successfully',
+        data: updateData as Wallet,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in updateBalance for id ${receiving_wallet_id}`,
@@ -181,7 +239,7 @@ export class WalletsService {
   async updateSenderBalance(
     sending_wallet_id: string,
     amount: number,
-  ): Promise<Wallet | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from('wallets')
@@ -212,7 +270,11 @@ export class WalletsService {
         return new ErrorResponseDto(400, updateError.message);
       }
 
-      return updateData as Wallet;
+      return {
+        statusCode: 200,
+        message: 'Wallet updated successfully',
+        data: updateData as Wallet,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in updateBalance for id ${sending_wallet_id}`,
@@ -222,7 +284,7 @@ export class WalletsService {
     }
   }
 
-  async deleteWallet(id: string): Promise<boolean | ErrorResponseDto> {
+  async deleteWallet(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('wallets')
@@ -235,7 +297,10 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return true;
+      return {
+        statusCode: 200,
+        message: 'Wallet deleted successfully',
+      };
     } catch (error) {
       this.logger.error(`Exception in deleteWallet for id ${id}`, error);
       return new ErrorResponseDto(500, error);

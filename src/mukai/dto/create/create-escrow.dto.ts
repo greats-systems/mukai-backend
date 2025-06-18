@@ -1,23 +1,49 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateEscrowDto {
-  @IsString()
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Unique identifier for the escrow (optional)',
+    required: false,
+  })
   @IsOptional()
-  id: string;
-
   @IsString()
-  @IsOptional()
-  created_at: string;
+  id?: string;
 
+  @ApiProperty({
+    example: '2023-10-01T12:00:00Z',
+    description: 'Timestamp when the escrow was created (optional)',
+    required: false,
+  })
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  escrow_name: string;
+  created_at?: string;
 
+  @ApiProperty({
+    example: 'Project X Escrow',
+    description: 'Name of the escrow (optional)',
+    required: false,
+  })
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  wallet_id: string;
+  escrow_name?: string;
 
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Wallet ID associated with the escrow (optional)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  wallet_id?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Flag to authorize transactions for the escrow (optional)',
+    required: false,
+  })
+  @IsOptional()
   @IsBoolean()
-  @IsOptional()
-  authorize_transaction: boolean;
+  authorize_transaction?: boolean;
 }

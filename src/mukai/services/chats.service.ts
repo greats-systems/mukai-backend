@@ -8,6 +8,7 @@ import { CreateChatDto } from '../dto/create/create-chat.dto';
 import { UpdateChatDto } from '../dto/update/update-chat.dto';
 import { Chat } from '../entities/chat.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -20,7 +21,7 @@ export class ChatsService {
 
   async createChat(
     createChatDto: CreateChatDto,
-  ): Promise<Chat | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     console.warn(createChatDto);
     try {
       const processedDto = {
@@ -39,13 +40,17 @@ export class ChatsService {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Chat;
+      return {
+        statusCode: 201,
+        message: 'Chat created successfully',
+        data: data as Chat,
+      };
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async findAllChats(): Promise<Chat[] | ErrorResponseDto> {
+  async findAllChats(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.from('chats').select();
 
@@ -54,14 +59,18 @@ export class ChatsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Chat[];
+      return {
+        statusCode: 200,
+        message: 'Chats fetched successfully',
+        data: data as Chat[],
+      };
     } catch (error) {
       this.logger.error('Exception in findAllChats', error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewChat(id: string): Promise<Chat | ErrorResponseDto> {
+  async viewChat(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('chats')
@@ -74,7 +83,11 @@ export class ChatsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Chat;
+      return {
+        statusCode: 200,
+        message: 'Chat fetched successfully',
+        data: data as Chat,
+      };
     } catch (error) {
       this.logger.error(`Exception in viewChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);
@@ -84,7 +97,7 @@ export class ChatsService {
   async updateChat(
     id: string,
     updateChatDto: UpdateChatDto,
-  ): Promise<Chat | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('chats')
@@ -96,14 +109,18 @@ export class ChatsService {
         this.logger.error(`Error updating Chats ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Chat;
+      return {
+        statusCode: 200,
+        message: 'Chat updated successfully',
+        data: data as Chat,
+      };
     } catch (error) {
       this.logger.error(`Exception in updateChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteChat(id: string): Promise<boolean | ErrorResponseDto> {
+  async deleteChat(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('chats')
@@ -116,7 +133,10 @@ export class ChatsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return true;
+      return {
+        statusCode: 200,
+        message: 'Chat deleted successfully',
+      };
     } catch (error) {
       this.logger.error(`Exception in deleteChat for id ${id}`, error);
       return new ErrorResponseDto(500, error);

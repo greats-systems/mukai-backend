@@ -6,35 +6,9 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 
 import { PostgresRestHandlerModule } from './common/postgresrest';
-import { OrdersModule } from './orders/orders.module';
+// import { OrdersModule } from './orders/orders.module';
 import { MessagingsModule } from './messagings/messagings.module';
 import { NodesModule } from './nodes/nodes.module';
-import { CommodityController } from './tradingservices/controllers/commodity.controller';
-import { ContractBidController } from './tradingservices/controllers/contract-bid.controller';
-import { ContractController } from './tradingservices/controllers/contract.controller';
-import { ProducerController } from './tradingservices/controllers/producer.controller';
-import { ProviderController } from './tradingservices/controllers/provider.controller';
-import { ProviderProductsController } from './tradingservices/controllers/provider-products.controller';
-import { ProviderServicesController } from './tradingservices/controllers/provider-services.controller';
-import { TradingservicesController } from './tradingservices/controllers/tradingservices.controller';
-import { TraderInventoryController } from './tradingservices/controllers/trader-inventory.controller';
-import { TradingservicesModule } from './tradingservices/modules/tradingservices.module';
-import { CommodityModule } from './tradingservices/modules/commodity.module';
-import { ContractBidModule } from './tradingservices/modules/contract-bid.module';
-import { ContractModule } from './tradingservices/modules/contract.module';
-import { ProducerModule } from './tradingservices/modules/producer.module';
-import { ProviderModule } from './tradingservices/modules/provider.module';
-import { ProviderProductsModule } from './tradingservices/modules/provider-products.module';
-import { ProviderServicesModule } from './tradingservices/modules/provider-services.module';
-import { TraderInventoryService } from './tradingservices/services/trader-inventory.service';
-import { CommodityService } from './tradingservices/services/commodity.service';
-import { ContractBidService } from './tradingservices/services/contract-bidding.service';
-import { ContractService } from './tradingservices/services/contracts.service';
-import { ProducerService } from './tradingservices/services/producers.service';
-import { ProviderProductsService } from './tradingservices/services/provider-products.service';
-import { ProviderService } from './tradingservices/services/provider.service';
-import { ProviderServicesService } from './tradingservices/services/provider-services.service';
-import { TradingservicesService } from './tradingservices/services/tradingservices.service';
 import { AgreementModule } from './mukai/modules/agreement.module';
 import { WalletModule } from './mukai/modules/wallet.module';
 import { TransactionModule } from './mukai/modules/transaction.module';
@@ -74,6 +48,15 @@ import { EscrowModule } from './mukai/modules/escrow.module';
 import { LoanModule } from './mukai/modules/loan.module';
 import { LoanController } from './mukai/controllers/loan.controller';
 import { LoanService } from './mukai/services/loan.servce';
+import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
+import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
+import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
+import { SubscriberModule } from './wallet/modules/subscriber.module';
+import { SubscriberController } from './wallet/controllers/subscriber.controller';
+import { SubscriberService } from './wallet/services/subscriber.service';
+import { WalletTransactionController } from './wallet/controllers/wallet-transaction.controller';
+import { WalletTransactionModule } from './wallet/modules/wallet-transaction.module';
+import { WalletTransactionService } from './wallet/services/wallet-transaction.service';
 
 @Module({
   imports: [
@@ -81,9 +64,10 @@ import { LoanService } from './mukai/services/loan.servce';
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     UserModule,
-    OrdersModule,
+    // OrdersModule,
     MessagingsModule,
     NodesModule,
+    /*
     CommodityModule,
     ProduceModule,
     ContractBidModule,
@@ -93,6 +77,7 @@ import { LoanService } from './mukai/services/loan.servce';
     ProviderProductsModule,
     ProviderServicesModule,
     TradingservicesModule,
+    */
     AgreementModule,
     WalletModule,
     TransactionModule,
@@ -107,9 +92,13 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowModule,
     LoanModule,
     CooperativeMemberRequestModule,
+    CooperativeMemberApprovalsModule,
+    SubscriberModule,
+    WalletTransactionModule,
   ],
   controllers: [
     AppController,
+    /*
     CommodityController,
     ContractBidController,
     ContractController,
@@ -119,6 +108,7 @@ import { LoanService } from './mukai/services/loan.servce';
     ProviderServicesController,
     TradingservicesController,
     TraderInventoryController,
+    */
     AgreementsController,
     WalletsController,
     TransactionsController,
@@ -133,9 +123,13 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowController,
     LoanController,
     CooperativeMemberRequestsController,
+    CooperativeMemberApprovalsController,
+    SubscriberController,
+    WalletTransactionController,
   ],
   providers: [
     AppService,
+    /*
     CommodityService,
     ContractBidService,
     ContractService,
@@ -145,6 +139,7 @@ import { LoanService } from './mukai/services/loan.servce';
     ProviderServicesService,
     TradingservicesService,
     TraderInventoryService,
+    */
     AgreementsService,
     WalletsService,
     TransactionsService,
@@ -159,6 +154,9 @@ import { LoanService } from './mukai/services/loan.servce';
     EscrowService,
     LoanService,
     CooperativeMemberRequestsService,
+    CooperativeMemberApprovalsService,
+    SubscriberService,
+    WalletTransactionService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

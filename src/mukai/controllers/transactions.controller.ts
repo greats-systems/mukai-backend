@@ -22,17 +22,19 @@ export class TransactionsController {
   async create(@Body() createTransactionDto: CreateTransactionDto) {
     const response =
       await this.transactionsService.createTransaction(createTransactionDto);
-    /*
+
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-      */
     return response;
   }
 
@@ -54,7 +56,7 @@ export class TransactionsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const response = await this.transactionsService.viewTransaction(id);
-    /*
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -64,7 +66,23 @@ export class TransactionsController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    */
+    return response;
+  }
+
+  @Get('report/:wallet_id')
+  async generateTransactionReport(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.generateTransactionReport(wallet_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     return response;
   }
 

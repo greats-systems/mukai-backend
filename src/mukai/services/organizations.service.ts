@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Logger, Injectable } from '@nestjs/common';
@@ -21,8 +22,8 @@ export class OrganizationsService {
   ): Promise<Organization | ErrorResponseDto> {
     try {
       /*
-      const Organization = new Organization();
-
+      const organization = new Organization();
+      
       Organization.id ?: string;
       Organization.handling_smart_contract ?: string;
       Organization.is_collateral_required ?: boolean;

@@ -7,6 +7,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
 import { UpdateCooperativeMemberRequestDto } from '../dto/update/update-cooperative-member-request.dto';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -19,7 +20,7 @@ export class CooperativeMemberRequestsService {
 
   async createCooperativeMemberRequest(
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
-  ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       // Check if user with member_id already exists
       const { data: existingRequest, error: checkError } =
@@ -41,6 +42,7 @@ export class CooperativeMemberRequestsService {
           'A request for this member already exists',
         );
       }
+      console.log('createCooperativeMemberRequestDto', createCooperativeMemberRequestDto);
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -50,7 +52,11 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error creating cooperative member request', error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as CooperativeMemberRequest;
+      return {
+        statusCode: 201,
+        message: 'Cooperative member request created successfully',
+        data: data as CooperativeMemberRequest,
+      };
     } catch (error) {
       this.logger.error('Exception in createCooperativeMemberRequest', error);
       return new ErrorResponseDto(500, error);
@@ -58,7 +64,7 @@ export class CooperativeMemberRequestsService {
   }
 
   async findAllCooperativeMemberRequests(): Promise<
-    CooperativeMemberRequest[] | ErrorResponseDto
+    SuccessResponseDto | ErrorResponseDto
   > {
     try {
       const { data, error } = await this.postgresrest
@@ -70,7 +76,11 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as CooperativeMemberRequest[];
+      return {
+        statusCode: 200,
+        message: 'Cooperative member requests fetched successfully',
+        data: data as CooperativeMemberRequest[],
+      };
     } catch (error) {
       this.logger.error('Exception in findAllCooperativeMemberRequests', error);
       return new ErrorResponseDto(500, error);
@@ -79,7 +89,7 @@ export class CooperativeMemberRequestsService {
 
   async findMemberRequestStatus(
     status: string,
-  ): Promise<CooperativeMemberRequest[] | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -91,7 +101,11 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as CooperativeMemberRequest[];
+      return {
+        statusCode: 200,
+        message: 'Cooperative member requests fetched successfully',
+        data: data as CooperativeMemberRequest[],
+      };
     } catch (error) {
       this.logger.error('Exception in findAllCooperativeMemberRequests', error);
       return new ErrorResponseDto(500, error);
@@ -100,7 +114,7 @@ export class CooperativeMemberRequestsService {
 
   async viewCooperativeMemberRequest(
     id: string,
-  ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -116,7 +130,11 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as CooperativeMemberRequest;
+      return {
+        statusCode: 200,
+        message: 'Cooperative member request fetched successfully',
+        data: data as CooperativeMemberRequest,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMemberRequest for id ${id}`,
@@ -128,7 +146,7 @@ export class CooperativeMemberRequestsService {
 
   async getPendingRequestDetails(
     member_id: string,
-  ): Promise<object | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -144,7 +162,11 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as object;
+      return {
+        statusCode: 200,
+        message: 'Cooperative member request fetched successfully',
+        data: data as object,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMemberRequest for id ${member_id}`,
@@ -156,7 +178,7 @@ export class CooperativeMemberRequestsService {
 
   async updateCooperativeMemberRequest(
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
-  ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -168,7 +190,11 @@ export class CooperativeMemberRequestsService {
         this.logger.error(`Error updating CooperativeMemberRequests`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as CooperativeMemberRequest;
+      return {
+        statusCode: 200,
+        message: 'Cooperative member request updated successfully',
+        data: data as CooperativeMemberRequest,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in updateCooperativeMemberRequest for id`,
@@ -181,7 +207,7 @@ export class CooperativeMemberRequestsService {
   async updateCooperativeMemberRequestByMemberID(
     id: string,
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
-  ): Promise<CooperativeMemberRequest | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -196,7 +222,11 @@ export class CooperativeMemberRequestsService {
         );
         return new ErrorResponseDto(400, error.message);
       }
-      return data as CooperativeMemberRequest;
+      return {
+        statusCode: 200,
+        message: 'Cooperative member request updated successfully',
+        data: data as CooperativeMemberRequest,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in updateCooperativeMemberRequest for id ${id}`,
@@ -208,7 +238,7 @@ export class CooperativeMemberRequestsService {
 
   async deleteCooperativeMemberRequest(
     id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -224,7 +254,11 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return true;
+      return {
+        statusCode: 200,
+        message: 'Cooperative member request deleted successfully',
+        data: true,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in deleteCooperativeMemberRequest for id ${id}`,

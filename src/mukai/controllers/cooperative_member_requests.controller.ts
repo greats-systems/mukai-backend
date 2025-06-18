@@ -259,10 +259,7 @@ export class CooperativeMemberRequestsController {
       await this.cooperativeMemberRequestsService.deleteCooperativeMemberRequest(
         id,
       );
-    if (response === true) {
-      return { message: 'Deletion successful' };
-    }
-    if (isErrorResponseDto(response)) {
+    if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',
         response.statusCode,

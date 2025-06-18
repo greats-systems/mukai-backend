@@ -121,4 +121,41 @@ export class CreateCooperativeMemberRequestDto {
   @IsString()
   @IsOptional()
   group_id?: string;
+
+  @ApiProperty({
+    example: '321e6543-e98b-12d3-b456-426614174000',
+    description: 'Cooperative category',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @ApiProperty({
+    example: '321e6543-e98b-12d3-b456-426614174000',
+    description: 'city',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @ApiProperty({
+    example: '321e6543-e98b-12d3-b456-426614174000',
+    description: 'country',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+
+  @ApiProperty({
+    example: '321e6543-e98b-12d3-b456-426614174000',
+    description: 'province/state',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  province_state?: string;
 }

@@ -24,11 +24,14 @@ export class TransactionsController {
       await this.transactionsService.createTransaction(createTransactionDto);
 
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

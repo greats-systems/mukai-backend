@@ -9,6 +9,7 @@ import { UpdateAssetDto } from '../dto/update/update-asset.dto';
 import { Asset } from '../entities/asset.entity';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
 import { Injectable, Logger } from '@nestjs/common';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -21,39 +22,8 @@ export class AssetsService {
 
   async createAsset(
     createAssetDto: CreateAssetDto,
-  ): Promise<Asset | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      /*
-      const Asset = new Asset();
-
-      Asset.id ?: string;
-      Asset.handling_smart_contract ?: string;
-      Asset.is_collateral_required ?: boolean;
-      Asset.requesting_account ?: string;
-      Asset.offering_account ?: string;
-      Asset.collateral_asset_id ?: string;
-      Asset.payment_due ?: string;
-      Asset.payment_terms ?: string;
-      Asset.amount ?: string;
-      Asset.payments_handling_wallet_id ?: string;
-      Asset.collateral_asset_handler_id ?: string;
-      Asset.collateral_asset_handler_fee ?: string;
-
-      Asset.provider_id = createAssetDto.provider_id;
-      Asset.Asset_name = createAssetDto.Asset_name;
-      Asset.unit_measure = createAssetDto.unit_measure;
-      Asset.unit_price = createAssetDto.unit_price;
-      Asset.max_capacity = createAssetDto.max_capacity;
-
-      // Check if the given Asset already exists
-      if (await this.checkIfProductExists(Asset.provider_id)) {
-        return new ErrorResponseDto(
-          409,
-          'You have already registered this Asset',
-        );
-      }
-        */
-
       const { data, error } = await this.postgresrest
         .from('assets')
         .insert(createAssetDto)
@@ -62,12 +32,51 @@ export class AssetsService {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Asset;
+      return {
+        statusCode: 201,
+        message: 'Asset created successfully',
+        data: data as Asset,
+      };
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
   }
+// get group assets
+  async getGroupAssets(group_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.from('assets').select().eq('group_id', group_id);
+      if (error) {
+        this.logger.error('Error fetching Group Assets', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      return {
+        statusCode: 200,
+        message: 'Group assets fetched successfully',
+        data: data as Asset[],
+      };
+    } catch (error) {
+      this.logger.error('Exception in getGroupAssets', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
 
+  async getProfileAssets(profile_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.from('assets').select().eq('profile_id', profile_id);
+      if (error) {
+        this.logger.error('Error fetching Group Assets', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      return {
+        statusCode: 200,
+        message: 'Group assets fetched successfully',
+        data: data as Asset[],
+      };
+    } catch (error) {
+      this.logger.error('Exception in getGroupAssets', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
   async findAllAssets(): Promise<Asset[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.from('assets').select();
@@ -107,7 +116,7 @@ export class AssetsService {
   async updateAsset(
     id: string,
     updateAssetDto: UpdateAssetDto,
-  ): Promise<Asset | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('assets')
@@ -119,14 +128,18 @@ export class AssetsService {
         this.logger.error(`Error updating Assets ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Asset;
+      return {
+        statusCode: 200,
+        message: 'Asset updated successfully',
+        data: data as Asset,
+      };
     } catch (error) {
       this.logger.error(`Exception in updateAsset for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteAsset(id: string): Promise<boolean | ErrorResponseDto> {
+  async deleteAsset(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('assets')
@@ -138,8 +151,10 @@ export class AssetsService {
         this.logger.error(`Error deleting Asset ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-
-      return true;
+      return {
+        statusCode: 200,
+        message: 'Asset deleted successfully',
+      };
     } catch (error) {
       this.logger.error(`Exception in deleteAsset for id ${id}`, error);
       return new ErrorResponseDto(500, error);

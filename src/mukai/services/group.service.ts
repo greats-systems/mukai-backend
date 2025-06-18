@@ -84,8 +84,8 @@ export class GroupService {
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       for (const member of createGroupDto.members || []) {
-        createTransactionDto.sending_wallet = createWalletDto.group_id;
-        const transactionResponse = await transactionsService.createTransaction()
+        // createTransactionDto.sending_wallet = createWalletDto.group_id;
+        // const transactionResponse = await transactionsService.createTransaction()
 
         cooperativeMemberRequestDto.status = 'in a group';
         cooperativeMemberRequestDto.group_id = createGroupMemberDto.group_id;        

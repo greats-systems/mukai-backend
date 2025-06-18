@@ -45,11 +45,14 @@ export class ChatsController {
   async create(@Body() createChatDto: CreateChatDto) {
     const response = await this.chatsService.createChat(createChatDto);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -71,7 +74,7 @@ export class ChatsController {
     const response = await this.chatsService.findAllChats();
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -102,11 +105,14 @@ export class ChatsController {
   async findOne(@Param('id') id: string) {
     const response = await this.chatsService.viewChat(id);
     if (response['statusCode'] === 404) {
-      throw new HttpException(response['message'], HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        response['message'] ?? 'Chat not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -142,14 +148,20 @@ export class ChatsController {
   async update(@Param('id') id: string, @Body() updateChatDto: UpdateChatDto) {
     const response = await this.chatsService.updateChat(id, updateChatDto);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 404) {
-      throw new HttpException(response['message'], HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        response['message'] ?? 'Chat not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -179,11 +191,14 @@ export class ChatsController {
   async delete(@Param('id') id: string) {
     const response = await this.chatsService.deleteChat(id);
     if (response['statusCode'] === 404) {
-      throw new HttpException(response['message'], HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        response['message'] ?? 'Chat not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

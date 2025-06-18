@@ -35,11 +35,14 @@ export class WalletsController {
   async create(@Body() createWalletDto: CreateWalletDto) {
     const response = await this.walletsService.createWallet(createWalletDto);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -57,11 +60,14 @@ export class WalletsController {
   async findAll() {
     const response = await this.walletsService.findAllWallets();
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -81,11 +87,14 @@ export class WalletsController {
   async findOne(@Param('id') id: string) {
     const response = await this.walletsService.viewWallet(id);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -109,18 +118,21 @@ export class WalletsController {
     const response = await this.walletsService.viewChildrenWallets(wallet_id);
 
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
     return response;
   }
 
-  @Get(':profile_id')
+  @Get('get_wallet_by_profile_id/:profile_id')
   @ApiOperation({ summary: 'Fetch a wallet by profile ID' })
   @ApiParam({
     name: 'profile_id',
@@ -134,11 +146,14 @@ export class WalletsController {
     const response = await this.walletsService.viewProfileWalletID(profile_id);
 
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -169,11 +184,14 @@ export class WalletsController {
     );
 
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -200,11 +218,14 @@ export class WalletsController {
       updateWalletDto,
     );
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -224,11 +245,14 @@ export class WalletsController {
   async delete(@Param('id') id: string) {
     const response = await this.walletsService.deleteWallet(id);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -113,7 +113,7 @@ export class WalletsService {
     }
   }
 
-  async viewGroupWallet(group_id: string, currency: string = 'usd'): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async viewCooperativeWallet(cooperative_id: string, currency: string = 'usd'): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('wallets')

@@ -75,7 +75,7 @@ export class WalletsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Fetch a single wallet by ID' })
+  @ApiOperation({ summary: 'Fetch a wallets by ID' })
   @ApiParam({
     name: 'id',
     description: 'Wallet ID',
@@ -101,7 +101,7 @@ export class WalletsController {
     return response;
   }
 
-  @Get('children_wallets/:id')
+  @Get(':id/children_wallets')
   @ApiOperation({ summary: 'Fetch a single wallet by ID' })
   @ApiParam({
     name: 'id',

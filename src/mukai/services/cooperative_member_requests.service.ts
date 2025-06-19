@@ -195,7 +195,7 @@ export class CooperativeMemberRequestsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        .eq('id', updateCooperativeMemberRequestDto.member_id)
+        .eq('member_id', updateCooperativeMemberRequestDto.member_id)
         .select()
         .single();
       if (error) {

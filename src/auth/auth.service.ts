@@ -401,6 +401,29 @@ export class AuthService {
     }
   }
 
+  async getProfile(profile_id: string): Promise<Profile> {
+    try {
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .eq('id', profile_id)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      return data as Profile;
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
   async getProfilesLike(id: string): Promise<Profile[]> {
     try {
       // Convert to lowercase for case-insensitive searc

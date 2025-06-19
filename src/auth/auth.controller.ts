@@ -40,6 +40,11 @@ export class AuthController {
     return this.authService.getProfilesLike(id);
   }
 
+  @Get('profiles/:id')
+  async getProfile(@Param('id') id: string) {
+    return this.authService.getProfile(id);
+  }
+
   /**
    * Creates a new user account.
    * @param signupDto - User signup data

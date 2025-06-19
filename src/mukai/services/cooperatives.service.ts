@@ -17,6 +17,8 @@ import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
+import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
+import { Profile, User } from 'src/user/entities/user.entity';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -114,7 +116,7 @@ export class CooperativesService {
         createWalletDto.balance = 100;
         createWalletDto.default_currency = 'usd';
         createWalletDto.is_group_wallet = true;
-        createWalletDto.group_id = response['cooperative_id'];
+        createWalletDto.group_id = createCooperativeResponse['id'];
         const walletResponse =
           await walletsService.createWallet(createWalletDto);
         console.log('Wallet response');
@@ -180,6 +182,45 @@ export class CooperativesService {
     }
   }
 
+  async viewCooperativeMembers(
+    cooperative_id: string,
+  ): Promise<Profile[] | Profile | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select('profiles(*)')
+        .eq('cooperative_id', cooperative_id)
+        .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching members for cooperative ${cooperative_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      if (!data) {
+        return new ErrorResponseDto(
+          404,
+          `Members in cooperative with id ${cooperative_id} not found`,
+        );
+      }
+      if (data['profiles'].length == 1) {
+        console.log(data);
+        return data['profiles'] as object as Profile;
+      } else {
+        return data['profiles'] as Profile[];
+      }
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativeMembers for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async viewCooperativesForMember(
     member_id: string,
   ): Promise<Group[] | ErrorResponseDto> {
@@ -201,7 +242,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
-
+  /*
   async viewCooperativeMembers(
     cooperative_id: string,
   ): Promise<Group[] | ErrorResponseDto> {
@@ -223,6 +264,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
+  */
 
   async viewCooperativeWallet(
     cooperative_id: string,
@@ -310,6 +352,8 @@ export class CooperativesService {
     updateCooperativeDto: UpdateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
     try {
+      const groupMembersService = new GroupMemberService(this.postgresrest);
+      const createGroupMemberDto = new CreateGroupMemberDto();
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .update(updateCooperativeDto)
@@ -319,6 +363,18 @@ export class CooperativesService {
       if (error) {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.message);
+      }
+      if (updateCooperativeDto.members != null) {
+        for (const member of updateCooperativeDto.members) {
+          createGroupMemberDto.member_id = member;
+          createGroupMemberDto.cooperative_id = id;
+          const groupMemberResponse =
+            await groupMembersService.createGroupMember(createGroupMemberDto);
+          console.log('groupMemberResponse');
+          console.log(groupMemberResponse);
+        }
+      } else {
+        console.log('Nothing to update');
       }
       return data as Cooperative;
     } catch (error) {

@@ -68,8 +68,8 @@ export class WalletsService {
         .from("wallets")
         .select()
         .eq("profile_id", id)
-        .eq("is_group_wallet", false)
-        .single();
+        .eq("is_group_wallet", false);
+        // .single();
 
       // .eq('created_at', date_trunc('month'))
       // .single();
@@ -91,7 +91,7 @@ export class WalletsService {
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
-        data: data as Wallet,
+        data: data as Wallet[],
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
@@ -162,7 +162,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select("id")
+        .select()
         .eq("profile_id", profile_id)
         .single();
 
@@ -174,7 +174,7 @@ export class WalletsService {
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
-        data: data as object,
+        data: data as Wallet,
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);

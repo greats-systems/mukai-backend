@@ -57,6 +57,9 @@ import { SubscriberService } from './wallet/services/subscriber.service';
 import { WalletTransactionController } from './wallet/controllers/wallet-transaction.controller';
 import { WalletTransactionModule } from './wallet/modules/wallet-transaction.module';
 import { WalletTransactionService } from './wallet/services/wallet-transaction.service';
+import { GroupMembersModule } from './mukai/modules/group-member.module';
+import { GroupMemberController } from './mukai/controllers/group_members.controller';
+import { GroupMemberService } from './mukai/services/group-members.service';
 
 @Module({
   imports: [
@@ -88,6 +91,7 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
     ChatModule,
     AssetModule,
     GroupModule,
+    GroupMembersModule,
     SpendingConditionsModule,
     EscrowModule,
     LoanModule,
@@ -119,6 +123,7 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
     ChatsController,
     AssetsController,
     GroupsController,
+    GroupMemberController,
     SpendingConditionsController,
     EscrowController,
     LoanController,
@@ -150,6 +155,7 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
     ChatsService,
     AssetsService,
     GroupService,
+    GroupMemberService,
     SpendingConditionsService,
     EscrowService,
     LoanService,

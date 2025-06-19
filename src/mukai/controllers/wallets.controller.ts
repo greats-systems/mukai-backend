@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -129,7 +128,7 @@ export class WalletsController {
   }
 
   @Get(':wallet_id')
-  @ApiOperation({ summary: 'Fetch children wallets of a wallet' })
+  @ApiOperation({ summary: 'Fetch a wallet' })
   @ApiParam({
     name: 'wallet_id',
     description: 'Parent wallet ID',

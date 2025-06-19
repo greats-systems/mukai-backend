@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -17,10 +18,9 @@ import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
+import { Profile } from 'src/user/entities/user.entity';
 import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
-import { Profile, User } from 'src/user/entities/user.entity';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -113,6 +113,7 @@ export class CooperativesService {
           await groupMembersService.createGroupMember(createGroupMemberDto);
         console.log('group_member response');
         console.log(response);
+
         createWalletDto.profile_id = createCooperativeDto.admin_id;
         createWalletDto.balance = 100;
         createWalletDto.default_currency = 'usd';
@@ -122,7 +123,8 @@ export class CooperativesService {
           await walletsService.createWallet(createWalletDto);
         console.log('Wallet response');
         console.log(walletResponse);
-        createTransactionDto.sending_wallet = walletResponse['data']['id'];
+
+        // createTransactionDto.sending_wallet = walletResponse['data']['id'];
         createTransactionDto.receiving_wallet = walletResponse['data']['id'];
         createTransactionDto.amount = createWalletDto.balance;
         createTransactionDto.transaction_type = 'deposit';
@@ -235,9 +237,8 @@ export class CooperativesService {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
-        .select('profiles(*)')
-        .eq('cooperative_id', cooperative_id)
-        .single();
+        .select('member_id, profiles(*)')
+        .eq('cooperative_id', cooperative_id);
 
       if (error) {
         this.logger.error(
@@ -247,24 +248,33 @@ export class CooperativesService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
         return new ErrorResponseDto(
           404,
           `Members in cooperative with id ${cooperative_id} not found`,
         );
       }
-      if (data['profiles'].length == 1) {
-        console.log(data);
-        return data['profiles'] as object as Profile;
-      } else {
-        return data['profiles'] as Profile[];
+
+      // Extract profiles from the data
+      const profiles = data.flatMap((item) => item.profiles);
+
+      if (profiles.length === 0) {
+        return new ErrorResponseDto(
+          404,
+          `No member profiles found for cooperative ${cooperative_id}`,
+        );
       }
+
+      return profiles.length === 1 ? profiles[0] : profiles;
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMembers for id ${cooperative_id}`,
         error,
       );
-      return new ErrorResponseDto(500, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
     }
   }
 

@@ -19,7 +19,8 @@ import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
-
+import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -96,7 +97,7 @@ export class CooperativesService {
           createWalletDto.children_wallets = walletIDs;
 
           cooperativeMemberRequestDto.status = 'in a cooperative';
-          cooperativeMemberRequestDto.group_id =
+          cooperativeMemberRequestDto.cooperative_id =
             createGroupMemberDto.cooperative_id;
           const updateMemberResponse =
             await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
@@ -135,7 +136,53 @@ export class CooperativesService {
 
         console.log(walletResponse);
       }
+      const walletIDs: string[] = [];
+      for (const member of createCooperativeDto.members || []) {
+        const cooperativeMemberWalletsJson =
+          await walletsService.viewProfileWalletID(member);
+        if (cooperativeMemberWalletsJson instanceof ErrorResponseDto) {
+          return cooperativeMemberWalletsJson; // Return the error if wallet lookup failed
+        }
+        walletIDs.push(cooperativeMemberWalletsJson['id'] ?? '');
+      }
 
+      createWalletDto.profile_id = createCooperativeDto.admin_id;
+      createWalletDto.balance = 100;
+      createWalletDto.default_currency = 'usd';
+      createWalletDto.is_group_wallet = true;
+      createWalletDto.group_id = createCooperativeDto.id;
+      createWalletDto.children_wallets = walletIDs;
+      const walletResponse = await walletsService.createWallet(createWalletDto);
+      createTransactionDto.sending_wallet = walletResponse['id'];
+      createTransactionDto.receiving_wallet = walletResponse['id'];
+      createTransactionDto.amount = createWalletDto.balance;
+      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.narrative = 'credit';
+      const transactionResponse =
+        await transactionsService.createTransaction(createTransactionDto);
+      console.log(transactionResponse);
+
+      for (const member of createCooperativeDto.members || []) {
+        cooperativeMemberRequestDto.status = 'in a cooperative';
+        cooperativeMemberRequestDto.cooperative_id =
+          createGroupMemberDto.cooperative_id;
+        const updateMemberResponse =
+          await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
+            member,
+            cooperativeMemberRequestDto,
+          );
+        console.log(updateMemberResponse);
+        console.log('\n');
+        /*
+          const updateMemberResponse = await this.postgresrest
+            .from('cooperative_member_requests')
+            .update(cooperativeMemberRequestDto)
+            .eq('member_id', createCooperativeDto.members![i]['id'])
+            .select()
+            .single();
+            */
+      }
+      console.log(walletResponse);
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -233,7 +280,8 @@ export class CooperativesService {
 
   async viewCooperativesForMember(
     member_id: string,
-  ): Promise<Group[] | ErrorResponseDto> {
+
+  ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -245,8 +293,11 @@ export class CooperativesService {
         this.logger.error('Error fetching cooperative', error);
         return new ErrorResponseDto(400, error.message);
       }
-
-      return data as Group[];
+      return {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+        data: data as object[],
+      };
     } catch (error) {
       this.logger.error('Exception in viewCooperativesForMember', error);
       return new ErrorResponseDto(500, error);
@@ -267,7 +318,6 @@ export class CooperativesService {
         this.logger.error('Error fetching cooperative', error);
         return new ErrorResponseDto(400, error.message);
       }
-
       return data as Group[];
     } catch (error) {
       this.logger.error('Exception in viewCooperativesForMember', error);

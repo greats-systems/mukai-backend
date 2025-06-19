@@ -460,6 +460,33 @@ export class AuthService {
     }
   }
 
+  async getProfilesLikeWalletID(id: string): Promise<Profile[]> {
+    try {
+      // Convert to lowercase for case-insensitive searc
+      const searchTerm = id.toLowerCase();
+      console.log('wallet_id', id)
+      const { data, error } = await this.postgresRest
+        .from('wallets')
+        .select('*')
+        // Cast UUID to text for pattern matching
+        .ilike('text_id', `%${id}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+      console.log('data', data)
+      return data?.length ? (data as Profile[]) : [];
+    } catch (error) {
+      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while searching profiles',
+      );
+    }
+  }
+
   async update(profile: MukaiProfile) {
     const now = new Date().toISOString();
     // Create profile in public.profiles

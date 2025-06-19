@@ -186,6 +186,36 @@ export class WalletsController {
     return response;
   }
 
+  @Get('get_profile_by_wallet_id/:wallet_id')
+  @ApiOperation({ summary: 'Fetch a wallet by profile ID' })
+  @ApiParam({
+    name: 'wallet_id',
+    description: 'Profile ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({ status: 200, description: 'Wallet retrieved successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async getProfileByWalletID(@Param('wallet_id') wallet_id: string) {
+    console.log('wallet_id', wallet_id);
+  
+    const response = await this.walletsService.getProfileByWalletID(wallet_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':group_id')
   @ApiOperation({ summary: 'Fetch a wallet by group ID' })
   @ApiParam({

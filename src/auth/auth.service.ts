@@ -35,7 +35,7 @@ export class AuthService {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
         ? process.env.LOCAL_SUPABASE_URL || ''
-        : process.env.SUPABASE_URL || ''  ,
+        : process.env.SUPABASE_URL || '',
       process.env.ENV == 'local'
         ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
         : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -154,6 +154,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    console.log('Logging in');
     try {
       // 1. First authenticate the user with email/password
       const {
@@ -218,41 +219,6 @@ export class AuthService {
       };
 
       return response;
-      /*
-      // 3. Create JWT payload
-      const payload = {
-        email: user.email,
-        sub: user.id,
-        role: user.role || 'authenticated',
-      };
-
-      // 4. Return standard Supabase auth response format
-      return {
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            ...(profileData || {}),
-          },
-          session: {
-            access_token:
-              session?.access_token || this.jwtService.sign(payload),
-            refresh_token: session?.refresh_token,
-            expires_in: session?.expires_in || 3600,
-            expires_at:
-              session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
-            token_type: session?.token_type || 'bearer',
-            user: {
-              id: user.id,
-              email: user.email,
-              role: user.role,
-            },
-          },
-        },
-        error: null,
-      };
-      */
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof UnauthorizedException) {
@@ -425,6 +391,29 @@ export class AuthService {
       }
 
       return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
+  async getProfile(profile_id: string): Promise<Profile> {
+    try {
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .eq('id', profile_id)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      return data as Profile;
     } catch (error) {
       console.error('Error in getProfiles:', error);
       throw new Error(

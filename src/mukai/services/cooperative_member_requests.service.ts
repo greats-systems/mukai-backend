@@ -45,7 +45,10 @@ export class CooperativeMemberRequestsService {
           'A request for this member already exists',
         );
       }
-      console.log('createCooperativeMemberRequestDto', createCooperativeMemberRequestDto);
+      console.log(
+        'createCooperativeMemberRequestDto',
+        createCooperativeMemberRequestDto,
+      );
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -91,12 +94,15 @@ export class CooperativeMemberRequestsService {
   }
 
   async findMemberRequestStatus(
+    group_id: string,
     status: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    console.log(`${group_id}/${status}`);
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
-        .select()
+        .select('member_id, profiles(*)')
+        .eq('cooperative_id', group_id)
         .eq('status', status);
 
       if (error) {
@@ -104,10 +110,16 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.message);
       }
 
+      console.log({
+        statusCode: 200,
+        message: 'Cooperative member requests fetched successfully',
+        data: data,
+      });
+
       return {
         statusCode: 200,
         message: 'Cooperative member requests fetched successfully',
-        data: data as CooperativeMemberRequest[],
+        data: data,
       };
     } catch (error) {
       this.logger.error('Exception in findAllCooperativeMemberRequests', error);
@@ -186,7 +198,7 @@ export class CooperativeMemberRequestsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        .eq('id', updateCooperativeMemberRequestDto.member_id)
+        .eq('member_id', updateCooperativeMemberRequestDto.member_id)
         .select()
         .single();
       if (error) {

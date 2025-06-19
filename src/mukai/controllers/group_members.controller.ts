@@ -21,6 +21,7 @@ import { GroupMemberService } from '../services/group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { GroupMembers } from '../entities/group-members.entity';
 import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
+// import { Cooperative } from '../entities/cooperative.entity';
 
 @ApiTags('GroupMembers')
 @Controller('group_members')
@@ -87,6 +88,66 @@ export class GroupMemberController {
     return response;
   }
 
+  @Get(':member_id/coops')
+  @ApiOperation({ summary: 'List all coops for member' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of coops',
+    type: [GroupMembers],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async findGroupsContainingMember(member_id: string) {
+    const response =
+      await this.groupMemberService.findGroupsContainingMember(member_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get(':cooperative_id/members')
+  @ApiOperation({ summary: 'List all members for coop' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of members',
+    type: [GroupMembers],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async findMembersInGroup(@Param('cooperative_id') cooperative_id: string) {
+    const response =
+      await this.groupMemberService.findMembersInGroup(cooperative_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get group_member details' })
   @ApiParam({
@@ -126,7 +187,7 @@ export class GroupMemberController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update an group_member' })
+  @ApiOperation({ summary: 'Update a group_member' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',

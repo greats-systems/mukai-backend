@@ -83,6 +83,29 @@ export class GroupMemberService {
     }
   }
 
+  async findMembersInGroup(
+    cooperative_id: string,
+  ): Promise<GroupMember[] | ErrorResponseDto> {
+    console.log(cooperative_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .eq('cooperative_id', cooperative_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching group', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as GroupMember[];
+    } catch (error) {
+      this.logger.error('Exception in findAllGroupMember', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async viewGroupMember(id: string): Promise<GroupMember[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest

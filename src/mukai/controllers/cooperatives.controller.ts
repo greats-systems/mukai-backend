@@ -21,6 +21,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
+import { Profile } from 'src/user/entities/user.entity';
 
 @ApiTags('Cooperatives')
 @Controller('cooperatives')
@@ -87,6 +88,48 @@ export class CooperativesController {
     return response;
   }
 
+  @Get(':cooperative_id/members')
+  @ApiOperation({ summary: 'Get members for a specific cooperative' })
+  @ApiParam({
+    name: 'cooperative_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of member cooperatives',
+    type: [Profile],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid cooperative ID',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cooperative not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCooperativeMembers(
+    @Param('cooperative_id') cooperative_id: string,
+  ) {
+    const response =
+      await this.cooperativesService.viewCooperativeMembers(cooperative_id);
+    console.log(response);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':member_id/cooperatives')
   @ApiOperation({ summary: 'Get cooperatives for a specific member' })
   @ApiParam({
@@ -115,11 +158,11 @@ export class CooperativesController {
     const response =
       await this.cooperativesService.viewCooperativesForMember(member_id);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      throw new HttpException(response['message'] ?? 'Bad request', HttpStatus.BAD_REQUEST);
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(
-        response['message'],
+        response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

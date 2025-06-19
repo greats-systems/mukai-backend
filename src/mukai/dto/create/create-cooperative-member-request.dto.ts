@@ -120,7 +120,7 @@ export class CreateCooperativeMemberRequestDto {
   })
   @IsString()
   @IsOptional()
-  group_id?: string;
+  cooperative_id?: string;
 
   @ApiProperty({
     example: '321e6543-e98b-12d3-b456-426614174000',

@@ -97,10 +97,14 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
-  @Get(':status')
-  async findMemberRequestStatus(@Param('status') status: string) {
+  @Get(':group_id/:status')
+  async findMemberRequestStatus(
+    @Param('group_id') group_id: string,
+    @Param('status') status: string,
+  ) {
     const response =
       await this.cooperativeMemberRequestsService.findMemberRequestStatus(
+        group_id,
         status,
       );
     if (response instanceof ErrorResponseDto) {

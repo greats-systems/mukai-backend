@@ -35,7 +35,7 @@ export class AuthService {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
         ? process.env.LOCAL_SUPABASE_URL || ''
-        : process.env.SUPABASE_URL || ''  ,
+        : process.env.SUPABASE_URL || '',
       process.env.ENV == 'local'
         ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
         : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -154,6 +154,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    console.log('Logging in');
     try {
       // 1. First authenticate the user with email/password
       const {
@@ -165,7 +166,14 @@ export class AuthService {
       });
 
       if (authError || !user) {
-        throw new UnauthorizedException('Invalid credentials');
+        return {
+          status: 'failed',
+          message: 'Invalid credentials',
+          access_token: null,
+          error: authError,
+          user: null,
+          statusCode: 401,
+        };
       }
 
       // 2. Get additional user profile data if needed
@@ -218,45 +226,11 @@ export class AuthService {
       };
 
       return response;
-      /*
-      // 3. Create JWT payload
-      const payload = {
-        email: user.email,
-        sub: user.id,
-        role: user.role || 'authenticated',
-      };
-
-      // 4. Return standard Supabase auth response format
-      return {
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            ...(profileData || {}),
-          },
-          session: {
-            access_token:
-              session?.access_token || this.jwtService.sign(payload),
-            refresh_token: session?.refresh_token,
-            expires_in: session?.expires_in || 3600,
-            expires_at:
-              session?.expires_at || Math.floor(Date.now() / 1000) + 3600,
-            token_type: session?.token_type || 'bearer',
-            user: {
-              id: user.id,
-              email: user.email,
-              role: user.role,
-            },
-          },
-        },
-        error: null,
-      };
-      */
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof UnauthorizedException) {
         return {
+          status: 'failed',
           data: null,
           error: {
             message: 'Invalid credentials',
@@ -265,6 +239,7 @@ export class AuthService {
         };
       }
       return {
+        status: 'failed',
         data: null,
         error: {
           message: 'Login failed',
@@ -435,6 +410,29 @@ export class AuthService {
     }
   }
 
+  async getProfile(profile_id: string): Promise<Profile> {
+    try {
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .eq('id', profile_id)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      return data as Profile;
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
   async getProfilesLike(id: string): Promise<Profile[]> {
     try {
       // Convert to lowercase for case-insensitive searc
@@ -451,6 +449,33 @@ export class AuthService {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
 
+      return data?.length ? (data as Profile[]) : [];
+    } catch (error) {
+      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while searching profiles',
+      );
+    }
+  }
+
+  async getProfilesLikeWalletID(id: string): Promise<Profile[]> {
+    try {
+      // Convert to lowercase for case-insensitive searc
+      const searchTerm = id.toLowerCase();
+      console.log('wallet_id', id)
+      const { data, error } = await this.postgresRest
+        .from('wallets')
+        .select('*')
+        // Cast UUID to text for pattern matching
+        .ilike('text_id', `%${id}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+      console.log('data', data)
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);

@@ -21,6 +21,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
+import { Profile } from 'src/user/entities/user.entity';
 
 @ApiTags('Cooperatives')
 @Controller('cooperatives')
@@ -97,7 +98,7 @@ export class CooperativesController {
   @ApiResponse({
     status: 200,
     description: 'Array of member cooperatives',
-    type: [Cooperative],
+    type: [Profile],
   })
   @ApiResponse({
     status: 400,

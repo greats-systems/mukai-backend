@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -9,8 +10,12 @@ import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
 import { WalletsService } from './wallets.service';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { Wallet } from '../entities/wallet.entity';
-import { PaymentInitiateRequest, PaymentMethod, SmilePayGateway } from 'src/common/zb_payment_gateway/payments';
+// import { Wallet } from '../entities/wallet.entity';
+import {
+  PaymentInitiateRequest,
+  PaymentMethod,
+  SmilePayGateway,
+} from 'src/common/zb_payment_gateway/payments';
 import { Profile } from 'src/user/entities/user.entity';
 // import { UUID } from 'crypto';
 
@@ -24,14 +29,13 @@ const paymentGateway = new SmilePayGateway(
 @Injectable()
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
-  
+
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTransaction(
     createTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-
       const walletsService = new WalletsService(this.postgresrest);
       const { data, error } = await this.postgresrest
         .from('transactions')
@@ -47,39 +51,54 @@ export class TransactionsService {
         createTransactionDto.sending_wallet,
         createTransactionDto.amount,
       );
-      if( createTransactionDto.receiving_wallet){
-      const creditResponse = await walletsService.updateReceiverBalance(
-        createTransactionDto.receiving_wallet,
-        createTransactionDto.amount,
-      );
+      if (createTransactionDto.receiving_wallet) {
+        const creditResponse = await walletsService.updateReceiverBalance(
+          createTransactionDto.receiving_wallet,
+          createTransactionDto.amount,
+        );
       }
-      if( createTransactionDto.receiving_phone){
-              // GET SENDING PROFILE
-      const { data: sendingProfile, error: sendingProfileError } = await this.postgresrest
-      .from('profiles')
-      .select()
-      .eq('id', createTransactionDto.account_id)
-      .single();
-    if(sendingProfileError){
-      return new ErrorResponseDto(400, sendingProfileError.message);
-    }
-    const sendingProfileData = sendingProfile as Profile;
+      if (createTransactionDto.receiving_phone) {
+        // GET SENDING PROFILE
+        const { data: sendingProfile, error: sendingProfileError } =
+          await this.postgresrest
+            .from('profiles')
+            .select()
+            .eq('id', createTransactionDto.account_id)
+            .single();
+        if (sendingProfileError) {
+          return new ErrorResponseDto(400, sendingProfileError.message);
+        }
+        const sendingProfileData = sendingProfile as Profile;
         const paymentRequest: PaymentInitiateRequest = {
           amount: createTransactionDto.amount,
           currency: 'ZWL',
           customerEmail: sendingProfileData.email,
           customerName: sendingProfileData.first_name,
           customerPhone: createTransactionDto.receiving_phone,
-          paymentMethod: createTransactionDto.transfer_mode == 'ecocash' ? PaymentMethod.ECOCASH : createTransactionDto.transfer_mode == 'omari' ? PaymentMethod.OMARI : createTransactionDto.transfer_mode == 'innbucks' ? PaymentMethod.INNBUCKS : createTransactionDto.transfer_mode == 'walletplus' ? PaymentMethod.WALLETPLUS : createTransactionDto.transfer_mode == 'card' ? PaymentMethod.CARD : createTransactionDto.transfer_mode == 'onemoney' ? PaymentMethod.ONEMONEY : PaymentMethod.ECOCASH,
+          paymentMethod:
+            createTransactionDto.transfer_mode == 'ecocash'
+              ? PaymentMethod.ECOCASH
+              : createTransactionDto.transfer_mode == 'omari'
+                ? PaymentMethod.OMARI
+                : createTransactionDto.transfer_mode == 'innbucks'
+                  ? PaymentMethod.INNBUCKS
+                  : createTransactionDto.transfer_mode == 'walletplus'
+                    ? PaymentMethod.WALLETPLUS
+                    : createTransactionDto.transfer_mode == 'card'
+                      ? PaymentMethod.CARD
+                      : createTransactionDto.transfer_mode == 'onemoney'
+                        ? PaymentMethod.ONEMONEY
+                        : PaymentMethod.ECOCASH,
           reference: data.id,
           callbackUrl: `https://f309-41-173-239-81.ngrok-free.app/tradingservices/payment/callback`,
           // callbackUrl: `${process.env.API_BASE_URL}/tradingservices/payment/callback`,
         };
-  
+
         // Initiate payment
-        const paymentResponse = await paymentGateway.initiateExpressPayment(paymentRequest);
-   console.log(paymentResponse);  
-        }
+        const paymentResponse =
+          await paymentGateway.initiateExpressPayment(paymentRequest);
+        console.log(paymentResponse);
+      }
 
       // console.log(debitResponse);
       // console.log(creditResponse);

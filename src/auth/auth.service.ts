@@ -166,7 +166,14 @@ export class AuthService {
       });
 
       if (authError || !user) {
-        throw new UnauthorizedException('Invalid credentials');
+        return {
+          status: 'failed',
+          message: 'Invalid credentials',
+          access_token: null,
+          error: authError,
+          user: null,
+          statusCode: 401,
+        };
       }
 
       // 2. Get additional user profile data if needed
@@ -223,6 +230,7 @@ export class AuthService {
       console.error('Login error:', error);
       if (error instanceof UnauthorizedException) {
         return {
+          status: 'failed',
           data: null,
           error: {
             message: 'Invalid credentials',
@@ -231,6 +239,7 @@ export class AuthService {
         };
       }
       return {
+        status: 'failed',
         data: null,
         error: {
           message: 'Login failed',

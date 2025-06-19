@@ -6,12 +6,15 @@ import {
   Param,
   HttpCode,
   Get,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
+import { ApiResponse } from '@nestjs/swagger';
 
 /**
  * Controller for handling authentication-related operations.
@@ -81,9 +84,47 @@ export class AuthController {
    * @returns Promise<any> - Authentication result with access token
    */
   @Post('login')
-  @HttpCode(200)
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Server error',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+    type: Object,
+  })
   async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+    const response = await this.authService.login(loginDto);
+    if (response['error'] !== null) {
+      throw new HttpException(
+        response['error']['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    if (response['statusCode'] === 401) {
+      throw new HttpException(
+        response['error']?.message ?? 'Invalid credentials',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    return response;
   }
 
   /**

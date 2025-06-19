@@ -87,7 +87,7 @@ export class GroupService {
 
       for (const member of createGroupDto.members || []) {
         cooperativeMemberRequestDto.status = 'in a group';
-        cooperativeMemberRequestDto.group_id =
+        cooperativeMemberRequestDto.cooperative_id =
           createGroupMemberDto.cooperative_id;
         const updateMemberResponse =
           await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(

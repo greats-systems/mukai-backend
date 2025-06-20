@@ -21,39 +21,19 @@ export class CooperativeMemberApprovalsService {
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
-      let hasSupported;
-      let hasOpposed;
-      // Check if the user has voted in support
-      /*
-      if (createCooperativeMemberApprovalsDto.supporting_votes) {
-        hasSupported = await this.checkIfMemberVoted(
-          createCooperativeMemberApprovalsDto.supporting_votes,
-        );
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .upsert(createCooperativeMemberApprovalsDto, {
+          onConflict: 'group_id,poll_description,asset_id',
+          ignoreDuplicates: true,
+        })
+        .select()
+        .single();
+      if (error) {
+        console.log(error);
+        return new ErrorResponseDto(400, error.message);
       }
-      // Check if the user has voted in opposition
-      if (createCooperativeMemberApprovalsDto.opposing_votes) {
-        hasOpposed = await this.checkIfMemberVoted(
-          createCooperativeMemberApprovalsDto.opposing_votes,
-        );
-      }
-      */
-
-      if (!hasSupported && !hasOpposed) {
-        const { data, error } = await this.postgresrest
-          .from('cooperative_member_approvals')
-          .insert(createCooperativeMemberApprovalsDto)
-          .select()
-          .single();
-        if (error) {
-          console.log(error);
-          return new ErrorResponseDto(400, error.message);
-        }
-        return data as CooperativeMemberApprovals;
-      } else {
-        return {
-          data: `Member ${createCooperativeMemberApprovalsDto.group_id} has cast a vote already`,
-        };
-      }
+      return data as CooperativeMemberApprovals;
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }

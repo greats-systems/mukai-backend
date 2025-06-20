@@ -8,6 +8,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
@@ -63,7 +64,7 @@ export class AuthController {
    * @param profile - Updated user profile data
    * @returns Promise<any> - Result of the update operation
    */
-  @Put('update-account/:id')
+  @Patch('update-account/:id')
   async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
   }

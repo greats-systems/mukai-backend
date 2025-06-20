@@ -25,15 +25,23 @@ export class GroupMemberService {
 
   async createGroupMember(
     createGroupMemberDto: CreateGroupMemberDto,
-  ): Promise<GroupMember | ErrorResponseDto> {
+  ): Promise<GroupMember | object | ErrorResponseDto> {
     try {
       const { data: createGroupMemberResponse, error } = await this.postgresrest
         .from('group_members')
-        .insert(createGroupMemberDto)
+        .upsert(createGroupMemberDto, {
+          onConflict: 'cooperative_id,member_id',
+          ignoreDuplicates: true,
+        })
         .select()
         .single();
       if (error) {
         console.log(error);
+        if (error.details == 'The result contains 0 rows') {
+          return {
+            data: `User ${createGroupMemberDto.member_id} is already in this group`,
+          };
+        }
         return new ErrorResponseDto(400, error.message);
       }
       return createGroupMemberResponse as GroupMember;

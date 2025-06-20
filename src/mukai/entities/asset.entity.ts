@@ -102,4 +102,11 @@ export class Asset {
     description: 'Associated profile ID',
   })
   profile_id: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if group members have voted to purchase the asset',
+    required: false,
+  })
+  has_received_vote?: boolean;
 }

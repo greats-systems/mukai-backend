@@ -217,7 +217,13 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error(`Error fetching Cooperative ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        if (error.details == 'The result contains 0 rows') {
+          return new ErrorResponseDto(
+            404,
+            `Cooperative with id ${id} not found`,
+          );
+        }
+        return new ErrorResponseDto(400, error.message || 'Unknown error');
       }
 
       if (!data) {
@@ -227,7 +233,10 @@ export class CooperativesService {
       return data as Cooperative;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
-      return new ErrorResponseDto(500, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
     }
   }
 
@@ -280,7 +289,6 @@ export class CooperativesService {
 
   async viewCooperativesForMember(
     member_id: string,
-
   ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {
     try {
       const { data, error } = await this.postgresrest

@@ -20,7 +20,8 @@ export class CreateAssetDto {
   asset_descriptive_name?: string;
 
   @ApiProperty({
-    example: 'Red Toyata Fortuner 2025 model with 100000 km on odometer and 2025 registration. It is in good condition and has been well maintained.',
+    example:
+      'Red Toyata Fortuner 2025 model with 100000 km on odometer and 2025 registration. It is in good condition and has been well maintained.',
     description: 'Descriptive description of the asset (optional)',
     required: false,
   })
@@ -29,7 +30,10 @@ export class CreateAssetDto {
   asset_description?: string;
 
   @ApiProperty({
-    example: ['https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png', 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png'],  
+    example: [
+      'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png',
+      'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png',
+    ],
     description: 'Asset images URLs (optional)',
     required: false,
   })
@@ -56,7 +60,7 @@ export class CreateAssetDto {
   valuation_currency?: string;
 
   @ApiProperty({
-    example: 1000.50,
+    example: 1000.5,
     description: 'Fiat value of the asset (optional)',
     required: false,
   })
@@ -189,4 +193,13 @@ export class CreateAssetDto {
   @IsString()
   @IsOptional()
   group_id?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if group members have voted to purchase the asset',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  has_received_vote?: boolean;
 }

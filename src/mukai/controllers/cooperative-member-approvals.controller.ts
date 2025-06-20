@@ -16,7 +16,7 @@ import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooper
 import { ApiOperation, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 
-@Controller('cooperative-member-approvals')
+@Controller('cooperative_member_approvals')
 export class CooperativeMemberApprovalsController {
   constructor(
     private readonly cooperativeMemberApprovalsService: CooperativeMemberApprovalsService,
@@ -162,6 +162,53 @@ export class CooperativeMemberApprovalsController {
     const response =
       await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovals(
         id,
+        updateCooperativeMemberApprovalsDto,
+      );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Patch('/coop/:coop_id')
+  @ApiOperation({ summary: 'Update a poll by coop_id' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative ID',
+  })
+  @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cooperative not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async updateByCoopID(
+    @Param('coop_id') coop_id: string,
+    @Body()
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovalsByCoopID(
+        coop_id,
         updateCooperativeMemberApprovalsDto,
       );
     if (response['statusCode'] === 400) {

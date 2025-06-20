@@ -86,6 +86,7 @@ export class GroupMemberService {
   async findMembersInGroup(
     cooperative_id: string,
   ): Promise<GroupMember[] | ErrorResponseDto> {
+    console.log('cooperative_id');
     console.log(cooperative_id);
     try {
       const { data, error } = await this.postgresrest

@@ -22,6 +22,11 @@ import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 import { error } from 'console';
+import { WalletsService } from 'src/mukai/services/wallets.service';
+import { TransactionsService } from 'src/mukai/services/transactions.service';
+import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
+import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
+import { supabase } from 'supabase/apps/docs/lib/supabase';
 
 @Injectable()
 export class AuthService {
@@ -250,6 +255,10 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto) {
+    const walletsService = new WalletsService(this.postgresRest);
+    const createWalletDto = new CreateWalletDto();
+    const transactionsService = new TransactionsService(this.postgresRest);
+    const createTransactionDto = new CreateTransactionDto();
     // Check if user exists in auth.users
     try {
       const { data: existingUser } = await this.supabaseAdmin
@@ -341,6 +350,41 @@ export class AuthService {
           .eq('id', newAuthUser.user.id);
         throw new Error(`Profile creation failed: ${profileError.message}`);
       }
+
+      // Create wallet
+      createWalletDto.profile_id = user_data.id;
+      createWalletDto.balance = 20;
+      createWalletDto.default_currency = 'usd';
+      createWalletDto.is_group_wallet = false;
+      createWalletDto.is_active = true;
+      createWalletDto.status = 'active';
+      const walletResponse = await walletsService.createWallet(createWalletDto);
+
+      // Update wallet_id in profiles
+      const updateProfileResponse = await this.postgresRest
+        .from('profiles')
+        .update({
+          wallet_id: walletResponse['data']['id'],
+          wallet_id_text: walletResponse['data']['id'],
+        })
+        .eq('id', newAuthUser.user.id)
+        .select();
+
+      // Record the trasaction
+      createTransactionDto.receiving_wallet = walletResponse['id'];
+      createTransactionDto.amount = createWalletDto.balance;
+      createTransactionDto.currency = createWalletDto.default_currency;
+      createTransactionDto.transaction_type = 'Opening deposit';
+      createTransactionDto.category = 'transfer';
+
+      const createTransactionResponse =
+        await transactionsService.createTransaction(createTransactionDto);
+
+      // Verify if everything succeeded
+      console.log('updateProfileResponse');
+      console.log(updateProfileResponse);
+      console.log('createTransactionResponse');
+      console.log(createTransactionResponse);
 
       // Generate JWT
       const payload = {

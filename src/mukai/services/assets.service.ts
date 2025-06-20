@@ -10,6 +10,10 @@ import { Asset } from '../entities/asset.entity';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
+// import { CooperativesService } from './cooperatives.service';
+import { GroupMemberService } from './group-members.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -23,15 +27,54 @@ export class AssetsService {
   async createAsset(
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    const createCoopMemberApproval = new CooperativeMemberApprovals();
+    const gmService = new GroupMemberService(this.postgresrest);
+    const coopMemberApprovalService = new CooperativeMemberApprovalsService(
+      this.postgresrest,
+    );
     try {
+      console.log(createAssetDto.group_id);
+
+      // Create the asset
       const { data, error } = await this.postgresrest
         .from('assets')
         .insert(createAssetDto)
+        .select()
         .single();
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
+
+      // Fetch number of members in group
+      const gmResponse = await gmService.findMembersInGroup(
+        createAssetDto.group_id!,
+      );
+      if (gmResponse instanceof ErrorResponseDto) {
+        console.warn('Something happened');
+        console.warn(gmResponse);
+        return gmResponse;
+      }
+      const groupSize = gmResponse.length;
+      createCoopMemberApproval.group_id = createAssetDto.group_id!;
+      createCoopMemberApproval.poll_description =
+        createAssetDto.asset_description!;
+      createCoopMemberApproval.number_of_members = groupSize;
+      createCoopMemberApproval.asset_id = data['id'];
+
+      // Create poll
+      const pollResponse =
+        await coopMemberApprovalService.createCooperativeMemberApprovals(
+          createCoopMemberApproval,
+        );
+
+      console.info(pollResponse);
+      if (pollResponse instanceof ErrorResponseDto) {
+        console.log('Poll response error');
+        console.log(pollResponse);
+        return pollResponse;
+      }
+
       return {
         statusCode: 201,
         message: 'Asset created successfully',
@@ -41,10 +84,15 @@ export class AssetsService {
       return new ErrorResponseDto(500, error);
     }
   }
-// get group assets
-  async getGroupAssets(group_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  // get group assets
+  async getGroupAssets(
+    group_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest.from('assets').select().eq('group_id', group_id);
+      const { data, error } = await this.postgresrest
+        .from('assets')
+        .select()
+        .eq('group_id', group_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
         return new ErrorResponseDto(400, error.message);
@@ -60,9 +108,14 @@ export class AssetsService {
     }
   }
 
-  async getProfileAssets(profile_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async getProfileAssets(
+    profile_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest.from('assets').select().eq('profile_id', profile_id);
+      const { data, error } = await this.postgresrest
+        .from('assets')
+        .select()
+        .eq('profile_id', profile_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
         return new ErrorResponseDto(400, error.message);
@@ -139,7 +192,9 @@ export class AssetsService {
     }
   }
 
-  async deleteAsset(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async deleteAsset(
+    id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
         .from('assets')

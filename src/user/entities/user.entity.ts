@@ -43,6 +43,7 @@ export class Profile {
   country_of_birth: string;
   avatar: string;
   wallet_balance: number;
+  wallet_id: string;
   // Add other nullable fields with proper types
   profile_image?: string;
   ward?: string;

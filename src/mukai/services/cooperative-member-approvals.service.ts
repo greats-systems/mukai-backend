@@ -121,7 +121,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(
-          `Error checking vote status for member ${member_id}`,
+          `Error checking vote status for member ${member_id.toString()}`,
           error,
         );
         return new ErrorResponseDto(400, error.message);

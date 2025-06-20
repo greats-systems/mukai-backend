@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsArray } from 'class-validator';
 
 export class CreateCooperativeMemberApprovalsDto {
   @ApiProperty({
@@ -39,22 +39,28 @@ export class CreateCooperativeMemberApprovalsDto {
   number_of_members?: number;
 
   @ApiProperty({
-    example: 0,
-    description: 'Optional initial supporting votes',
-    required: false,
+    example: [
+      '4ca7ce72-6f63-4a76-be8a-fe024d32fe1c',
+      'd6b9e096-702d-44e2-93b1-8cc5418cf1f8',
+    ],
+    description: 'List of supporting member IDs',
   })
-  @IsInt()
+  @IsString()
+  @IsArray()
   @IsOptional()
-  supporting_votes?: number;
+  supporting_votes?: string[];
 
   @ApiProperty({
-    example: 0,
-    description: 'Optional initial opposing votes',
-    required: false,
+    example: [
+      '4ca7ce72-6f63-4a76-be8a-fe024d32fe1c',
+      'd6b9e096-702d-44e2-93b1-8cc5418cf1f8',
+    ],
+    description: 'List of supporting member IDs',
   })
-  @IsInt()
+  @IsString()
+  @IsArray()
   @IsOptional()
-  opposing_votes?: number;
+  opposing_votes?: string[];
 
   @ApiProperty({
     example: 'Annual leadership election',
@@ -64,4 +70,13 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   poll_description?: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description:
+      'Asset ID from assets table (useful when voting for asset purchase/sale)',
+  })
+  @IsString()
+  @IsOptional()
+  asset_id: string;
 }

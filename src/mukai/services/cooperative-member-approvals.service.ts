@@ -24,6 +24,7 @@ export class CooperativeMemberApprovalsService {
       let hasSupported;
       let hasOpposed;
       // Check if the user has voted in support
+      /*
       if (createCooperativeMemberApprovalsDto.supporting_votes) {
         hasSupported = await this.checkIfMemberVoted(
           createCooperativeMemberApprovalsDto.supporting_votes,
@@ -35,6 +36,7 @@ export class CooperativeMemberApprovalsService {
           createCooperativeMemberApprovalsDto.opposing_votes,
         );
       }
+      */
 
       if (!hasSupported && !hasOpposed) {
         const { data, error } = await this.postgresrest
@@ -108,17 +110,14 @@ export class CooperativeMemberApprovalsService {
 
   async checkIfMemberVoted(
     member_id: string[],
+    asset_id: string,
   ): Promise<boolean | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select()
-        // Check if member_id exists in either array
-        .or(
-          `supporting_votes.cs.{${member_id}},
-           opposing_votes.cs.{${member_id}},`,
-        )
-        .maybeSingle(); // Use maybeSingle instead of single to handle empty results
+        .contains('supporting_votes', member_id)
+        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
 
       if (error) {
         this.logger.error(
@@ -184,11 +183,13 @@ export class CooperativeMemberApprovalsService {
     if (updateCooperativeMemberApprovalsDto.supporting_votes) {
       hasSupported = await this.checkIfMemberVoted(
         updateCooperativeMemberApprovalsDto.supporting_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
     if (updateCooperativeMemberApprovalsDto.opposing_votes) {
       hasOpposed = await this.checkIfMemberVoted(
         updateCooperativeMemberApprovalsDto.opposing_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
     if (!hasSupported && !hasOpposed) {

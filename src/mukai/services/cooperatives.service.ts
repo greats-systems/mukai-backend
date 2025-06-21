@@ -76,39 +76,7 @@ export class CooperativesService {
       console.log('Response data');
       console.log(createCooperativeResponse['id']);
 
-      if (createCooperativeDto.members != null) {
-        for (const member of createCooperativeDto.members) {
-          createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
-          createGroupMemberDto.member_id = member;
-          const response =
-            await groupMembersService.createGroupMember(createGroupMemberDto);
-          console.log('groupMembersService response');
-          console.log(response);
-        }
-
-        const walletIDs: string[] = [];
-        for (const member of createCooperativeDto.members || []) {
-          const cooperativeMemberWalletsJson =
-            await walletsService.viewProfileWalletID(member);
-          if (cooperativeMemberWalletsJson instanceof ErrorResponseDto) {
-            return cooperativeMemberWalletsJson; // Return the error if wallet lookup failed
-          }
-          walletIDs.push(cooperativeMemberWalletsJson['id'] ?? '');
-          createWalletDto.children_wallets = walletIDs;
-
-          cooperativeMemberRequestDto.status = 'in a cooperative';
-          cooperativeMemberRequestDto.cooperative_id =
-            createGroupMemberDto.cooperative_id;
-          const updateMemberResponse =
-            await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
-              member,
-              cooperativeMemberRequestDto,
-            );
-          console.log(updateMemberResponse);
-          console.log('\n');
-        }
-      } else {
-        createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
+      createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
         const response =
           await groupMembersService.createGroupMember(createGroupMemberDto);
         console.log('group_member response');

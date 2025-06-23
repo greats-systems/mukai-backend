@@ -9,6 +9,9 @@ import { CreateWalletDto } from "../dto/create/create-wallet.dto";
 import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
+import { TransactionsService } from "./transactions.service";
+import { CreateTransactionDto } from "../dto/create/create-transaction.dto";
+import { UUID } from "crypto";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -25,14 +28,18 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .upsert(createWalletDto, {onConflict: 'profile_id,is_group_wallet,default_currency', ignoreDuplicates: true,})
+        .upsert(createWalletDto, {
+          onConflict: "profile_id,is_group_wallet,default_currency",
+          ignoreDuplicates: true,
+        })
         .select()
         .single();
       if (error) {
         console.log(error);
-        if (error.details == 'The result contains 0 rows') {
+        if (error.details == "The result contains 0 rows") {
           return {
-            data: `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
+            data:
+              `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
           };
         }
         return new ErrorResponseDto(400, error.message);
@@ -72,26 +79,18 @@ export class WalletsService {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .select()
-        .eq("profile_id", id)
-        .eq("is_group_wallet", false);
-        // .single();
-
-      // .eq('created_at', date_trunc('month'))
-      // .single();
+        .eq("profile_id", id);
 
       if (error) {
-        if (error.code == "PGRST116") {
-          return {
-            statusCode: 404,
-            message: `No wallet found for ${id}`,
-            data: null,
-          }
-        }
-        else {
-          this.logger.error(`Error fetching Wallet ${id}`, error);
-          return new ErrorResponseDto(400, error.message);
-        }
+        this.logger.error(`Error fetching Wallet ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
       }
+
+      console.log({
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet[],
+      });
 
       return {
         statusCode: 200,
@@ -216,7 +215,10 @@ export class WalletsService {
   async updateReceiverBalance(
     receiving_wallet_id: string,
     amount: number,
+    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    const transactionsService = new TransactionsService(this.postgresrest);
+    const createTransactionDto = new CreateTransactionDto();
     try {
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
@@ -247,6 +249,18 @@ export class WalletsService {
         return new ErrorResponseDto(400, updateError.message);
       }
 
+      createTransactionDto.receiving_wallet = receiving_wallet_id as UUID;
+      createTransactionDto.narrative = "credit";
+      createTransactionDto.amount = amount;
+      createTransactionDto.transaction_type = "internal transfer";
+      createTransactionDto.currency = currency;
+
+      const transactionResponse = await transactionsService.createTransaction(
+        createTransactionDto,
+      );
+      console.log("updateSenderBalance transaction response");
+      console.log(transactionResponse);
+
       return {
         statusCode: 200,
         message: "Wallet updated successfully",
@@ -264,7 +278,10 @@ export class WalletsService {
   async updateSenderBalance(
     sending_wallet_id: string,
     amount: number,
+    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    const transactionsService = new TransactionsService(this.postgresrest);
+    const createTransactionDto = new CreateTransactionDto();
     try {
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
@@ -294,6 +311,18 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
+
+      createTransactionDto.sending_wallet = sending_wallet_id as UUID;
+      createTransactionDto.narrative = "debit";
+      createTransactionDto.amount = amount;
+      createTransactionDto.transaction_type = "internal transfer";
+      createTransactionDto.currency = currency;
+
+      const transactionResponse = await transactionsService.createTransaction(
+        createTransactionDto,
+      );
+      console.log("updateSenderBalance transaction response");
+      console.log(transactionResponse);
 
       return {
         statusCode: 200,

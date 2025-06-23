@@ -50,12 +50,16 @@ export class TransactionsService {
       const debitResponse = await walletsService.updateSenderBalance(
         createTransactionDto.sending_wallet,
         createTransactionDto.amount,
+        createTransactionDto.currency!,
       );
       if (createTransactionDto.receiving_wallet) {
         const creditResponse = await walletsService.updateReceiverBalance(
           createTransactionDto.receiving_wallet,
           createTransactionDto.amount,
+          createTransactionDto.currency!,
         );
+        console.log('Credit response:');
+        console.log(creditResponse);
       }
       if (createTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
@@ -214,9 +218,10 @@ export class TransactionsService {
   ): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.rpc(
-        'get_user_transaction_totals',
+        'get_comprehensive_transaction_report',
         {
-          user_id: wallet_id,
+          p_wallet_id: wallet_id,
+          // p_period: 'January',
         },
       );
 
@@ -232,44 +237,50 @@ export class TransactionsService {
     }
   }
 
-  async updateTransaction(
-    id: string,
-    updateTransactionDto: UpdateTransactionDto,
-  ): Promise<Transaction | ErrorResponseDto> {
+  async generateUserTransactionReport(
+    wallet_id: string,
+  ): Promise<object | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest
-        .from('transactions')
-        .update(updateTransactionDto)
-        .eq('id', id)
-        .select()
-        .single();
+      const { data, error } = await this.postgresrest.rpc(
+        'get_comprehensive_individual_transaction_report',
+        {
+          p_wallet_id: wallet_id,
+          // p_period: 'January',
+        },
+      );
+
       if (error) {
-        this.logger.error(`Error updating Transactions ${id}`, error);
+        this.logger.error(`Error fetching Transaction`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Transaction;
+
+      return data as object;
     } catch (error) {
-      this.logger.error(`Exception in updateTransaction for id ${id}`, error);
+      this.logger.error(`Exception in viewTransaction for id`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async deleteTransaction(id: string): Promise<boolean | ErrorResponseDto> {
+  async generateCoopTransactionReport(
+    wallet_id: string,
+  ): Promise<object | ErrorResponseDto> {
     try {
-      const { error } = await this.postgresrest
-        .from('transactions')
-        .delete()
-        .eq('id', id)
-        .single();
+      const { data, error } = await this.postgresrest.rpc(
+        'get_comprehensive_cooperative_transaction_report',
+        {
+          p_wallet_id: wallet_id,
+          // p_period: 'January',
+        },
+      );
 
       if (error) {
-        this.logger.error(`Error deleting Transaction ${id}`, error);
+        this.logger.error(`Error fetching Transaction`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      return true;
+      return data as object;
     } catch (error) {
-      this.logger.error(`Exception in deleteTransaction for id ${id}`, error);
+      this.logger.error(`Exception in viewTransaction for id`, error);
       return new ErrorResponseDto(500, error);
     }
   }

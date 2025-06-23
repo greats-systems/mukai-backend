@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -74,7 +75,7 @@ export class WalletsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Fetch a wallets by ID' })
+  @ApiOperation({ summary: 'Fetch wallets by profile ID' })
   @ApiParam({
     name: 'id',
     description: 'Wallet ID',
@@ -186,7 +187,7 @@ export class WalletsController {
     return response;
   }
 
-  @Get(':group_id')
+  @Get('coop/:group_id')
   @ApiOperation({ summary: 'Fetch a wallet by group ID' })
   @ApiParam({
     name: 'group_id',

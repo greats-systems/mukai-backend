@@ -158,7 +158,10 @@ export class CooperativesController {
     const response =
       await this.cooperativesService.viewCooperativesForMember(member_id);
     if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'] ?? 'Bad request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (response['statusCode'] === 500) {
       throw new HttpException(

@@ -211,16 +211,18 @@ export class CooperativeMemberApprovalsController {
         coop_id,
         updateCooperativeMemberApprovalsDto,
       );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    if (response) {
+      if (response['statusCode'] === 400) {
+        throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      }
+      if (response['statusCode'] === 500) {
+        throw new HttpException(
+          response['message'],
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      return response;
     }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
   }
 
   @Delete(':id')

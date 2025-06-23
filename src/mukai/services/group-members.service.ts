@@ -2,11 +2,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import { Logger, Injectable } from '@nestjs/common';
-import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
+// import { GroupMembers } from '@nestjs/microservices/external/kafka.interface';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
+import { GroupMembers } from '../entities/group-members.entity';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -25,24 +26,34 @@ export class GroupMemberService {
 
   async createGroupMember(
     createGroupMemberDto: CreateGroupMemberDto,
-  ): Promise<GroupMember | ErrorResponseDto> {
+  ): Promise<GroupMembers | object | ErrorResponseDto> {
+    console.log(createGroupMemberDto);
     try {
+      await this.postgresrest.clearCache();
       const { data: createGroupMemberResponse, error } = await this.postgresrest
         .from('group_members')
-        .insert(createGroupMemberDto)
+        .upsert(createGroupMemberDto, {
+          onConflict: 'member_id,cooperative_id',
+          ignoreDuplicates: false,
+        })
         .select()
         .single();
       if (error) {
         console.log(error);
+        if (error.details == 'The result contains 0 rows') {
+          return {
+            data: `User ${createGroupMemberDto.member_id} is already in this group`,
+          };
+        }
         return new ErrorResponseDto(400, error.message);
       }
-      return createGroupMemberResponse as GroupMember;
+      return createGroupMemberResponse as GroupMembers;
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async findAllGroupMembers(): Promise<GroupMember[] | ErrorResponseDto> {
+  async findAllGroupMembers(): Promise<GroupMembers[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -54,7 +65,7 @@ export class GroupMemberService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as GroupMember[];
+      return data as GroupMembers[];
     } catch (error) {
       this.logger.error('Exception in findAllGroupMember', error);
       return new ErrorResponseDto(500, error);
@@ -63,7 +74,7 @@ export class GroupMemberService {
 
   async findGroupsContainingMember(
     member_id: string,
-  ): Promise<GroupMember[] | ErrorResponseDto> {
+  ): Promise<GroupMembers[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -76,7 +87,7 @@ export class GroupMemberService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as GroupMember[];
+      return data as GroupMembers[];
     } catch (error) {
       this.logger.error('Exception in findAllGroupMember', error);
       return new ErrorResponseDto(500, error);
@@ -85,7 +96,7 @@ export class GroupMemberService {
 
   async findMembersInGroup(
     cooperative_id: string,
-  ): Promise<GroupMember[] | ErrorResponseDto> {
+  ): Promise<GroupMembers[] | ErrorResponseDto> {
     console.log('cooperative_id');
     console.log(cooperative_id);
     try {
@@ -100,14 +111,14 @@ export class GroupMemberService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as GroupMember[];
+      return data as GroupMembers[];
     } catch (error) {
       this.logger.error('Exception in findAllGroupMember', error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewGroupMember(id: string): Promise<GroupMember[] | ErrorResponseDto> {
+  async viewGroupMember(id: string): Promise<GroupMembers[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -120,7 +131,7 @@ export class GroupMemberService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as GroupMember[];
+      return data as GroupMembers[];
     } catch (error) {
       this.logger.error(`Exception in viewGroupMember for id ${id}`, error);
       return new ErrorResponseDto(500, error);
@@ -130,7 +141,7 @@ export class GroupMemberService {
   async updateGroupMember(
     id: string,
     updateGroupMemberDto: UpdateGroupMemberDto,
-  ): Promise<GroupMember | ErrorResponseDto> {
+  ): Promise<GroupMembers | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
@@ -142,7 +153,7 @@ export class GroupMemberService {
         this.logger.error(`Error updating group ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as GroupMember;
+      return data as GroupMembers;
     } catch (error) {
       this.logger.error(`Exception in updateGroupMember for id ${id}`, error);
       return new ErrorResponseDto(500, error);

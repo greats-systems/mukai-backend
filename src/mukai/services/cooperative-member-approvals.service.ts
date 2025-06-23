@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -7,6 +8,9 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
+import { AssetsService } from './assets.service';
+import { UpdateAssetDto } from '../dto/update/update-asset.dto';
+import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -21,39 +25,19 @@ export class CooperativeMemberApprovalsService {
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
-      let hasSupported;
-      let hasOpposed;
-      // Check if the user has voted in support
-      /*
-      if (createCooperativeMemberApprovalsDto.supporting_votes) {
-        hasSupported = await this.checkIfMemberVoted(
-          createCooperativeMemberApprovalsDto.supporting_votes,
-        );
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .upsert(createCooperativeMemberApprovalsDto, {
+          onConflict: 'group_id,poll_description,asset_id',
+          ignoreDuplicates: true,
+        })
+        .select()
+        .single();
+      if (error) {
+        console.log(error);
+        return new ErrorResponseDto(400, error.message);
       }
-      // Check if the user has voted in opposition
-      if (createCooperativeMemberApprovalsDto.opposing_votes) {
-        hasOpposed = await this.checkIfMemberVoted(
-          createCooperativeMemberApprovalsDto.opposing_votes,
-        );
-      }
-      */
-
-      if (!hasSupported && !hasOpposed) {
-        const { data, error } = await this.postgresrest
-          .from('cooperative_member_approvals')
-          .insert(createCooperativeMemberApprovalsDto)
-          .select()
-          .single();
-        if (error) {
-          console.log(error);
-          return new ErrorResponseDto(400, error.message);
-        }
-        return data as CooperativeMemberApprovals;
-      } else {
-        return {
-          data: `Member ${createCooperativeMemberApprovalsDto.group_id} has cast a vote already`,
-        };
-      }
+      return data as CooperativeMemberApprovals;
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
@@ -109,30 +93,121 @@ export class CooperativeMemberApprovalsService {
   }
 
   async checkIfMemberVoted(
-    member_id: string[],
+    member_id: string,
     asset_id: string,
   ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberVoted');
+    console.log(member_id);
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select()
-        .contains('supporting_votes', member_id)
-        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
+        .eq('asset_id', asset_id)
+        .or(
+          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
+        );
 
       if (error) {
         this.logger.error(
-          `Error checking vote status for member ${member_id}`,
+          `Error checking vote status for member ${member_id.toString()}`,
           error,
         );
         return new ErrorResponseDto(400, error.message);
       }
 
       // Return true if record exists (member has voted), false otherwise
-      console.log(data);
-      return !!data;
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
     } catch (error) {
       this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString}`,
+        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async checkIfMemberSupported(
+    member_id: string,
+    asset_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberSupported');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .contains('supporting_votes', [member_id])
+        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
+
+      if (error) {
+        this.logger.error(
+          `Error checking vote status for member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async checkIfMemberOpposed(
+    member_id: string,
+    asset_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberOpposed');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .contains('opposing_votes', [member_id])
+        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
+
+      if (error) {
+        this.logger.error(
+          `Error checking vote status for member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
         error instanceof Error ? error : new Error(String(error)),
       );
       return new ErrorResponseDto(
@@ -147,6 +222,7 @@ export class CooperativeMemberApprovalsService {
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
+      console.log(updateCooperativeMemberApprovalsDto);
       // const approval = await this.viewCooperativeMemberApprovals(u)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -174,41 +250,106 @@ export class CooperativeMemberApprovalsService {
   async updateCooperativeMemberApprovalsByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+  ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
     // console.log(group_id);
     // Check if member has already voted
+    let hasVotedBefore;
     let hasSupported;
     let hasOpposed;
+    const assetsService = new AssetsService(this.postgresrest);
+    const updateAssetsDto = new UpdateAssetDto();
 
     if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-      hasSupported = await this.checkIfMemberVoted(
+      hasVotedBefore = await this.checkIfMemberVoted(
+        updateCooperativeMemberApprovalsDto.supporting_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
+      );
+      hasSupported = await this.checkIfMemberSupported(
         updateCooperativeMemberApprovalsDto.supporting_votes,
         updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
     if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      hasOpposed = await this.checkIfMemberVoted(
+      hasVotedBefore = await this.checkIfMemberVoted(
+        updateCooperativeMemberApprovalsDto.opposing_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
+      );
+      hasOpposed = await this.checkIfMemberOpposed(
         updateCooperativeMemberApprovalsDto.opposing_votes,
         updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
-    if (!hasSupported && !hasOpposed) {
+    console.log('Voted?');
+    console.log(hasVotedBefore);
+    console.log('Supported?');
+    console.log(hasSupported);
+    console.log('Opposed?');
+    console.log(hasOpposed);
+    if (
+      (!hasVotedBefore || hasVotedBefore == undefined) &&
+      (!hasSupported || hasSupported == undefined) &&
+      (!hasOpposed || hasOpposed == undefined)
+    ) {
+      console.log('This user has not voted yet');
+      console.log(updateCooperativeMemberApprovalsDto);
       try {
-        const { data, error } = await this.postgresrest
-          .from('cooperative_member_approvals')
-          .update(updateCooperativeMemberApprovalsDto)
-          .eq('group_id', group_id)
-          .eq('asset_id', updateCooperativeMemberApprovalsDto.asset_id)
-          .select()
-          .single();
-        if (error) {
-          this.logger.error(
-            `Error updating cooperative_member_approvals by coop ${group_id}`,
-            error,
+        let data;
+
+        // Conditionally append to supporting_votes if provided
+        if (updateCooperativeMemberApprovalsDto.supporting_votes) {
+          console.log(updateCooperativeMemberApprovalsDto.supporting_votes);
+          console.log(
+            typeof updateCooperativeMemberApprovalsDto.supporting_votes,
           );
-          return new ErrorResponseDto(400, error.message);
+          // Get the first member ID if it's an array, or use the value directly
+          const memberId = Array.isArray(
+            updateCooperativeMemberApprovalsDto.supporting_votes,
+          )
+            ? updateCooperativeMemberApprovalsDto.supporting_votes[0]
+            : updateCooperativeMemberApprovalsDto.supporting_votes;
+
+          data = await this.postgresrest.rpc('add_supporting_vote', {
+            p_group_id: group_id,
+            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
+            p_member_id: memberId, // No .toString() needed if it's already a UUID string
+          });
+          console.log(data);
+
+          if (data.error) {
+            this.logger.error(
+              `Error adding supporting vote: ${data.error.message},`,
+            );
+            return new ErrorResponseDto(400, data.error.message);
+          }
         }
-        return data as CooperativeMemberApprovals[];
+
+        // Conditionally append to opposing_votes if provided
+        if (updateCooperativeMemberApprovalsDto.opposing_votes) {
+          const memberId = Array.isArray(
+            updateCooperativeMemberApprovalsDto.opposing_votes,
+          )
+            ? updateCooperativeMemberApprovalsDto.opposing_votes[0]
+            : updateCooperativeMemberApprovalsDto.opposing_votes;
+
+          data = await this.postgresrest.rpc('add_opposing_vote', {
+            p_group_id: group_id,
+            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
+            p_member_id: memberId,
+          });
+
+          if (data.error) {
+            this.logger.error(
+              `Error adding opposing vote: ${data.error.message}`,
+            );
+            return new ErrorResponseDto(400, data.error.message);
+          }
+        }
+
+        // Update asset status
+        updateAssetsDto.id = updateCooperativeMemberApprovalsDto.asset_id;
+        updateAssetsDto.has_received_vote = true;
+        await assetsService.updateAsset(updateAssetsDto.id!, updateAssetsDto);
+        return data as UpdateCooperativeMemberApprovalsDto;
       } catch (error) {
         this.logger.error(
           `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
@@ -217,7 +358,8 @@ export class CooperativeMemberApprovalsService {
         return new ErrorResponseDto(500, error);
       }
     } else {
-      return new ErrorResponseDto(403, 'You have already cast your vote');
+      console.log('This user has voted before');
+      return { data: 'You have voted already' };
     }
   }
 

@@ -21,6 +21,8 @@ import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { AuthService } from 'src/auth/auth.service';
+import { SignupDto } from 'src/auth/dto/signup.dto';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -64,6 +66,8 @@ export class CooperativesService {
       const cooperativeMemberRequestDto =
         new CreateCooperativeMemberRequestDto();
       console.log(createCooperativeDto);
+
+      // Create cooperative
       const { data: createCooperativeResponse, error } = await this.postgresrest
         .from('cooperatives')
         .insert(createCooperativeDto)
@@ -75,7 +79,7 @@ export class CooperativesService {
       }
       console.log('Response data');
       console.log(createCooperativeResponse['id']);
-
+      
       if (createCooperativeDto.members != null) {
         for (const member of createCooperativeDto.members) {
           createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
@@ -124,7 +128,7 @@ export class CooperativesService {
         console.log('Wallet response');
         console.log(walletResponse);
 
-        // createTransactionDto.sending_wallet = walletResponse['data']['id'];
+        
         createTransactionDto.receiving_wallet = walletResponse['data']['id'];
         createTransactionDto.amount = createWalletDto.balance;
         createTransactionDto.transaction_type = 'deposit';
@@ -136,6 +140,7 @@ export class CooperativesService {
 
         console.log(walletResponse);
       }
+      
       const walletIDs: string[] = [];
       for (const member of createCooperativeDto.members || []) {
         const cooperativeMemberWalletsJson =

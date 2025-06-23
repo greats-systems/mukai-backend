@@ -26,7 +26,6 @@ import { WalletsService } from 'src/mukai/services/wallets.service';
 import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
 import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
-import { supabase } from 'supabase/apps/docs/lib/supabase';
 
 @Injectable()
 export class AuthService {

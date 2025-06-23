@@ -76,4 +76,16 @@ export class PostgresRest {
   public rpc(fnName: string, params?: object) {
     return this.clientInstance.rpc(fnName, params);
   }
+
+  public async clearCache() {
+    try {
+      await this.clientInstance.rpc('pg_notify', {
+        channel: 'postgrest',
+        payload: 'reload schema',
+      });
+      this.logger.log('PostgREST schema cache cleared');
+    } catch (error) {
+      this.logger.error('Failed to clear PostgREST cache:', error);
+    }
+  }
 }

@@ -22,15 +22,20 @@ export class WalletsService {
 
   async createWallet(
     createWalletDto: CreateWalletDto,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .insert(createWalletDto)
+        .upsert(createWalletDto, {onConflict: 'profile_id,is_group_wallet,default_currency', ignoreDuplicates: true,})
         .select()
         .single();
       if (error) {
         console.log(error);
+        if (error.details == 'The result contains 0 rows') {
+          return {
+            data: `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
+          };
+        }
         return new ErrorResponseDto(400, error.message);
       }
       return {

@@ -32,7 +32,7 @@ export class CooperativeMemberApprovals {
     ],
     description: 'List of supporting member IDs',
   })
-  supporting_votes: string[];
+  supporting_votes: string;
 
   @ApiProperty({
     example: [
@@ -41,7 +41,7 @@ export class CooperativeMemberApprovals {
     ],
     description: 'List of opposing member IDs',
   })
-  opposing_votes: string[];
+  opposing_votes: string;
 
   @ApiProperty({
     example: 'Approval of new membership criteria',

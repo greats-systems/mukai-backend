@@ -2,14 +2,14 @@ import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAssetDto {
-  // @ApiProperty({
-  //   example: '123e4567-e89b-12d3-a456-426614174000',
-  //   description: 'Unique identifier for the asset (optional)',
-  //   required: false,
-  // })
-  // @IsString()
-  // @IsOptional()
-  // id?: string;
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Unique identifier for the asset (optional)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  id?: string;
   @ApiProperty({
     example: 'Toyata Fortuner 2025 model',
     description: 'Descriptive name of the asset (optional)',

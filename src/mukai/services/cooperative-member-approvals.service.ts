@@ -92,6 +92,49 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
+  async checkIfMemberVoted(
+    member_id: string,
+    asset_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberVoted');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('asset_id', asset_id)
+        .or(
+          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
+        );
+
+      if (error) {
+        this.logger.error(
+          `Error checking vote status for member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
   async checkIfMemberSupported(
     member_id: string,
     asset_id: string,
@@ -210,29 +253,40 @@ export class CooperativeMemberApprovalsService {
   ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
     // console.log(group_id);
     // Check if member has already voted
+    let hasVotedBefore;
     let hasSupported;
     let hasOpposed;
     const assetsService = new AssetsService(this.postgresrest);
     const updateAssetsDto = new UpdateAssetDto();
 
     if (updateCooperativeMemberApprovalsDto.supporting_votes) {
+      hasVotedBefore = await this.checkIfMemberVoted(
+        updateCooperativeMemberApprovalsDto.supporting_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
+      );
       hasSupported = await this.checkIfMemberSupported(
         updateCooperativeMemberApprovalsDto.supporting_votes,
         updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
     if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      console.log(updateCooperativeMemberApprovalsDto.opposing_votes);
+      hasVotedBefore = await this.checkIfMemberVoted(
+        updateCooperativeMemberApprovalsDto.opposing_votes,
+        updateCooperativeMemberApprovalsDto.asset_id!,
+      );
       hasOpposed = await this.checkIfMemberOpposed(
         updateCooperativeMemberApprovalsDto.opposing_votes,
         updateCooperativeMemberApprovalsDto.asset_id!,
       );
     }
+    console.log('Voted?');
+    console.log(hasVotedBefore);
     console.log('Supported?');
     console.log(hasSupported);
     console.log('Opposed?');
     console.log(hasOpposed);
     if (
+      (!hasVotedBefore || hasVotedBefore == undefined) &&
       (!hasSupported || hasSupported == undefined) &&
       (!hasOpposed || hasOpposed == undefined)
     ) {

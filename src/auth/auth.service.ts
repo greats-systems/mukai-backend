@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
+  Body,
   HttpException,
   HttpStatus,
   Injectable,
@@ -423,6 +424,28 @@ export class AuthService {
       };
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    try {
+      const { data, error } = await this.supabaseAdmin.auth.refreshSession({
+        refresh_token: body.refreshToken,
+      });
+
+      if (error || !data.session) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      return {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresAt: data.session.expires_at,
+        userId: data.user.id,
+        email: data.user.email,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Session refresh failed');
     }
   }
 

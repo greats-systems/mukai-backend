@@ -250,6 +250,39 @@ export class WalletsController {
     return response;
   }
 
+  @Get('like/:id')
+  @ApiOperation({ summary: 'Fetch a wallet ID like id' })
+  @ApiParam({
+    name: 'id',
+    description: 'Group ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet retrieved successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async getWalletsLike(@Param('id') id: string) {
+    const response = await this.walletsService.getWalletsLike(id);
+
+    if (response) {
+      if (response['statusCode'] === 400) {
+        throw new HttpException(
+          response['message'] ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (response['statusCode'] === 500) {
+        throw new HttpException(
+          response['message'] ?? 'Internal server error',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+    return response;
+  }
+
   @Get('coop/:group_id')
   @ApiOperation({ summary: 'Fetch a wallet by group ID' })
   @ApiParam({

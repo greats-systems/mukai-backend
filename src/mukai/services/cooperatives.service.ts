@@ -26,29 +26,16 @@ function initLogger(funcname: Function): Logger {
 export class CooperativesService {
   private readonly logger = initLogger(CooperativesService);
   constructor(private readonly postgresrest: PostgresRest) {}
-  /*
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperatives')
-        .insert(createCooperativeDto)
-        .single();
-      if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
-      }
-      return data as Cooperative;
-    } catch (error) {
-      return new ErrorResponseDto(500, error);
-    }
-  }
-  */
-
-  async createCooperative(
-    createCooperativeDto: CreateCooperativeDto,
-  ): Promise<Cooperative | ErrorResponseDto> {
+    /* When a cooperative is created, the following steps should be taken:
+    1. The new coop is created in the cooperatives table
+    2. The coop is also create in the group_members table. Coop ID will act as a foreign key that links the coop and its members
+    2. A wallet, with an initial deposit of $100, for said coop is created. The coop ID will act as a foreign key 
+    to the cooperatives table
+    3. The deposit is recorded in the transactions table
+     */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();

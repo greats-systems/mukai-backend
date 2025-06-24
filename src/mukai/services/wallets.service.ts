@@ -9,9 +9,6 @@ import { CreateWalletDto } from "../dto/create/create-wallet.dto";
 import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
-import { TransactionsService } from "./transactions.service";
-import { CreateTransactionDto } from "../dto/create/create-transaction.dto";
-import { UUID } from "crypto";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -99,6 +96,66 @@ export class WalletsService {
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewCoopWallet(coop_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from("wallets")
+        .select()
+        .eq("group_id", coop_id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching coop Wallet ${coop_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      console.log({
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet,
+      });
+
+      return {
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet,
+      };
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${coop_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewIndividualWallets(profile_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from("wallets")
+        .select()
+        .eq("profile_id", profile_id)
+        .eq('is_group_wallet', false);
+
+      if (error) {
+        this.logger.error(`Error fetching individual wallet ${profile_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      console.log({
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet[],
+      });
+
+      return {
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet[],
+      };
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -215,10 +272,7 @@ export class WalletsService {
   async updateReceiverBalance(
     receiving_wallet_id: string,
     amount: number,
-    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    const transactionsService = new TransactionsService(this.postgresrest);
-    const createTransactionDto = new CreateTransactionDto();
     try {
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
@@ -249,18 +303,6 @@ export class WalletsService {
         return new ErrorResponseDto(400, updateError.message);
       }
 
-      createTransactionDto.receiving_wallet = receiving_wallet_id as UUID;
-      createTransactionDto.narrative = "credit";
-      createTransactionDto.amount = amount;
-      createTransactionDto.transaction_type = "internal transfer";
-      createTransactionDto.currency = currency;
-
-      const transactionResponse = await transactionsService.createTransaction(
-        createTransactionDto,
-      );
-      console.log("updateSenderBalance transaction response");
-      console.log(transactionResponse);
-
       return {
         statusCode: 200,
         message: "Wallet updated successfully",
@@ -278,16 +320,17 @@ export class WalletsService {
   async updateSenderBalance(
     sending_wallet_id: string,
     amount: number,
-    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    const transactionsService = new TransactionsService(this.postgresrest);
-    const createTransactionDto = new CreateTransactionDto();
+    // const transactionsService = new TransactionsService(this.postgresrest);
+    // const createTransactionDto = new CreateTransactionDto();
     try {
+      console.log('Updating sender balance');
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
         .select("balance")
         .eq("id", sending_wallet_id)
         .single();
+      console.log(balanceData);
       if (balanceError) {
         this.logger.error(
           `Error fetching balance ${sending_wallet_id}`,
@@ -311,18 +354,8 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-
-      createTransactionDto.sending_wallet = sending_wallet_id as UUID;
-      createTransactionDto.narrative = "debit";
-      createTransactionDto.amount = amount;
-      createTransactionDto.transaction_type = "internal transfer";
-      createTransactionDto.currency = currency;
-
-      const transactionResponse = await transactionsService.createTransaction(
-        createTransactionDto,
-      );
-      console.log("updateSenderBalance transaction response");
-      console.log(transactionResponse);
+      console.log('New wallet:');
+      console.log(updateData);
 
       return {
         statusCode: 200,

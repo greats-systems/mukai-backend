@@ -6,7 +6,6 @@ import { Logger, Injectable } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
-import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
 import { WalletsService } from './wallets.service';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
@@ -33,67 +32,73 @@ export class TransactionsService {
   constructor(private readonly postgresrest: PostgresRest) {}
 
   async createTransaction(
-    createTransactionDto: CreateTransactionDto,
+    senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      /*When a transaction is initiated, 4 steps should take place:
+       1. the initiator's transaction is recorded in the transactions table
+       2. the initiator's wallet is debited
+       3. the receiver's wallet is credited
+       4 the receiver's credit is recorded in the transactions table
+       */
       const walletsService = new WalletsService(this.postgresrest);
-      const { data, error } = await this.postgresrest
+      const receiverTransactionDto = new CreateTransactionDto();
+      const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')
-        .insert(createTransactionDto)
+        .insert(senderTransactionDto)
         .select()
         .single();
-      if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+      if (senderError) {
+        console.log(senderError);
+        return new ErrorResponseDto(400, senderError.message);
       }
-      console.log(data);
+      console.log(sender);
+      console.log('Updating sender wallet');
       const debitResponse = await walletsService.updateSenderBalance(
-        createTransactionDto.sending_wallet,
-        createTransactionDto.amount,
-        createTransactionDto.currency!,
+        senderTransactionDto.sending_wallet,
+        senderTransactionDto.amount,
       );
-      if (createTransactionDto.receiving_wallet) {
-        const creditResponse = await walletsService.updateReceiverBalance(
-          createTransactionDto.receiving_wallet,
-          createTransactionDto.amount,
-          createTransactionDto.currency!,
-        );
-        console.log('Credit response:');
-        console.log(creditResponse);
-      }
-      if (createTransactionDto.receiving_phone) {
+      console.log(debitResponse);
+      console.log('Updating receiver wallet');
+      const creditResponse = await walletsService.updateReceiverBalance(
+        senderTransactionDto.receiving_wallet,
+        senderTransactionDto.amount,
+      );
+      console.log(creditResponse);
+
+      if (senderTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
         const { data: sendingProfile, error: sendingProfileError } =
           await this.postgresrest
             .from('profiles')
             .select()
-            .eq('id', createTransactionDto.account_id)
+            .eq('id', senderTransactionDto.account_id)
             .single();
         if (sendingProfileError) {
           return new ErrorResponseDto(400, sendingProfileError.message);
         }
         const sendingProfileData = sendingProfile as Profile;
         const paymentRequest: PaymentInitiateRequest = {
-          amount: createTransactionDto.amount,
+          amount: senderTransactionDto.amount,
           currency: 'ZWL',
           customerEmail: sendingProfileData.email,
           customerName: sendingProfileData.first_name,
-          customerPhone: createTransactionDto.receiving_phone,
+          customerPhone: senderTransactionDto.receiving_phone,
           paymentMethod:
-            createTransactionDto.transfer_mode == 'ecocash'
+            senderTransactionDto.transfer_mode == 'ecocash'
               ? PaymentMethod.ECOCASH
-              : createTransactionDto.transfer_mode == 'omari'
+              : senderTransactionDto.transfer_mode == 'omari'
                 ? PaymentMethod.OMARI
-                : createTransactionDto.transfer_mode == 'innbucks'
+                : senderTransactionDto.transfer_mode == 'innbucks'
                   ? PaymentMethod.INNBUCKS
-                  : createTransactionDto.transfer_mode == 'walletplus'
+                  : senderTransactionDto.transfer_mode == 'walletplus'
                     ? PaymentMethod.WALLETPLUS
-                    : createTransactionDto.transfer_mode == 'card'
+                    : senderTransactionDto.transfer_mode == 'card'
                       ? PaymentMethod.CARD
-                      : createTransactionDto.transfer_mode == 'onemoney'
+                      : senderTransactionDto.transfer_mode == 'onemoney'
                         ? PaymentMethod.ONEMONEY
                         : PaymentMethod.ECOCASH,
-          reference: data.id,
+          reference: sender.id,
           callbackUrl: `https://f309-41-173-239-81.ngrok-free.app/tradingservices/payment/callback`,
           // callbackUrl: `${process.env.API_BASE_URL}/tradingservices/payment/callback`,
         };
@@ -103,18 +108,41 @@ export class TransactionsService {
           await paymentGateway.initiateExpressPayment(paymentRequest);
         console.log(paymentResponse);
       }
-
+      /*
       // console.log(debitResponse);
       // console.log(creditResponse);
       // send notification to the user
+      */
+      receiverTransactionDto.sending_wallet =
+        senderTransactionDto.sending_wallet;
+      receiverTransactionDto.receiving_wallet =
+        senderTransactionDto.receiving_wallet;
+      receiverTransactionDto.amount = senderTransactionDto.amount;
+      receiverTransactionDto.category = senderTransactionDto.category;
+      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
+      receiverTransactionDto.transaction_type =
+        senderTransactionDto.transaction_type;
+      receiverTransactionDto.currency = senderTransactionDto.currency;
+      receiverTransactionDto.narrative = 'credit';
 
+      const { data: receiver, error: receiverError } = await this.postgresrest
+        .from('transactions')
+        .insert(receiverTransactionDto)
+        .select()
+        .single();
+      if (receiverError) {
+        console.log(receiverError);
+        return new ErrorResponseDto(400, receiverError.message);
+      }
+      console.log(receiver);
       return {
         statusCode: 201,
         message: 'Transaction created successfully',
         data: {
-          transaction_id: data.id,
-          date: data.created_date,
-          new_balance: debitResponse['balance'] ?? 0.0,
+          message: senderTransactionDto,
+          // transaction_id: data.id,
+          // date: data.created_date,
+          // new_balance: debitResponse['balance'] ?? 0.0,
         },
         // debitResponse,
         // creditResponse
@@ -229,7 +257,7 @@ export class TransactionsService {
         this.logger.error(`Error fetching Transaction`, error);
         return new ErrorResponseDto(400, error.message);
       }
-
+      console.log(data.length);
       return data as object;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id`, error);

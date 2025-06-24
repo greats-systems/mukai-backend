@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Post,
   Body,
   Put,
   Param,
-  HttpCode,
   Get,
   HttpException,
   HttpStatus,
@@ -126,6 +127,12 @@ export class AuthController {
       );
     }
     return response;
+  }
+
+  @Post('refresh')
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    const response = await this.authService.refreshToken(body);
+    console.log(response);
   }
 
   /**

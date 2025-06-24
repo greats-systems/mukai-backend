@@ -159,6 +159,69 @@ export class WalletsController {
     return response;
   }
 
+  @Get('coop/:coop_id')
+  @ApiOperation({ summary: 'Fetch a coop wallet' })
+  @ApiParam({
+    name: 'coop_id',
+    description: 'Coop ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Coop wallet profile retrieved successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async viewCoopWallet(@Param('coop_id') coop_id: string) {
+    const response = await this.walletsService.viewCoopWallet(coop_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('member/:profile_id')
+  @ApiOperation({ summary: 'Fetch a member wallet' })
+  @ApiParam({
+    name: 'profile_id',
+    description: 'Profile ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Individual wallet retrieved successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async viewIndividualWallets(@Param('profile_id') profile_id: string) {
+    const response =
+      await this.walletsService.viewIndividualWallets(profile_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get('get_wallet_by_profile_id/:profile_id')
   @ApiOperation({ summary: 'Fetch a wallet by profile ID' })
   @ApiParam({

@@ -503,6 +503,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
+      console.log('getProfilesLike searchTerm', searchTerm)
 
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -514,7 +515,47 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
+      if(data && data.length >0){
+        console.log('profile data',data)
+        console.log('profile data',data[0]['id'])
+        let id = data[0]['id']
+        const { data:walletData, error:WalletError } = await this.postgresRest
+        .from('wallets')
+        .select('id')
+        // Cast UUID to text for pattern matching
+        .eq('profile_id', id).single();
+        console.log('wallet_id',walletData)
+        data[0]['wallet_id'] = walletData!['id']
+      }
+      console.log('profile data load',data)
 
+      return data?.length ? (data as Profile[]) : [];
+    } catch (error) {
+      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while searching profiles',
+      );
+    }
+  }
+
+  async getProfilesLikeWalletID(id: string): Promise<Profile[]> {
+    try {
+      // Convert to lowercase for case-insensitive searc
+      const searchTerm = id.toLowerCase();
+      console.log('searchTerm', searchTerm)
+      const { data, error } = await this.postgresRest
+        .from('wallets')
+        .select('*')
+        // Cast UUID to text for pattern matching
+        .ilike('profile_id', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+      console.log('data', data)
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);

@@ -55,6 +55,7 @@ export class ProfileSeeder {
         province: 'Province/State',
         account_status: 'active',
         wallet_address: `0x${Math.random().toString(16).substr(2, 40)}`,
+        wallet_id:  uuidv4(),
         online_status: Math.random() > 0.5,
         abilities: ['Programming', 'Design', 'Marketing', 'Sales'][
           Math.floor(Math.random() * 4)

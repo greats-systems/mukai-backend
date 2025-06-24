@@ -9,6 +9,7 @@ import { CreateWalletDto } from "../dto/create/create-wallet.dto";
 import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
+import { Profile } from "src/user/entities/user.entity";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -239,6 +240,69 @@ export class WalletsService {
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getProfilesLikeWalletID(id: string): Promise<Profile[]> {
+    try {
+      // Convert to lowercase for case-insensitive searc
+      const searchTerm = id.toLowerCase();
+
+      const { data, error } = await this.postgresrest
+        .from('wallets')
+        .select('*')
+        // Cast UUID to text for pattern matching
+        .ilike('id_text', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      return data?.length ? (data as Profile[]) : [];
+    } catch (error) {
+      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while searching profiles',
+      );
+    }
+  }
+  async getProfileByWalletID(
+    wallet_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from("wallets")
+        .select()
+        .eq("id", wallet_id)
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      // get profile
+      const profile_id = data['profile_id'];
+      const { data: profileData, error: profileError } = await this.postgresrest
+        .from('profiles')
+        .select('*')
+        .eq('id', profile_id)
+        .single();
+
+    if (error) {
+      throw new Error(`Failed to fetch profiles: ${profileError?.message}`);
+    }
+    console.log('profileData', profileData)
+      return {
+        statusCode: 200,
+        message: "Wallet Profile fetched successfully",
+        data: profileData as Profile,
+      };
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

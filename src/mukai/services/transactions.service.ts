@@ -254,7 +254,7 @@ export class TransactionsService {
       );
 
       if (error) {
-        this.logger.error(`Error fetching Transaction`, error);
+        this.logger.error(`Error fetching financial report`, error);
         return new ErrorResponseDto(400, error.message);
       }
       console.log(data.length);
@@ -278,7 +278,7 @@ export class TransactionsService {
       );
 
       if (error) {
-        this.logger.error(`Error fetching Transaction`, error);
+        this.logger.error(`Error fetching user financial report`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -302,7 +302,7 @@ export class TransactionsService {
       );
 
       if (error) {
-        this.logger.error(`Error fetching Transaction`, error);
+        this.logger.error(`Error creating coop financial report`, error);
         return new ErrorResponseDto(400, error.message);
       }
 

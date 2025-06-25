@@ -101,7 +101,9 @@ export class WalletsService {
     }
   }
 
-  async viewCoopWallet(coop_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async viewCoopWallet(
+    coop_id: string,
+  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
@@ -111,6 +113,9 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching coop Wallet ${coop_id}`, error);
+        if (error.details == "The result contains 0 rows") {
+          return { data: "No wallet found" };
+        }
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -131,16 +136,21 @@ export class WalletsService {
     }
   }
 
-  async viewIndividualWallets(profile_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async viewIndividualWallets(
+    profile_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .select()
         .eq("profile_id", profile_id)
-        .eq('is_group_wallet', false);
+        .eq("is_group_wallet", false);
 
       if (error) {
-        this.logger.error(`Error fetching individual wallet ${profile_id}`, error);
+        this.logger.error(
+          `Error fetching individual wallet ${profile_id}`,
+          error,
+        );
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -250,15 +260,15 @@ export class WalletsService {
       const searchTerm = id.toLowerCase();
 
       const { data, error } = await this.postgresrest
-        .from('wallets')
-        .select('*')
+        .from("wallets")
+        .select("*")
         // Cast UUID to text for pattern matching
-        .ilike('id_text', `%${searchTerm}%`)
+        .ilike("id_text", `%${searchTerm}%`)
         .single();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
-      };
+      }
 
       return data as Wallet;
     } catch (error) {
@@ -266,7 +276,7 @@ export class WalletsService {
       throw new Error(
         error instanceof Error
           ? error.message
-          : 'An unexpected error occurred while searching profiles',
+          : "An unexpected error occurred while searching profiles",
       );
     }
   }
@@ -285,17 +295,17 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
       // get profile
-      const profile_id = data['profile_id'];
+      const profile_id = data["profile_id"];
       const { data: profileData, error: profileError } = await this.postgresrest
-        .from('profiles')
-        .select('*')
-        .eq('id', profile_id)
+        .from("profiles")
+        .select("*")
+        .eq("id", profile_id)
         .single();
 
-    if (error) {
-      throw new Error(`Failed to fetch profiles: ${profileError?.message}`);
-    }
-    console.log('profileData', profileData)
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${profileError?.message}`);
+      }
+      console.log("profileData", profileData);
       return {
         statusCode: 200,
         message: "Wallet Profile fetched successfully",
@@ -388,7 +398,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log('Updating sender balance');
+      console.log("Updating sender balance");
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
         .select("balance")
@@ -418,7 +428,7 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      console.log('New wallet:');
+      console.log("New wallet:");
       console.log(updateData);
 
       return {

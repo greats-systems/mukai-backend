@@ -118,14 +118,16 @@ export class CooperativesController {
     const response =
       await this.cooperativesService.viewCooperativeMembers(cooperative_id);
     console.log(response);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response) {
+      if (response['statusCode'] === 400) {
+        throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      }
+      if (response['statusCode'] === 500) {
+        throw new HttpException(
+          response['message'],
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
     return response;
   }

@@ -22,7 +22,7 @@ export class LoanService {
   ): Promise<Loan | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('loan')
+        .from('loans')
         .insert(createLoanDto)
         .single();
       if (error) {
@@ -38,7 +38,7 @@ export class LoanService {
   async findAllLoans(): Promise<Loan[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('loan')
+        .from('loans')
         .select()
         .order('created_at', { ascending: false });
 
@@ -57,13 +57,13 @@ export class LoanService {
   async viewLoan(id: string): Promise<Loan[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('loan')
+        .from('loans')
         .select()
         .eq('id', id)
         .single();
 
       if (error) {
-        this.logger.error(`Error fetching group ${id}`, error);
+        this.logger.error(`Error fetching loan ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -74,13 +74,35 @@ export class LoanService {
     }
   }
 
+  async viewProfileLoan(
+    profile_id: string,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('profile_id', profile_id);
+      // .single();
+
+      if (error) {
+        this.logger.error(`Error fetching loan for ${profile_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(`Exception in viewLoan for id ${profile_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async updateLoan(
     id: string,
     updateLoanDto: UpdateLoanDto,
   ): Promise<Loan | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('loan')
+        .from('loans')
         .update(updateLoanDto)
         .eq('id', id)
         .select()
@@ -99,7 +121,7 @@ export class LoanService {
   async deleteLoan(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest
-        .from('loan')
+        .from('loans')
         .delete()
         .eq('id', id)
         .single();

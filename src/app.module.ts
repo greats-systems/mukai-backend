@@ -143,7 +143,6 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     CooperativeMemberApprovalsService,
     SubscriberService,
     SmileWalletService,
-    WalletTransactionService
     WalletTransactionService,
     // WalletTransactionService,
     EmployeesService,

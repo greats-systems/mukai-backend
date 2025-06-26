@@ -212,29 +212,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
-  /*
-  async viewCooperativeMembers(
-    cooperative_id: string,
-  ): Promise<Group[] | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('group_members')
-        .select()
-        .eq('cooperative_id', cooperative_id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        this.logger.error('Error fetching cooperative', error);
-        return new ErrorResponseDto(400, error.message);
-      }
-      return data as Group[];
-    } catch (error) {
-      this.logger.error('Exception in viewCooperativesForMember', error);
-      return new ErrorResponseDto(500, error);
-    }
-  }
-  */
-
+  
   async viewCooperativeWallet(
     cooperative_id: string,
   ): Promise<Cooperative[] | ErrorResponseDto> {

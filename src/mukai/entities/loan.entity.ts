@@ -91,4 +91,10 @@ export class Loan {
     description: 'Description of collateral',
   })
   collateral_description?: string;
+
+  @ApiPropertyOptional({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Borrower profile ID',
+  })
+  profile_id?: string;
 }

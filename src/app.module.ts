@@ -60,6 +60,7 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
 import { GroupMembersModule } from './mukai/modules/group-member.module';
 import { GroupMemberController } from './mukai/controllers/group_members.controller';
 import { GroupMemberService } from './mukai/services/group-members.service';
+<<<<<<< simon
 import { EmployeesModule } from './smartbiz/payroll/modules/employee.module';
 import { EmployeesController } from './smartbiz/payroll/controllers/employee.controller';
 import { EmployeesService } from './smartbiz/payroll/services/employee.service';
@@ -67,6 +68,10 @@ import { SmartBizPostgresRestHandlerModule } from './common/postgresrest/smart_b
 import { PayslipsController } from './smartbiz/payroll/controllers/payslip.controller';
 import { PayslipsModule } from './smartbiz/payroll/modules/payslip.module';
 import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
+=======
+import { SmilePayGateway } from './common/zb_payment_gateway/payments';
+import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
+>>>>>>> main
 
 @Module({
   imports: [
@@ -140,13 +145,18 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     CooperativeMemberRequestsService,
     CooperativeMemberApprovalsService,
     SubscriberService,
+<<<<<<< simon
     WalletTransactionService,
     EmployeesService,
     PayslipsService,
+=======
+    SmileWalletService,
+    WalletTransactionService
+>>>>>>> main
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,
     // },
   ],
 })
-export class AppModule {}
+export class AppModule { }

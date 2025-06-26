@@ -60,6 +60,8 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
 import { GroupMembersModule } from './mukai/modules/group-member.module';
 import { GroupMemberController } from './mukai/controllers/group_members.controller';
 import { GroupMemberService } from './mukai/services/group-members.service';
+import { SmilePayGateway } from './common/zb_payment_gateway/payments';
+import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
 
 @Module({
   imports: [
@@ -162,11 +164,12 @@ import { GroupMemberService } from './mukai/services/group-members.service';
     CooperativeMemberRequestsService,
     CooperativeMemberApprovalsService,
     SubscriberService,
-    WalletTransactionService,
+    SmileWalletService,
+    WalletTransactionService
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,
     // },
   ],
 })
-export class AppModule {}
+export class AppModule { }

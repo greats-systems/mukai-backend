@@ -153,4 +153,4 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     // },
   ],
 })
-export class AppModule { }
+export class AppModule {}

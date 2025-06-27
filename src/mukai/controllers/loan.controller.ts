@@ -21,6 +21,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Loan } from '../entities/loan.entity';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('Loans')
 @Controller('loans')
@@ -45,14 +46,19 @@ export class LoanController {
   })
   async create(@Body() createLoanDto: CreateLoanDto) {
     const response = await this.loanService.createLoan(createLoanDto);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      if (response.statusCode === 400) {
+        throw new HttpException(
+          response.message ?? 'Bad Request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (response.statusCode === 500) {
+        throw new HttpException(
+          response.message ?? 'Internal Server Error',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
     return response;
   }

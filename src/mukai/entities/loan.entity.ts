@@ -5,25 +5,25 @@ export class Loan {
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'Unique loan identifier',
   })
-  id: string;
+  id?: string;
 
   @ApiProperty({
     example: '2023-10-01T00:00:00Z',
     description: 'Loan creation timestamp',
   })
-  created_at: string;
+  created_at?: string;
 
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Borrower wallet ID',
   })
-  borrower_wallet_id: string;
+  borrower_wallet_id?: string;
 
   @ApiProperty({
     example: '567e1234-e89b-43d2-b456-426614174000',
     description: 'Lender wallet ID',
   })
-  lender_wallet_id: string;
+  lender_wallet_id?: string;
 
   @ApiProperty({
     example: 1000,
@@ -35,26 +35,26 @@ export class Loan {
     example: 5.5,
     description: 'Annual interest rate (%)',
   })
-  interest_rate: number;
+  interest_rate?: number;
 
   @ApiProperty({
     example: 30,
-    description: 'Loan term in days',
+    description: 'Loan term in months',
   })
-  loan_term_days: number;
+  loan_term_months?: number;
 
   @ApiProperty({
     example: '2023-11-01T00:00:00Z',
     description: 'Due date for repayment',
   })
-  due_date: Date;
+  due_date?: Date;
 
   @ApiProperty({
     example: 'active',
     description: 'Loan status',
     enum: ['pending', 'active', 'paid', 'defaulted'],
   })
-  status: string;
+  status?: string;
 
   @ApiPropertyOptional({
     example: 500,
@@ -97,4 +97,22 @@ export class Loan {
     description: 'Borrower profile ID',
   })
   profile_id?: string;
+
+  @ApiPropertyOptional({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Lender coop ID',
+  })
+  cooperative_id?: string;
+
+  @ApiProperty({
+    example: '2023-10-01T00:00:00Z',
+    description: 'Loan update timestamp',
+  })
+  updated_at?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if members have voted for/against the loan',
+  })
+  has_received_vote?: boolean;
 }

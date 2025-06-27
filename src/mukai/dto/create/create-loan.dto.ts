@@ -58,12 +58,12 @@ export class CreateLoanDto {
 
   @ApiProperty({
     example: 120,
-    description: 'Loan term in days',
+    description: 'Loan term in months',
     required: true,
   })
   @IsInt()
   @IsOptional()
-  loan_term_days?: number;
+  loan_term_months?: number;
 
   @ApiProperty({
     example: '2025/01/01',
@@ -146,4 +146,28 @@ export class CreateLoanDto {
   @IsString()
   @IsOptional()
   profile_id?: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Lender coop ID',
+  })
+  @IsString()
+  @IsOptional()
+  cooperative_id?: string;
+
+  @ApiProperty({
+    example: '2023-10-01T00:00:00Z',
+    description: 'Loan update timestamp',
+  })
+  @IsString()
+  @IsOptional()
+  updated_at?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if members have voted for/against the loan',
+  })
+  @IsString()
+  @IsOptional()
+  has_received_vote?: boolean;
 }

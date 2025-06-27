@@ -79,4 +79,13 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   asset_id: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description:
+      'Loan ID from loans table (useful when voting for loan application)',
+  })
+  @IsString()
+  @IsOptional()
+  loan_id: string;
 }

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { UpdateLoanDto } from '../dto/update/update-loan.dto';
-import { LoanService } from '../services/loan.servce';
+import { LoanService } from '../services/loan.service';
 import {
   ApiTags,
   ApiOperation,
@@ -21,6 +21,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { Loan } from '../entities/loan.entity';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('Loans')
 @Controller('loans')
@@ -45,14 +46,19 @@ export class LoanController {
   })
   async create(@Body() createLoanDto: CreateLoanDto) {
     const response = await this.loanService.createLoan(createLoanDto);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      if (response.statusCode === 400) {
+        throw new HttpException(
+          response.message ?? 'Bad Request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (response.statusCode === 500) {
+        throw new HttpException(
+          response.message ?? 'Internal Server Error',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
     return response;
   }
@@ -148,8 +154,52 @@ export class LoanController {
     status: 500,
     description: 'Internal server error',
   })
-  async viewProfileLoan(@Param('profile_id') profile_id: string) {
-    const response = await this.loanService.viewProfileLoan(profile_id);
+  async viewProfileLoans(@Param('profile_id') profile_id: string) {
+    const response = await this.loanService.viewProfileLoans(profile_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('coop/:cooperative_id')
+  @ApiOperation({ summary: 'Get list of coop loans' })
+  @ApiParam({
+    name: 'profile_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Loan details',
+    type: Loan,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Loan not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCoopLoans(
+    @Param('cooperative_id') profile_id,
+    @Body() profileBody,
+  ) {
+    const response = await this.loanService.viewCoopLoans(
+      profile_id,
+      profileBody['profile_id'],
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

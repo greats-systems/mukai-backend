@@ -47,7 +47,7 @@ import { EscrowService } from './mukai/services/escrow.service';
 import { EscrowModule } from './mukai/modules/escrow.module';
 import { LoanModule } from './mukai/modules/loan.module';
 import { LoanController } from './mukai/controllers/loan.controller';
-import { LoanService } from './mukai/services/loan.servce';
+import { LoanService } from './mukai/services/loan.service';
 import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
 import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
 import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
@@ -60,7 +60,8 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
 import { GroupMembersModule } from './mukai/modules/group-member.module';
 import { GroupMemberController } from './mukai/controllers/group_members.controller';
 import { GroupMemberService } from './mukai/services/group-members.service';
-<<<<<<< simon
+import { SmilePayGateway } from './common/zb_payment_gateway/payments';
+import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
 import { EmployeesModule } from './smartbiz/payroll/modules/employee.module';
 import { EmployeesController } from './smartbiz/payroll/controllers/employee.controller';
 import { EmployeesService } from './smartbiz/payroll/services/employee.service';
@@ -68,10 +69,6 @@ import { SmartBizPostgresRestHandlerModule } from './common/postgresrest/smart_b
 import { PayslipsController } from './smartbiz/payroll/controllers/payslip.controller';
 import { PayslipsModule } from './smartbiz/payroll/modules/payslip.module';
 import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
-=======
-import { SmilePayGateway } from './common/zb_payment_gateway/payments';
-import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
->>>>>>> main
 
 @Module({
   imports: [
@@ -145,18 +142,15 @@ import { SmileWalletService } from './wallet/services/zb_digital_wallet.service'
     CooperativeMemberRequestsService,
     CooperativeMemberApprovalsService,
     SubscriberService,
-<<<<<<< simon
+    SmileWalletService,
     WalletTransactionService,
+    // WalletTransactionService,
     EmployeesService,
     PayslipsService,
-=======
-    SmileWalletService,
-    WalletTransactionService
->>>>>>> main
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,
     // },
   ],
 })
-export class AppModule { }
+export class AppModule {}

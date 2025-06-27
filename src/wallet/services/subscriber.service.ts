@@ -7,6 +7,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateSubscriberDto } from '../dto/create/create-subscriber.dto';
 import { UpdateSubscriberDto } from '../dto/update/update-subscriber.dto';
 import { Subscriber } from '../entities/subscriber.entity';
+import { CreateSubscriberRequest, SmileWalletService } from './zb_digital_wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -15,7 +16,8 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class SubscriberService {
   private readonly logger = initLogger(SubscriberService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  // inject wallet service
+  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) { }
 
   async createSubscriber(
     createSubscriberDto: CreateSubscriberDto,
@@ -24,11 +26,29 @@ export class SubscriberService {
       const { data, error } = await this.postgresrest
         .from('zb_wallet_subscribers')
         .insert(createSubscriberDto)
+        .select()
         .single();
+
       if (error) {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
+      if (!data) {
+        return new ErrorResponseDto(400, 'No data returned from database');
+      } else {
+        const subscriberData: CreateSubscriberRequest = {
+          firstName: data['first_name'],
+          lastName: data['last_name'],
+          mobile: data['mobile'],
+          dateOfBirth: data['date_of_birth'],
+          idNumber: data['id_number'],
+          gender: data['gender'],
+          source: 'Mukai-App'
+        };
+        await this.smileWalletService.createSubscriber(subscriberData);
+
+      }
+
       return data as Subscriber;
     } catch (error) {
       return new ErrorResponseDto(500, error);

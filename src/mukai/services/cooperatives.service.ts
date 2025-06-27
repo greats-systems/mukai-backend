@@ -12,17 +12,12 @@ import { Cooperative } from '../entities/cooperative.entity';
 import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { WalletsService } from './wallets.service';
-import { CooperativeMemberRequestsService } from './cooperative_member_requests.service';
-import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
-import { GroupMember } from '@nestjs/microservices/external/kafka.interface';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { AuthService } from 'src/auth/auth.service';
-import { SignupDto } from 'src/auth/dto/signup.dto';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -31,40 +26,23 @@ function initLogger(funcname: Function): Logger {
 export class CooperativesService {
   private readonly logger = initLogger(CooperativesService);
   constructor(private readonly postgresrest: PostgresRest) {}
-  /*
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperatives')
-        .insert(createCooperativeDto)
-        .single();
-      if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
-      }
-      return data as Cooperative;
-    } catch (error) {
-      return new ErrorResponseDto(500, error);
-    }
-  }
-  */
-
-  async createCooperative(
-    createCooperativeDto: CreateCooperativeDto,
-  ): Promise<Cooperative | ErrorResponseDto> {
+    /* When a cooperative is created, the following steps should be taken:
+    1. The new coop is created in the cooperatives table
+    2. The coop is also create in the group_members table. Coop ID will act as a foreign key that links the coop and its members
+    2. A wallet, with an initial deposit of $100, for said coop is created. The coop ID will act as a foreign key 
+    to the cooperatives table
+    3. The deposit is recorded in the transactions table
+     */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
       const walletsService = new WalletsService(this.postgresrest);
-      const cooperativeMemberRequestsService =
-        new CooperativeMemberRequestsService(this.postgresrest);
       const transactionsService = new TransactionsService(this.postgresrest);
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
-      const cooperativeMemberRequestDto =
-        new CreateCooperativeMemberRequestDto();
       console.log(createCooperativeDto);
 
       // Create cooperative
@@ -79,115 +57,33 @@ export class CooperativesService {
       }
       console.log('Response data');
       console.log(createCooperativeResponse['id']);
-      
-      if (createCooperativeDto.members != null) {
-        for (const member of createCooperativeDto.members) {
-          createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
-          createGroupMemberDto.member_id = member;
-          const response =
-            await groupMembersService.createGroupMember(createGroupMemberDto);
-          console.log('groupMembersService response');
-          console.log(response);
-        }
 
-        const walletIDs: string[] = [];
-        for (const member of createCooperativeDto.members || []) {
-          const cooperativeMemberWalletsJson =
-            await walletsService.viewProfileWalletID(member);
-          if (cooperativeMemberWalletsJson instanceof ErrorResponseDto) {
-            return cooperativeMemberWalletsJson; // Return the error if wallet lookup failed
-          }
-          walletIDs.push(cooperativeMemberWalletsJson['id'] ?? '');
-          createWalletDto.children_wallets = walletIDs;
-
-          cooperativeMemberRequestDto.status = 'in a cooperative';
-          cooperativeMemberRequestDto.cooperative_id =
-            createGroupMemberDto.cooperative_id;
-          const updateMemberResponse =
-            await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
-              member,
-              cooperativeMemberRequestDto,
-            );
-          console.log(updateMemberResponse);
-          console.log('\n');
-        }
-      } else {
-        createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
-        const response =
-          await groupMembersService.createGroupMember(createGroupMemberDto);
-        console.log('group_member response');
-        console.log(response);
-
-        createWalletDto.profile_id = createCooperativeDto.admin_id;
-        createWalletDto.balance = 100;
-        createWalletDto.default_currency = 'usd';
-        createWalletDto.is_group_wallet = true;
-        createWalletDto.group_id = createCooperativeResponse['id'];
-        const walletResponse =
-          await walletsService.createWallet(createWalletDto);
-        console.log('Wallet response');
-        console.log(walletResponse);
-
-        
-        createTransactionDto.receiving_wallet = walletResponse['data']['id'];
-        createTransactionDto.amount = createWalletDto.balance;
-        createTransactionDto.transaction_type = 'deposit';
-        createTransactionDto.narrative = 'credit';
-        createTransactionDto.currency = createWalletDto.default_currency;
-        const transactionResponse =
-          await transactionsService.createTransaction(createTransactionDto);
-        console.log(transactionResponse);
-
-        console.log(walletResponse);
-      }
-      
-      const walletIDs: string[] = [];
-      for (const member of createCooperativeDto.members || []) {
-        const cooperativeMemberWalletsJson =
-          await walletsService.viewProfileWalletID(member);
-        if (cooperativeMemberWalletsJson instanceof ErrorResponseDto) {
-          return cooperativeMemberWalletsJson; // Return the error if wallet lookup failed
-        }
-        walletIDs.push(cooperativeMemberWalletsJson['id'] ?? '');
-      }
+      createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
+      const response =
+        await groupMembersService.createGroupMember(createGroupMemberDto);
+      console.log('group_member response');
+      console.log(response);
 
       createWalletDto.profile_id = createCooperativeDto.admin_id;
       createWalletDto.balance = 100;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
-      createWalletDto.group_id = createCooperativeDto.id;
-      createWalletDto.children_wallets = walletIDs;
+      createWalletDto.group_id = createCooperativeResponse['id'];
       const walletResponse = await walletsService.createWallet(createWalletDto);
-      createTransactionDto.sending_wallet = walletResponse['id'];
-      createTransactionDto.receiving_wallet = walletResponse['id'];
+      console.log('Wallet response');
+      console.log(walletResponse);
+
+      createTransactionDto.receiving_wallet = walletResponse['data']['id'];
       createTransactionDto.amount = createWalletDto.balance;
       createTransactionDto.transaction_type = 'deposit';
       createTransactionDto.narrative = 'credit';
+      createTransactionDto.currency = createWalletDto.default_currency;
       const transactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
-      console.log(transactionResponse);
 
-      for (const member of createCooperativeDto.members || []) {
-        cooperativeMemberRequestDto.status = 'in a cooperative';
-        cooperativeMemberRequestDto.cooperative_id =
-          createGroupMemberDto.cooperative_id;
-        const updateMemberResponse =
-          await cooperativeMemberRequestsService.updateCooperativeMemberRequestByMemberID(
-            member,
-            cooperativeMemberRequestDto,
-          );
-        console.log(updateMemberResponse);
-        console.log('\n');
-        /*
-          const updateMemberResponse = await this.postgresrest
-            .from('cooperative_member_requests')
-            .update(cooperativeMemberRequestDto)
-            .eq('member_id', createCooperativeDto.members![i]['id'])
-            .select()
-            .single();
-            */
-      }
+      console.log(transactionResponse);
       console.log(walletResponse);
+
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -316,29 +212,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
-  /*
-  async viewCooperativeMembers(
-    cooperative_id: string,
-  ): Promise<Group[] | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('group_members')
-        .select()
-        .eq('cooperative_id', cooperative_id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        this.logger.error('Error fetching cooperative', error);
-        return new ErrorResponseDto(400, error.message);
-      }
-      return data as Group[];
-    } catch (error) {
-      this.logger.error('Exception in viewCooperativesForMember', error);
-      return new ErrorResponseDto(500, error);
-    }
-  }
-  */
-
+  
   async viewCooperativeWallet(
     cooperative_id: string,
   ): Promise<Cooperative[] | ErrorResponseDto> {

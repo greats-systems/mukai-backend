@@ -5,14 +5,11 @@ import {
   Post,
   Body,
   Param,
-  Patch,
-  Delete,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
-import { UpdateTransactionDto } from '../dto/update/update-transaction.dto';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -86,15 +83,11 @@ export class TransactionsController {
     return response;
   }
 
-  @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateTransactionDto: UpdateTransactionDto,
-  ) {
-    const response = await this.transactionsService.updateTransaction(
-      id,
-      updateTransactionDto,
-    );
+  @Get('report/individual/:wallet_id')
+  async generateUserTransactionReport(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.generateUserTransactionReport(wallet_id);
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -107,9 +100,11 @@ export class TransactionsController {
     return response;
   }
 
-  @Delete(':id')
-  async delete(@Param('id') id: string) {
-    const response = await this.transactionsService.deleteTransaction(id);
+  @Get('report/coop/:wallet_id')
+  async generateCoopTransactionReport(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.generateCoopTransactionReport(wallet_id);
+
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

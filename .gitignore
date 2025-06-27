@@ -71,3 +71,5 @@ firebase-service-account.json
 
 # Freetrader APIs
 tradingservices/*
+
+.nestcliignore

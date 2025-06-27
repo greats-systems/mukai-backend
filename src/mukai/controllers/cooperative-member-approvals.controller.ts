@@ -225,6 +225,55 @@ export class CooperativeMemberApprovalsController {
     }
   }
 
+  @Patch('/coop/:coop_id/loans')
+  @ApiOperation({ summary: 'Update a loan poll by coop_id' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative ID',
+  })
+  @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cooperative not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async updateLoanByCoopID(
+    @Param('coop_id') coop_id: string,
+    @Body()
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovalsLoanByCoopID(
+        coop_id,
+        updateCooperativeMemberApprovalsDto,
+      );
+    if (response) {
+      if (response['statusCode'] === 400) {
+        throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+      }
+      if (response['statusCode'] === 500) {
+        throw new HttpException(
+          response['message'],
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      return response;
+    }
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a poll' })
   @ApiParam({

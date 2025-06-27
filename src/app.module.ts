@@ -5,7 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 
-import { PostgresRestHandlerModule } from './common/postgresrest';
+// import { PostgresRestHandlerModule } from './common/postgresrest';
 // import { OrdersModule } from './orders/orders.module';
 import { MessagingsModule } from './messagings/messagings.module';
 import { NodesModule } from './nodes/nodes.module';
@@ -47,7 +47,7 @@ import { EscrowService } from './mukai/services/escrow.service';
 import { EscrowModule } from './mukai/modules/escrow.module';
 import { LoanModule } from './mukai/modules/loan.module';
 import { LoanController } from './mukai/controllers/loan.controller';
-import { LoanService } from './mukai/services/loan.servce';
+import { LoanService } from './mukai/services/loan.service';
 import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
 import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
 import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
@@ -60,27 +60,25 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
 import { GroupMembersModule } from './mukai/modules/group-member.module';
 import { GroupMemberController } from './mukai/controllers/group_members.controller';
 import { GroupMemberService } from './mukai/services/group-members.service';
+import { SmilePayGateway } from './common/zb_payment_gateway/payments';
+import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
+import { EmployeesModule } from './smartbiz/payroll/modules/employee.module';
+import { EmployeesController } from './smartbiz/payroll/controllers/employee.controller';
+import { EmployeesService } from './smartbiz/payroll/services/employee.service';
+import { SmartBizPostgresRestHandlerModule } from './common/postgresrest/smart_biz_postgresrest.module';
+import { PayslipsController } from './smartbiz/payroll/controllers/payslip.controller';
+import { PayslipsModule } from './smartbiz/payroll/modules/payslip.module';
+import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
 
 @Module({
   imports: [
-    PostgresRestHandlerModule,
+    // PostgresRestHandlerModule,
+    SmartBizPostgresRestHandlerModule,
     AuthModule,
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     UserModule,
-    // OrdersModule,
     MessagingsModule,
     NodesModule,
-    /*
-    CommodityModule,
-    ProduceModule,
-    ContractBidModule,
-    ContractModule,
-    ProducerModule,
-    ProviderModule,
-    ProviderProductsModule,
-    ProviderServicesModule,
-    TradingservicesModule,
-    */
     AgreementModule,
     WalletModule,
     TransactionModule,
@@ -99,20 +97,11 @@ import { GroupMemberService } from './mukai/services/group-members.service';
     CooperativeMemberApprovalsModule,
     SubscriberModule,
     WalletTransactionModule,
+    EmployeesModule,
+    PayslipsModule,
   ],
   controllers: [
     AppController,
-    /*
-    CommodityController,
-    ContractBidController,
-    ContractController,
-    ProducerController,
-    ProviderController,
-    ProviderProductsController,
-    ProviderServicesController,
-    TradingservicesController,
-    TraderInventoryController,
-    */
     AgreementsController,
     WalletsController,
     TransactionsController,
@@ -131,20 +120,11 @@ import { GroupMemberService } from './mukai/services/group-members.service';
     CooperativeMemberApprovalsController,
     SubscriberController,
     WalletTransactionController,
+    EmployeesController,
+    PayslipsController,
   ],
   providers: [
     AppService,
-    /*
-    CommodityService,
-    ContractBidService,
-    ContractService,
-    ProducerService,
-    ProviderService,
-    ProviderProductsService,
-    ProviderServicesService,
-    TradingservicesService,
-    TraderInventoryService,
-    */
     AgreementsService,
     WalletsService,
     TransactionsService,
@@ -162,7 +142,11 @@ import { GroupMemberService } from './mukai/services/group-members.service';
     CooperativeMemberRequestsService,
     CooperativeMemberApprovalsService,
     SubscriberService,
+    SmileWalletService,
     WalletTransactionService,
+    // WalletTransactionService,
+    EmployeesService,
+    PayslipsService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

@@ -116,7 +116,7 @@ export class LoanService {
     }
   }
 
-  async viewProfileLoan(
+  async viewProfileLoans(
     profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {
     try {
@@ -127,13 +127,46 @@ export class LoanService {
       // .single();
 
       if (error) {
-        this.logger.error(`Error fetching loan for ${profile_id}`, error);
+        this.logger.error(
+          `Error fetching loan for profile ${profile_id}`,
+          error,
+        );
         return new ErrorResponseDto(400, error.message);
       }
 
       return data as Loan[];
     } catch (error) {
       this.logger.error(`Exception in viewLoan for id ${profile_id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewCoopLoans(
+    cooperative_id: string,
+    profile_id: string,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('cooperative_id', cooperative_id)
+        .neq('profile_id', profile_id);
+      // .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching loan for coop ${cooperative_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewLoan for id ${cooperative_id}`,
+        error,
+      );
       return new ErrorResponseDto(500, error);
     }
   }

@@ -154,4 +154,20 @@ export class CreateLoanDto {
   @IsString()
   @IsOptional()
   cooperative_id?: string;
+
+  @ApiProperty({
+    example: '2023-10-01T00:00:00Z',
+    description: 'Loan update timestamp',
+  })
+  @IsString()
+  @IsOptional()
+  updated_at?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if members have voted for/against the loan',
+  })
+  @IsString()
+  @IsOptional()
+  has_received_vote?: boolean;
 }

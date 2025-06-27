@@ -103,4 +103,16 @@ export class Loan {
     description: 'Lender coop ID',
   })
   cooperative_id?: string;
+
+  @ApiProperty({
+    example: '2023-10-01T00:00:00Z',
+    description: 'Loan update timestamp',
+  })
+  updated_at?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if members have voted for/against the loan',
+  })
+  has_received_vote?: boolean;
 }

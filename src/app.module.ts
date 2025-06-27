@@ -47,7 +47,7 @@ import { EscrowService } from './mukai/services/escrow.service';
 import { EscrowModule } from './mukai/modules/escrow.module';
 import { LoanModule } from './mukai/modules/loan.module';
 import { LoanController } from './mukai/controllers/loan.controller';
-import { LoanService } from './mukai/services/loan.servce';
+import { LoanService } from './mukai/services/loan.service';
 import { CooperativeMemberApprovalsModule } from './mukai/modules/cooperative-member-approvals.module';
 import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
 import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';

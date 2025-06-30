@@ -173,19 +173,22 @@ export class SmileWalletService {
   }
 
   // create subscriber
-  async createSubscriber(data: any): Promise<CreateSubscriberRequest> {
+  async createSubscriber(data: CreateSubscriberRequest): Promise<any> {
     try {
       console.log('Creating subscriber in Smile Wallet', data);
 
       const response = await axios.post(`${this.baseUrl}/accounts/api/v1/subscribers/create`, data, { headers: this.getHeaders() });
       if (response.statusText !== 'OK') {
-        throw new Error(`Failed to create subscriber: ${response.statusText}`);
+        console.error('Error creating subscriber:', response.statusText);
+        return null;
+      } else {
+        console.log('Subscriber created successfully:', response.data);
+        return true;
       }
-      console.log('Subscriber created successfully:', response.data);
-      return response.data;
+
     } catch (error) {
       console.error('Error creating subscriber:', error);
-      throw error;
+      return null;
     }
   }
   // get logged-in transactor

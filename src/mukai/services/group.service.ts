@@ -18,6 +18,7 @@ import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { Wallet } from '../entities/wallet.entity';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -26,7 +27,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class GroupService {
   private readonly logger = initLogger(GroupService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -34,10 +35,10 @@ export class GroupService {
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(this.postgresrest);
+      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       const cooperativeMemberRequestDto =
@@ -200,8 +201,8 @@ export class GroupService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const walletService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')

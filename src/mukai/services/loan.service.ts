@@ -10,8 +10,8 @@ import { UpdateLoanDto } from '../dto/update/update-loan.dto';
 import { Loan } from '../entities/loan.entity';
 import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
-import uuidv4 from 'supabase/apps/studio/lib/uuid';
 import { DateTime } from 'luxon';
+import { v4 as uuidv4 } from 'uuid';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);

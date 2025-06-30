@@ -151,4 +151,31 @@ export class SignupDto {
   //     'Password must contain at least one lowercase, uppercase, and number',
   // })
   password: string;
+  @ApiPropertyOptional({
+    example: 'Zimbabwe',
+    description: "Country where the user resides",
+  })
+  @IsString()
+  country: string;
+
+  @ApiPropertyOptional({
+    example: 'Harare',
+    description: "City where the user resides",
+  })
+  @IsString()
+  city: string;
+
+  @ApiPropertyOptional({
+    example: '2027999J23',
+    description: "National ID number of the user",
+  })
+  @IsString()
+  national_id_number: string;
+
+  @ApiPropertyOptional({
+    example: '200-01-01',
+    description: "Date of birth of the user",
+  })
+  @IsString()
+  date_of_birth: string;
 }

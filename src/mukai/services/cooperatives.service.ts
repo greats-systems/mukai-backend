@@ -18,6 +18,7 @@ import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -25,7 +26,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CooperativesService {
   private readonly logger = initLogger(CooperativesService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) { }
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
@@ -39,8 +40,8 @@ export class CooperativesService {
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       console.log(createCooperativeDto);
@@ -212,7 +213,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
-  
+
   async viewCooperativeWallet(
     cooperative_id: string,
   ): Promise<Cooperative[] | ErrorResponseDto> {
@@ -245,8 +246,8 @@ export class CooperativesService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const walletService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')

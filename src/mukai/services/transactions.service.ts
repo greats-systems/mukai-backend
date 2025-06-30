@@ -16,6 +16,7 @@ import {
   SmilePayGateway,
 } from 'src/common/zb_payment_gateway/payments';
 import { Profile } from 'src/user/entities/user.entity';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
@@ -29,7 +30,7 @@ const paymentGateway = new SmilePayGateway(
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
 
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) { }
 
   async createTransaction(
     senderTransactionDto: CreateTransactionDto,
@@ -41,7 +42,7 @@ export class TransactionsService {
        3. the receiver's wallet is credited
        4 the receiver's credit is recorded in the transactions table
        */
-      const walletsService = new WalletsService(this.postgresrest);
+      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
       const receiverTransactionDto = new CreateTransactionDto();
       const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')

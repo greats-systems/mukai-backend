@@ -22,11 +22,12 @@ import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
-import { error } from 'console';
+import { count, error } from 'console';
 import { WalletsService } from 'src/mukai/services/wallets.service';
 import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
 import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,7 @@ export class AuthService {
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly smileWalletService: SmileWalletService,
   ) {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
@@ -255,12 +257,12 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto) {
-    const walletsService = new WalletsService(this.postgresRest);
+    const walletsService = new WalletsService(this.postgresRest, this.smileWalletService);
     const createWalletDto = new CreateWalletDto();
-    const transactionsService = new TransactionsService(this.postgresRest);
+    const transactionsService = new TransactionsService(this.postgresRest, this.smileWalletService);
     const createTransactionDto = new CreateTransactionDto();
-    // Check if user exists in auth.users
     try {
+      console.log('Creating transaction...', signupDto);
       const { data: existingUser } = await this.supabaseAdmin
         .from('users')
         .select('id')
@@ -336,6 +338,10 @@ export class AuthService {
         avatar: signupDto.avatar,
         national_id_url: signupDto.national_id_url,
         passport_url: signupDto.passport_url,
+        country: signupDto.country,
+        city: signupDto.city,
+        national_id_number: signupDto.national_id_number,
+        date_of_birth: signupDto.date_of_birth,
       };
 
       // Create profile in public.profiles
@@ -515,19 +521,19 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-      if(data && data.length >0){
-        console.log('profile data',data)
-        console.log('profile data',data[0]['id'])
+      if (data && data.length > 0) {
+        console.log('profile data', data)
+        console.log('profile data', data[0]['id'])
         let id = data[0]['id']
-        const { data:walletData, error:WalletError } = await this.postgresRest
-        .from('wallets')
-        .select('id')
-        // Cast UUID to text for pattern matching
-        .eq('profile_id', id).single();
-        console.log('wallet_id',walletData)
+        const { data: walletData, error: WalletError } = await this.postgresRest
+          .from('wallets')
+          .select('id')
+          // Cast UUID to text for pattern matching
+          .eq('profile_id', id).single();
+        console.log('wallet_id', walletData)
         data[0]['wallet_id'] = walletData!['id']
       }
-      console.log('profile data load',data)
+      console.log('profile data load', data)
 
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
@@ -239,6 +240,48 @@ export class LoanController {
   })
   async update(@Param('id') id: string, @Body() updateLoanDto: UpdateLoanDto) {
     const response = await this.loanService.updateLoan(id, updateLoanDto);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Patch('coop/:id')
+  @ApiOperation({ summary: 'Update coop loan' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Loan ID',
+  })
+  @ApiBody({ type: UpdateLoanDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated loan details',
+    type: Loan,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Loan not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async updateCoop(
+    @Param('id') id: string,
+    @Body() updateLoanDto: UpdateLoanDto,
+  ) {
+    const response = await this.loanService.updateCoop(id, updateLoanDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

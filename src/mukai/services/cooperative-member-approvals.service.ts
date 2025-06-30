@@ -94,6 +94,31 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
+  async viewCooperativeMemberApprovalsByCoop(
+    group_id: string,
+  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', group_id);
+        // .single();
+
+      if (error) {
+        this.logger.error(`Error fetching group ${group_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      console.log(data);
+      return data as CooperativeMemberApprovals[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativeMemberApprovals for id ${group_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async checkIfMemberVoted(
     member_id: string,
     asset_id: string,

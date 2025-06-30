@@ -45,16 +45,15 @@ export class AuthController {
     return this.authService.getProfilesLikeWalletID(id);
   }
 
-    /**
+  /**
    * Retrieves user profiles similar to the given ID.
    * @param id - The ID to search similar profiles for
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
-    @Get('profiles/like/:id')
-    async getProfilesLike(@Param('id') id: string) {
-      return this.authService.getProfilesLike(id);
-    }
-  
+  @Get('profiles/like/:id')
+  async getProfilesLike(@Param('id') id: string) {
+    return this.authService.getProfilesLike(id);
+  }
 
   @Get('profiles/:id')
   async getProfile(@Param('id') id: string) {

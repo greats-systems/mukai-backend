@@ -193,6 +193,33 @@ export class LoanService {
     }
   }
 
+  async updateCoop(
+    cooperative_id: string,
+    updateLoanDto: UpdateLoanDto,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .update({
+          interest_rate: updateLoanDto.interest_rate,
+        })
+        .eq('cooperative_id', cooperative_id)
+        .select();
+        // .single();
+      if (error) {
+        this.logger.error(`Error updating coop loan ${cooperative_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateLoan for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async deleteLoan(id: string): Promise<boolean | ErrorResponseDto> {
     try {
       const { error } = await this.postgresrest

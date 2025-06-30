@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsNumber,
-  IsArray,
-  IsUUID,
-} from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsUUID } from 'class-validator';
 import { UUID } from 'crypto';
 
 export class CreateCooperativeDto {
@@ -116,11 +110,9 @@ export class CreateCooperativeDto {
   monthly_sub: number;
 
   @ApiProperty({
-    example:
-      '[987e6543-e21b-43d2-b456-426614174000, 8a7e9543-f817be-ab44-5c33-fabc532d, ...]',
-    description: 'List of group member IDs',
+    example: 0.05,
+    description: 'Coop interest rate',
   })
-  @IsString()
-  @IsArray()
-  members: string[];
+  @IsNumber()
+  interest_rate: number;
 }

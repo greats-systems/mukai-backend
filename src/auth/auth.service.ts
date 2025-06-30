@@ -173,6 +173,14 @@ export class AuthService {
       });
 
       if (authError || !user) {
+        console.log({
+          status: 'failed',
+          message: 'Invalid credentials',
+          access_token: null,
+          error: authError,
+          user: null,
+          statusCode: 401,
+        });
         return {
           status: 'failed',
           message: 'Invalid credentials',
@@ -257,9 +265,15 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto) {
-    const walletsService = new WalletsService(this.postgresRest, this.smileWalletService);
+    const walletsService = new WalletsService(
+      this.postgresRest,
+      this.smileWalletService,
+    );
     const createWalletDto = new CreateWalletDto();
-    const transactionsService = new TransactionsService(this.postgresRest, this.smileWalletService);
+    const transactionsService = new TransactionsService(
+      this.postgresRest,
+      this.smileWalletService,
+    );
     const createTransactionDto = new CreateTransactionDto();
     try {
       console.log('Creating transaction...', signupDto);
@@ -322,6 +336,7 @@ export class AuthService {
 
       const profileData = {
         id: newAuthUser.user.id,
+        id_text: newAuthUser.user.id,
         email: signupDto.email,
         phone: signupDto.phone,
         first_name: signupDto.first_name,
@@ -509,7 +524,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('getProfilesLike searchTerm', searchTerm)
+      console.log('getProfilesLike searchTerm', searchTerm);
 
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -522,18 +537,19 @@ export class AuthService {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
       if (data && data.length > 0) {
-        console.log('profile data', data)
-        console.log('profile data', data[0]['id'])
-        let id = data[0]['id']
+        console.log('profile data', data);
+        console.log('profile data', data[0]['id']);
+        let id = data[0]['id'];
         const { data: walletData, error: WalletError } = await this.postgresRest
           .from('wallets')
           .select('id')
           // Cast UUID to text for pattern matching
-          .eq('profile_id', id).single();
-        console.log('wallet_id', walletData)
-        data[0]['wallet_id'] = walletData!['id']
+          .eq('profile_id', id)
+          .single();
+        console.log('wallet_id', walletData);
+        data[0]['wallet_id'] = walletData!['id'];
       }
-      console.log('profile data load', data)
+      console.log('profile data load', data);
 
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
@@ -550,7 +566,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('searchTerm', searchTerm)
+      console.log('searchTerm', searchTerm);
       const { data, error } = await this.postgresRest
         .from('wallets')
         .select('*')
@@ -561,7 +577,7 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-      console.log('data', data)
+      console.log('data', data);
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);

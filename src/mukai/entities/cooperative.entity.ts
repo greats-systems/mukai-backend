@@ -80,4 +80,10 @@ export class Cooperative {
     description: 'Subscription paid by each coop member',
   })
   monthly_sub: number;
+
+  @ApiProperty({
+    example: 0.05,
+    description: 'Coop interest rate',
+  })
+  interest_rate: number;
 }

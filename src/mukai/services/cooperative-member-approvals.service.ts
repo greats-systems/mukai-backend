@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -95,29 +96,57 @@ export class CooperativeMemberApprovalsService {
   }
 
   async viewCooperativeMemberApprovalsByCoop(
-    group_id: string,
-  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .eq('group_id', group_id);
-        // .single();
+  group_id: string,
+): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+  try {
+    // Fetch data from PostgreSQL
+    const { data, error } = await this.postgresrest
+      .from('cooperative_member_approvals')
+      .select()
+      .eq('group_id', group_id);
 
-      if (error) {
-        this.logger.error(`Error fetching group ${group_id}`, error);
-        return new ErrorResponseDto(400, error.message);
-      }
-      console.log(data);
-      return data as CooperativeMemberApprovals[];
-    } catch (error) {
-      this.logger.error(
-        `Exception in viewCooperativeMemberApprovals for id ${group_id}`,
-        error,
-      );
-      return new ErrorResponseDto(500, error);
+    if (error) {
+      this.logger.error(`Error fetching approvals for group ${group_id}`, error);
+      return new ErrorResponseDto(400, error.message);
     }
+
+    if (!data || data.length === 0) {
+      this.logger.log(`No approvals found for group ${group_id}`);
+      return [];
+    }
+
+    // Type assertion
+    const approvals = data as CooperativeMemberApprovals[];
+
+    // Process each approval record
+    approvals.forEach(record => {
+      // Safely get vote counts (default to 0 if null/undefined)
+      const supportingCount = record.supporting_votes?.length || 0;
+      const opposingCount = record.opposing_votes?.length || 0;
+      const totalMembers = record.number_of_members || 1; // Avoid division by zero
+
+      // Calculate approval ratio
+      const approvalRatio = supportingCount / totalMembers;
+      const has75PercentApproval = approvalRatio >= 0.75;
+
+      // Log detailed information
+      this.logger.debug(`Approval ID: ${record.id}`);
+      this.logger.debug(`- Supporting votes: ${supportingCount}`);
+      this.logger.debug(`- Opposing votes: ${opposingCount}`);
+      this.logger.debug(`- Total members: ${totalMembers}`);
+      this.logger.debug(`- Approval ratio: ${(approvalRatio * 100).toFixed(2)}%`);
+      this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
+    });
+
+    return approvals;
+  } catch (error) {
+    this.logger.error(
+      `Exception in viewCooperativeMemberApprovals for group ${group_id}`,
+      error,
+    );
+    return new ErrorResponseDto(500, 'Internal server error');
   }
+}
 
   async checkIfMemberVoted(
     member_id: string,
@@ -162,6 +191,94 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
+  async checkIfMemberVotedForCategory(
+    group_id: string,
+    member_id: string,
+    poll_description: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberVotedForCategory');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', group_id)
+        .eq('poll_description', poll_description)
+        .or(
+          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
+        );
+
+      if (error) {
+        this.logger.error(
+          `Error checking vote status for supporting member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted for poll_description');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberVotedForCategory for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async checkIfMemberSupportedCategory(
+    group_id: string,
+    member_id: string,
+    poll_description: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberSupportedCategory');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .contains('supporting_votes', [member_id])
+        .eq('group_id', group_id)
+        .eq('poll_description', poll_description); // Use maybeSingle instead of single to handle empty results
+
+      if (error) {
+        this.logger.error(
+          `Error checking vote status for member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberSupportedCategory for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
   async checkIfMemberSupported(
     member_id: string,
     asset_id: string,
@@ -178,6 +295,49 @@ export class CooperativeMemberApprovalsService {
       if (error) {
         this.logger.error(
           `Error checking vote status for member ${member_id.toString()}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      // Return true if record exists (member has voted), false otherwise
+      console.log('Checking if member voted');
+      if (data.length === 0) {
+        console.log(data.length);
+        return false;
+      }
+      // console.log(!data);
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async checkIfMemberOpposedCategory(
+    group_id: string,
+    member_id: string,
+    poll_description: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    console.log('checkIfMemberOpposedCategory');
+    console.log(member_id);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .contains('opposing_votes', [member_id])
+        .eq('group_id', group_id)
+        .eq('poll_description', poll_description); // Use maybeSingle instead of single to handle empty results
+
+      if (error) {
+        this.logger.error(
+          `Error checking opposing vote status for member ${member_id.toString()}`,
           error,
         );
         return new ErrorResponseDto(400, error.message);
@@ -369,63 +529,6 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
-  private async checkVoteStatus(
-    member_id: string,
-    filter: { asset_id?: string; loan_id?: string },
-    voteType?: 'supporting' | 'opposing',
-  ): Promise<boolean | ErrorResponseDto> {
-    try {
-      if (!filter.asset_id && !filter.loan_id) {
-        throw new Error('Either asset_id or loan_id must be provided');
-      }
-
-      let query = this.postgresrest
-        .from('cooperative_member_approvals')
-        .select();
-
-      // Apply filters
-      if (filter.asset_id) {
-        query = query.eq('asset_id', filter.asset_id);
-      }
-      if (filter.loan_id) {
-        query = query.eq('loan_id', filter.loan_id);
-      }
-
-      // Apply vote type filter if specified
-      if (voteType) {
-        const column =
-          voteType === 'supporting' ? 'supporting_votes' : 'opposing_votes';
-        query = query.contains(column, [member_id]);
-      } else {
-        // For general vote check, look in either array
-        query = query.or(
-          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
-        );
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      return data.length > 0;
-    } catch (error) {
-      this.logger.error(
-        `Exception in vote check for member ${member_id}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
   async updateCooperativeMemberApprovals(
     id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
@@ -455,121 +558,81 @@ export class CooperativeMemberApprovalsService {
       return new ErrorResponseDto(500, error);
     }
   }
-
   async updateCooperativeMemberApprovalsByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
-    // console.log(group_id);
-    // Check if member has already voted
-    let hasVotedBefore;
-    let hasSupported;
-    let hasOpposed;
-    const assetsService = new AssetsService(this.postgresrest);
-    const updateAssetsDto = new UpdateAssetDto();
+    try {
+      // Determine vote type (support or oppose)
+      const isSupporting =
+        !!updateCooperativeMemberApprovalsDto.supporting_votes;
+      const memberId = isSupporting
+        ? updateCooperativeMemberApprovalsDto.supporting_votes
+        : updateCooperativeMemberApprovalsDto.opposing_votes;
 
-    if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-      hasVotedBefore = await this.checkIfMemberVoted(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-      hasSupported = await this.checkIfMemberSupported(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-    }
-    if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      hasVotedBefore = await this.checkIfMemberVoted(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-      hasOpposed = await this.checkIfMemberOpposed(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-    }
-    console.log('Voted?');
-    console.log(hasVotedBefore);
-    console.log('Supported?');
-    console.log(hasSupported);
-    console.log('Opposed?');
-    console.log(hasOpposed);
-    if (
-      (!hasVotedBefore || hasVotedBefore == undefined) &&
-      (!hasSupported || hasSupported == undefined) &&
-      (!hasOpposed || hasOpposed == undefined)
-    ) {
-      console.log('This user has not voted yet');
-      console.log(updateCooperativeMemberApprovalsDto);
-      try {
-        let data;
-
-        // Conditionally append to supporting_votes if provided
-        if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-          console.log(updateCooperativeMemberApprovalsDto.supporting_votes);
-          console.log(
-            typeof updateCooperativeMemberApprovalsDto.supporting_votes,
-          );
-          // Get the first member ID if it's an array, or use the value directly
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.supporting_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.supporting_votes[0]
-            : updateCooperativeMemberApprovalsDto.supporting_votes;
-
-          data = await this.postgresrest.rpc('add_supporting_vote', {
-            p_group_id: group_id,
-            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
-            p_member_id: memberId, // No .toString() needed if it's already a UUID string
-          });
-          console.log(data);
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding supporting vote: ${data.error.message},`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Conditionally append to opposing_votes if provided
-        if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.opposing_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.opposing_votes[0]
-            : updateCooperativeMemberApprovalsDto.opposing_votes;
-
-          data = await this.postgresrest.rpc('add_opposing_vote', {
-            p_group_id: group_id,
-            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
-            p_member_id: memberId,
-          });
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding opposing vote: ${data.error.message}`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Update asset status
-        updateAssetsDto.id = updateCooperativeMemberApprovalsDto.asset_id;
-        updateAssetsDto.has_received_vote = true;
-        await assetsService.updateAsset(updateAssetsDto.id!, updateAssetsDto);
-        return data as UpdateCooperativeMemberApprovalsDto;
-      } catch (error) {
-        this.logger.error(
-          `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
-          error,
+      if (!memberId) {
+        return new ErrorResponseDto(
+          400,
+          'Must provide either supporting_votes or opposing_votes',
         );
-        return new ErrorResponseDto(500, error);
       }
-    } else {
-      console.log('This user has voted before');
-      return { data: 'You have voted already' };
+
+      // Check current vote status
+      const currentVoteStatus = await this.checkMemberVoteStatus(
+        group_id,
+        memberId.toString(),
+        updateCooperativeMemberApprovalsDto.poll_description!,
+      );
+
+      // Cast the vote
+      const data = await this.postgresrest.rpc('cast_vote', {
+        p_group_id: group_id,
+        p_poll_description:
+          updateCooperativeMemberApprovalsDto.poll_description,
+        p_member_id: memberId,
+        p_is_supporting: isSupporting,
+      });
+
+      if (data.error) {
+        this.logger.error(`Error casting vote: ${data.error.message}`);
+        return new ErrorResponseDto(400, data.error.message);
+      }
+
+      return {
+        previousVote: currentVoteStatus,
+        newVote: isSupporting ? 'support' : 'oppose',
+        data: data,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error.message);
     }
+  }
+
+  private async checkMemberVoteStatus(
+    groupId: string,
+    memberId: string,
+    pollDescription: string,
+  ): Promise<'support' | 'oppose' | 'none'> {
+    const result = await this.postgresrest
+      .from('cooperative_member_approvals')
+      .select('supporting_votes, opposing_votes')
+      .eq('group_id', groupId)
+      .eq('poll_description', pollDescription)
+      .single();
+
+    if (result.error) throw new Error(result.error.message);
+
+    if (result.data.supporting_votes?.includes(memberId)) {
+      return 'support';
+    }
+    if (result.data.opposing_votes?.includes(memberId)) {
+      return 'oppose';
+    }
+    return 'none';
   }
 
   async updateCooperativeMemberApprovalsLoanByCoopID(

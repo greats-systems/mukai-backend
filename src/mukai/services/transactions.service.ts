@@ -30,7 +30,10 @@ const paymentGateway = new SmilePayGateway(
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
 
-  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) { }
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
 
   async createTransaction(
     senderTransactionDto: CreateTransactionDto,
@@ -42,7 +45,10 @@ export class TransactionsService {
        3. the receiver's wallet is credited
        4 the receiver's credit is recorded in the transactions table
        */
-      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const receiverTransactionDto = new CreateTransactionDto();
       const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')
@@ -187,6 +193,32 @@ export class TransactionsService {
       return data as Transaction;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewWalletContributions(
+    wallet_id: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select('sending_wallet, wallets(profile_id),profiles(*)')
+        .eq('sending_wallet', wallet_id)
+        .eq('transaction_type', 'contribution')
+        .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching contribution for ${wallet_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error(`Exception in viewTransaction for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

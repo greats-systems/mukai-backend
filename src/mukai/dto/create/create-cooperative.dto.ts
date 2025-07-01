@@ -115,4 +115,11 @@ export class CreateCooperativeDto {
   })
   @IsNumber()
   interest_rate: number;
+
+  @ApiProperty({
+    example: 0.05,
+    description: 'Additional info (useful when creating voting requests',
+  })
+  @IsNumber()
+  additional_info: any;
 }

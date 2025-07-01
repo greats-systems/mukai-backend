@@ -268,6 +268,7 @@ export class CooperativeMemberApprovalsController {
     }
   }
 
+  /*
   @Patch('/coop/:coop_id/loans')
   @ApiOperation({ summary: 'Update a loan poll by coop_id' })
   @ApiParam({
@@ -316,6 +317,7 @@ export class CooperativeMemberApprovalsController {
       return response;
     }
   }
+  */
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a poll' })

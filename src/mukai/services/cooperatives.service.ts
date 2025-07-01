@@ -333,7 +333,7 @@ export class CooperativesService {
   async updateCooperative(
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
-  ): Promise<Cooperative | ErrorResponseDto> {
+  ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     console.log(updateCooperativeDto);
     /**
      * Before updating the interest rate, the members should vote on it first
@@ -345,10 +345,12 @@ export class CooperativesService {
       );
       cmaDto.group_id = id;
       cmaDto.poll_description = 'set interest rate';
+      cmaDto.additional_info = updateCooperativeDto.additional_info;
       console.log(cmaDto);
       const cmaResponse =
         await cmaService.createCooperativeMemberApprovals(cmaDto);
       console.log(cmaResponse);
+      /*
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .update(updateCooperativeDto)
@@ -359,7 +361,36 @@ export class CooperativesService {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      return data as Cooperative;
+      */
+      return cmaResponse as CooperativeMemberApprovals;
+    } catch (error) {
+      this.logger.error(`Exception in updateCooperative for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateCooperativeAfterVoting(
+    id: string,
+    updateCooperativeDto: UpdateCooperativeDto,
+  ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
+    console.log(updateCooperativeDto);
+    /**
+     * Before updating the interest rate, the members should vote on it first
+     */
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .update(updateCooperativeDto)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      console.log('Coop data after voting');
+      console.log(data);
+      return data as CooperativeMemberApprovals;
     } catch (error) {
       this.logger.error(`Exception in updateCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);

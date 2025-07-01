@@ -62,4 +62,23 @@ export class CooperativeMemberApprovals {
       'Loan ID from loans table (useful when voting for loan application)',
   })
   loan_id: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Has the 75% consensus been reached?',
+  })
+  consensus_reached: boolean;
+
+  @ApiProperty({
+    example: '11:05:27T19:28:51.0012354',
+    description: 'Timestamp of when record was updated',
+  })
+  updated_at: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description:
+      'Loan ID from loans table (useful when voting for loan application)',
+  })
+  additional_info: any;
 }

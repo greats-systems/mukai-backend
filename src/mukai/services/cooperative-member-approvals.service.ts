@@ -9,11 +9,10 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
-import { AssetsService } from './assets.service';
-import { UpdateAssetDto } from '../dto/update/update-asset.dto';
 import { UUID } from 'crypto';
-import { LoanService } from './loan.service';
-import { UpdateLoanDto } from '../dto/update/update-loan.dto';
+import { CooperativesService } from './cooperatives.service';
+import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -28,12 +27,22 @@ export class CooperativeMemberApprovalsService {
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
+      this.logger.debug(createCooperativeMemberApprovalsDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .upsert(createCooperativeMemberApprovalsDto, {
-          onConflict: 'group_id,poll_description,asset_id',
-          ignoreDuplicates: true,
-        })
+        .upsert(
+          {
+            group_id: createCooperativeMemberApprovalsDto.group_id,
+            poll_description:
+              createCooperativeMemberApprovalsDto.poll_description,
+            additional_info:
+              createCooperativeMemberApprovalsDto.additional_info,
+          },
+          {
+            onConflict: 'group_id,poll_description,asset_id',
+            ignoreDuplicates: true,
+          },
+        )
         .select()
         .single();
       if (error) {
@@ -96,58 +105,74 @@ export class CooperativeMemberApprovalsService {
   }
 
   async viewCooperativeMemberApprovalsByCoop(
-  group_id: string,
-): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
-  try {
-    // Fetch data from PostgreSQL
-    const { data, error } = await this.postgresrest
-      .from('cooperative_member_approvals')
-      .select()
-      .eq('group_id', group_id);
+    group_id: string,
+  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+    try {
+      // Fetch data from PostgreSQL
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', group_id);
 
-    if (error) {
-      this.logger.error(`Error fetching approvals for group ${group_id}`, error);
-      return new ErrorResponseDto(400, error.message);
+      if (error) {
+        this.logger.error(
+          `Error fetching approvals for group ${group_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      console.log(data);
+      if (!data || data.length === 0) {
+        this.logger.log(`No approvals found for group ${group_id}`);
+        return [];
+      }
+
+      // Type assertion
+      const approvals = data as CooperativeMemberApprovals[];
+
+      // Process each approval record
+      approvals.forEach((record) => {
+        // Safely get vote counts (default to 0 if null/undefined)
+        const supportingCount = record.supporting_votes?.length || 0;
+        const opposingCount = record.opposing_votes?.length || 0;
+
+        // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
+        const totalMembersExcludingAdmin = Math.max(
+          (record.number_of_members || 1) - 1,
+          1,
+        );
+
+        // Calculate approval ratio (using members excluding admin)
+        const approvalRatio = supportingCount / totalMembersExcludingAdmin;
+        const has75PercentApproval = approvalRatio >= 0.75;
+
+        // Log detailed information
+        this.logger.debug(`Approval ID: ${record.id}`);
+        this.logger.debug(`- Supporting votes: ${supportingCount}`);
+        this.logger.debug(`- Opposing votes: ${opposingCount}`);
+        this.logger.debug(
+          `- Total members (excluding admin): ${totalMembersExcludingAdmin}`,
+        );
+        this.logger.debug(
+          `- Approval ratio: ${(approvalRatio * 100).toFixed(0)}%`,
+        );
+        this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
+        record.consensus_reached = has75PercentApproval;
+      });
+
+      // console.log(approvals);
+      return approvals;
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativeMemberApprovals for group ${group_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, 'Internal server error');
     }
-
-    if (!data || data.length === 0) {
-      this.logger.log(`No approvals found for group ${group_id}`);
-      return [];
-    }
-
-    // Type assertion
-    const approvals = data as CooperativeMemberApprovals[];
-
-    // Process each approval record
-    approvals.forEach(record => {
-      // Safely get vote counts (default to 0 if null/undefined)
-      const supportingCount = record.supporting_votes?.length || 0;
-      const opposingCount = record.opposing_votes?.length || 0;
-      const totalMembers = record.number_of_members || 1; // Avoid division by zero
-
-      // Calculate approval ratio
-      const approvalRatio = supportingCount / totalMembers;
-      const has75PercentApproval = approvalRatio >= 0.75;
-
-      // Log detailed information
-      this.logger.debug(`Approval ID: ${record.id}`);
-      this.logger.debug(`- Supporting votes: ${supportingCount}`);
-      this.logger.debug(`- Opposing votes: ${opposingCount}`);
-      this.logger.debug(`- Total members: ${totalMembers}`);
-      this.logger.debug(`- Approval ratio: ${(approvalRatio * 100).toFixed(2)}%`);
-      this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
-    });
-
-    return approvals;
-  } catch (error) {
-    this.logger.error(
-      `Exception in viewCooperativeMemberApprovals for group ${group_id}`,
-      error,
-    );
-    return new ErrorResponseDto(500, 'Internal server error');
   }
-}
 
+  /*
   async checkIfMemberVoted(
     member_id: string,
     asset_id: string,
@@ -528,17 +553,33 @@ export class CooperativeMemberApprovalsService {
       );
     }
   }
+  */
 
   async updateCooperativeMemberApprovals(
     id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
+      const coopService = new CooperativesService(
+        this.postgresrest,
+        new SmileWalletService(),
+      );
+      const updateCoopDto = new UpdateCooperativeDto();
       console.log(updateCooperativeMemberApprovalsDto);
       // const approval = await this.viewCooperativeMemberApprovals(u)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .update(updateCooperativeMemberApprovalsDto)
+        .update({
+          group_id: updateCooperativeMemberApprovalsDto.group_id,
+          number_of_members:
+            updateCooperativeMemberApprovalsDto.number_of_members,
+          supporting_votes:
+            updateCooperativeMemberApprovalsDto.supporting_votes,
+          opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
+          poll_description:
+            updateCooperativeMemberApprovalsDto.poll_description,
+          updated_at: updateCooperativeMemberApprovalsDto.updated_at,
+        })
         .eq('id', id)
         .select()
         .single();
@@ -548,6 +589,27 @@ export class CooperativeMemberApprovalsService {
           error,
         );
         return new ErrorResponseDto(400, error.message);
+      }
+      // console.log(updateCooperativeMemberApprovalsDto.poll_description);
+      if (updateCooperativeMemberApprovalsDto.consensus_reached) {
+        if (
+          updateCooperativeMemberApprovalsDto.poll_description ==
+          'set interest rate'
+        ) {
+          updateCoopDto.interest_rate =
+            updateCooperativeMemberApprovalsDto.additional_info;
+          updateCoopDto.id =
+            updateCooperativeMemberApprovalsDto.group_id as UUID;
+          this.logger.debug(updateCoopDto);
+          const updateCoopResponse =
+            await coopService.updateCooperativeAfterVoting(
+              updateCoopDto.id.toString(),
+              updateCoopDto,
+            );
+          console.log(updateCoopResponse);
+        }
+      } else {
+        this.logger.debug('Consensus not yet reached');
       }
       return data as CooperativeMemberApprovals;
     } catch (error) {
@@ -635,6 +697,7 @@ export class CooperativeMemberApprovalsService {
     return 'none';
   }
 
+  /*
   async updateCooperativeMemberApprovalsLoanByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
@@ -752,6 +815,7 @@ export class CooperativeMemberApprovalsService {
       return { data: 'You have voted already' };
     }
   }
+  */
 
   async deleteCooperativeMemberApprovals(
     id: string,

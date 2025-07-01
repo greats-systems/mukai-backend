@@ -547,7 +547,6 @@ export class AuthService {
           .eq('profile_id', id)
           .single();
         console.log('wallet_id', walletData);
-        data[0]['wallet_id'] = walletData!['id'];
       }
       console.log('profile data load', data);
 

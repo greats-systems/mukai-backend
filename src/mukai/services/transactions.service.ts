@@ -199,11 +199,11 @@ export class TransactionsService {
 
   async viewWalletContributions(
     wallet_id: string,
-  ): Promise<Transaction | ErrorResponseDto> {
+  ): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('transactions')
-        .select()
+        .select('sending_wallet, wallets(profile_id),profiles(*)')
         .eq('sending_wallet', wallet_id)
         .eq('transaction_type', 'contribution')
         .single();
@@ -216,7 +216,7 @@ export class TransactionsService {
         return new ErrorResponseDto(400, error.message);
       }
 
-      return data as Transaction;
+      return data as object;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);

@@ -578,6 +578,7 @@ export class CooperativeMemberApprovalsService {
           opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
           poll_description:
             updateCooperativeMemberApprovalsDto.poll_description,
+          additional_info: updateCooperativeMemberApprovalsDto.additional_info,
           updated_at: updateCooperativeMemberApprovalsDto.updated_at,
         })
         .eq('id', id)

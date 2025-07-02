@@ -155,10 +155,12 @@ export class CooperativeMemberApprovalsController {
   })
   async viewCooperativeMemberApprovalsByCoop(
     @Param('group_id') group_id: string,
+    @Body() userJson: object,
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
         group_id,
+        userJson
       );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

@@ -83,12 +83,12 @@ export class SignupDto {
   @IsString()
   wallet_id: string;
 
-  @ApiPropertyOptional({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative ID associated with the user',
-  })
-  @IsString()
-  cooperative_id: string;
+  // @ApiPropertyOptional({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Cooperative ID associated with the user',
+  // })
+  // @IsString()
+  // cooperative_id: string;
 
   @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -141,7 +141,8 @@ export class SignupDto {
 
   @ApiProperty({
     example: 'Password123!',
-    description: 'Password for the user account. Must be at least 8 characters long.',
+    description:
+      'Password for the user account. Must be at least 8 characters long.',
     required: true,
   })
   @IsString()
@@ -153,28 +154,28 @@ export class SignupDto {
   password: string;
   @ApiPropertyOptional({
     example: 'Zimbabwe',
-    description: "Country where the user resides",
+    description: 'Country where the user resides',
   })
   @IsString()
   country: string;
 
   @ApiPropertyOptional({
     example: 'Harare',
-    description: "City where the user resides",
+    description: 'City where the user resides',
   })
   @IsString()
   city: string;
 
   @ApiPropertyOptional({
     example: '2027999J23',
-    description: "National ID number of the user",
+    description: 'National ID number of the user',
   })
   @IsString()
   national_id_number: string;
 
   @ApiPropertyOptional({
     example: '200-01-01',
-    description: "Date of birth of the user",
+    description: 'Date of birth of the user',
   })
   @IsString()
   date_of_birth: string;

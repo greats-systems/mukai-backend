@@ -13,6 +13,15 @@ export class CreateCooperativeDto {
   id?: UUID;
 
   @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Unique identifier for the cooperative wallet (optional)',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  wallet_id?: string;
+
+  @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Admin ID who manages the cooperative (optional)',
     required: false,
@@ -118,7 +127,7 @@ export class CreateCooperativeDto {
 
   @ApiProperty({
     example: 0.05,
-    description: 'Additional info (useful when creating voting requests',
+    description: 'Additional info (useful when creating voting requests)',
   })
   @IsNumber()
   additional_info: any;

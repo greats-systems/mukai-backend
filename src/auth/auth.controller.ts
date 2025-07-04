@@ -33,8 +33,6 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of user profiles
    */
   @Get('profiles')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async getProfiles() {
     return this.authService.getProfiles();
   }
@@ -45,8 +43,6 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
   @Get('profiles/like_wallet_id/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async getProfilesLikeWalletID(@Param('id') id: string) {
     return this.authService.getProfilesLikeWalletID(id);
   }
@@ -57,15 +53,11 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
   @Get('profiles/like/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async getProfilesLike(@Param('id') id: string) {
     return this.authService.getProfilesLike(id);
   }
 
   @Get('profiles/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async getProfile(@Param('id') id: string) {
     console.log('AuthGuard works 🎉');
     return this.authService.getProfile(id);
@@ -87,8 +79,6 @@ export class AuthController {
    * @returns Promise<any> - Result of the update operation
    */
   @Patch('update-account/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
   }
@@ -99,8 +89,6 @@ export class AuthController {
    * @returns Promise<any> - Result of the FCM update operation
    */
   @Put('update-fcm/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async updateFCM(@Body() profile: Profile) {
     return this.authService.updateFCM(profile);
   }

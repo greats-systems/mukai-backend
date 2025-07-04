@@ -520,7 +520,7 @@ export class AuthService {
     }
   }
 
-  async getProfilesLike(id: string): Promise<Profile[]> {
+  async getProfilesLike(id: string): Promise<Profile> {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
@@ -531,15 +531,16 @@ export class AuthService {
         .select('*')
         // Cast UUID to text for pattern matching
         .ilike('id_text', `%${searchTerm}%`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
       if (data && data.length > 0) {
         console.log('profile data', data);
-        console.log('profile data', data[0]['id']);
-        let id = data[0]['id'];
+        console.log('profile data id', data['id']);
+        const id = data['id'];
         const { data: walletData, error: WalletError } = await this.postgresRest
           .from('wallets')
           .select('id')
@@ -551,7 +552,8 @@ export class AuthService {
       }
       console.log('profile data load', data);
 
-      return data?.length ? (data as Profile[]) : [];
+      // return data?.length ? (data as Profile[]) : [];
+      return data as Profile;
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
       throw new Error(

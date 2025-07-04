@@ -19,6 +19,7 @@ import { WalletsService } from './wallets.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { DateTime } from 'luxon';
+import { GroupMemberService } from './group-members.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -34,11 +35,20 @@ export class CooperativeMemberApprovalsService {
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       this.logger.debug(createCooperativeMemberApprovalsDto);
+      const gmService = new GroupMemberService(this.postgresrest);
+      const gmResponse = await gmService.findMembersInGroup(
+        createCooperativeMemberApprovalsDto.group_id!,
+      );
+      if (gmResponse instanceof ErrorResponseDto) {
+        return gmResponse;
+      }
+      const groupSize = gmResponse.length;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .upsert(
           {
             group_id: createCooperativeMemberApprovalsDto.group_id,
+            number_of_members: groupSize,
             profile_id: createCooperativeMemberApprovalsDto.profile_id,
             poll_description:
               createCooperativeMemberApprovalsDto.poll_description,
@@ -307,7 +317,8 @@ export class CooperativeMemberApprovalsService {
             this.postgresrest,
             new SmileWalletService(),
           );
-          const transactionResponse = await transService.createTransaction(transactionDto);
+          const transactionResponse =
+            await transService.createTransaction(transactionDto);
           this.logger.debug('transactionResponse');
           this.logger.debug(transactionResponse);
         }

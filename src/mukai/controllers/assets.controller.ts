@@ -65,6 +65,40 @@ export class AssetsController {
     return response;
   }
 
+  @Post('individual')
+  @ApiOperation({ summary: 'Create a new individual asset' })
+  @ApiBody({ type: CreateAssetDto })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Asset created successfully',
+    type: Asset,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+  })
+  async createIndividual(@Body() createAssetDto: CreateAssetDto) {
+    const response = await this.assetsService.createIndividualAsset(createAssetDto);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+  
+
   @Get()
   @ApiOperation({ summary: 'Get all assets' })
   @ApiResponse({

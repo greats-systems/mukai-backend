@@ -45,6 +45,8 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
   @Get('profiles/like_wallet_id/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getProfilesLikeWalletID(@Param('id') id: string) {
     return this.authService.getProfilesLikeWalletID(id);
   }
@@ -55,6 +57,8 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
   @Get('profiles/like/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getProfilesLike(@Param('id') id: string) {
     return this.authService.getProfilesLike(id);
   }

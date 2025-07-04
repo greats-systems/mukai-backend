@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,14 +17,18 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GroupMemberService } from '../services/group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { GroupMembers } from '../entities/group-members.entity';
 import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 // import { Cooperative } from '../entities/cooperative.entity';
 
 @ApiTags('GroupMembers')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('group_members')
 export class GroupMemberController {
   constructor(private readonly groupMemberService: GroupMemberService) {}

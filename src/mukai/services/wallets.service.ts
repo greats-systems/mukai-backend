@@ -300,7 +300,7 @@ export class WalletsService {
         .select("*")
         // Cast UUID to text for pattern matching
         .ilike("id_text", `%${searchTerm}%`)
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);

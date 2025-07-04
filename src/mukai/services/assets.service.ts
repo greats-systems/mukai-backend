@@ -61,7 +61,7 @@ export class AssetsService {
       createCoopMemberApproval.poll_description =
         createAssetDto.asset_description!;
       createCoopMemberApproval.number_of_members = groupSize;
-      createCoopMemberApproval.asset_id = data['id'];
+      createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll
       const pollResponse =

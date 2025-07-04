@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -30,8 +31,9 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
+        // .insert(createWalletDto)
         .upsert(createWalletDto, {
-          onConflict: "profile_id,is_group_wallet,default_currency",
+          onConflict: "group_id,default_currency",
           ignoreDuplicates: true,
         })
         .select()
@@ -39,10 +41,11 @@ export class WalletsService {
       if (error) {
         console.log(error);
         if (error.details == "The result contains 0 rows") {
-          return {
-            data:
-              `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
-          };
+          return new ErrorResponseDto(403, `User ${createWalletDto.profile_id} cannot create a wallet of the same type`)
+          // return {
+          //   data:
+          //     `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
+          // };
         }
         return new ErrorResponseDto(400, error.message);
       }
@@ -157,12 +160,6 @@ export class WalletsService {
         }
         return new ErrorResponseDto(400, error.message);
       }
-
-      console.log({
-        statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet,
-      });
 
       return {
         statusCode: 200,
@@ -403,7 +400,7 @@ export class WalletsService {
       const { data: updateData, error: updateError } = await this.postgresrest
         .from("wallets")
         .update({
-          balance: balance + amount,
+          balance: balance + parseFloat(amount.toString()),
         })
         .eq("id", receiving_wallet_id)
         .select()

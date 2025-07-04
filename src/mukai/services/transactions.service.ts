@@ -61,6 +61,7 @@ export class TransactionsService {
       }
       console.log(sender);
       console.log('Updating sender wallet');
+
       const debitResponse = await walletsService.updateSenderBalance(
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,
@@ -72,6 +73,28 @@ export class TransactionsService {
         senderTransactionDto.amount,
       );
       console.log(creditResponse);
+      receiverTransactionDto.sending_wallet =
+        senderTransactionDto.sending_wallet;
+      receiverTransactionDto.receiving_wallet =
+        senderTransactionDto.receiving_wallet;
+      receiverTransactionDto.amount = senderTransactionDto.amount;
+      receiverTransactionDto.category = senderTransactionDto.category;
+      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
+      receiverTransactionDto.transaction_type =
+        senderTransactionDto.transaction_type;
+      receiverTransactionDto.currency = senderTransactionDto.currency;
+      receiverTransactionDto.narrative = 'credit';
+
+      const { data: receiver, error: receiverError } = await this.postgresrest
+        .from('transactions')
+        .insert(receiverTransactionDto)
+        .select()
+        .single();
+      if (receiverError) {
+        console.log(receiverError);
+        return new ErrorResponseDto(400, receiverError.message);
+      }
+      console.log(receiver);
 
       if (senderTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
@@ -119,30 +142,7 @@ export class TransactionsService {
       // console.log(debitResponse);
       // console.log(creditResponse);
       // send notification to the user
-      */
-      receiverTransactionDto.sending_wallet =
-        senderTransactionDto.sending_wallet;
-      receiverTransactionDto.receiving_wallet =
-        senderTransactionDto.receiving_wallet;
-      receiverTransactionDto.amount = senderTransactionDto.amount;
-      receiverTransactionDto.category = senderTransactionDto.category;
-      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
-      receiverTransactionDto.transaction_type =
-        senderTransactionDto.transaction_type;
-      receiverTransactionDto.currency = senderTransactionDto.currency;
-      receiverTransactionDto.narrative = 'credit';
-
-      const { data: receiver, error: receiverError } = await this.postgresrest
-        .from('transactions')
-        .insert(receiverTransactionDto)
-        .select()
-        .single();
-      if (receiverError) {
-        console.log(receiverError);
-        return new ErrorResponseDto(400, receiverError.message);
-      }
-      console.log(receiver);
-      return {
+      */ return {
         statusCode: 201,
         message: 'Transaction created successfully',
         data: {
@@ -218,7 +218,10 @@ export class TransactionsService {
 
       return data as object;
     } catch (error) {
-      this.logger.error(`Exception in viewTransaction for id ${wallet_id}`, error);
+      this.logger.error(
+        `Exception in viewTransaction for id ${wallet_id}`,
+        error,
+      );
       return new ErrorResponseDto(500, error);
     }
   }

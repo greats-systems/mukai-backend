@@ -20,6 +20,12 @@ export class CooperativeMemberApprovals {
   group_id: string;
 
   @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'ID of the individual member',
+  })
+  profile_id: string;
+
+  @ApiProperty({
     example: 150,
     description: 'Total number of members in a cooperative',
   })

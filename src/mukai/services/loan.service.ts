@@ -49,13 +49,13 @@ export class LoanService {
   async createLoan(
     createLoanDto: CreateLoanDto,
   ): Promise<Loan | ErrorResponseDto> {
-    const maService = new CooperativeMemberApprovalsService(this.postgresrest);
-    const maDto = new CreateCooperativeMemberApprovalsDto();
+    // const maService = new CooperativeMemberApprovalsService(this.postgresrest);
+    // const maDto = new CreateCooperativeMemberApprovalsDto();
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
-      createLoanDto.due_date = this.calculateDueDate(
-        createLoanDto.loan_term_months!,
-      );
+      // createLoanDto.due_date = this.calculateDueDate(
+      //   createLoanDto.loan_term_months!,
+      // );
       const { data: loanResponse, error } = await this.postgresrest
         .from('loans')
         .insert(createLoanDto)
@@ -65,12 +65,12 @@ export class LoanService {
         console.log(error);
         return new ErrorResponseDto(400, error.message);
       }
-      maDto.group_id = createLoanDto.cooperative_id;
-      maDto.poll_description = 'loan application';
-      maDto.loan_id = createLoanDto.id;
-      const maResponse =
-        await maService.createCooperativeMemberApprovals(maDto);
-      console.log(maResponse);
+      // maDto.group_id = createLoanDto.cooperative_id;
+      // maDto.poll_description = 'loan application';
+      // // maDto.loan_id = createLoanDto.id;
+      // const maResponse =
+      //   await maService.createCooperativeMemberApprovals(maDto);
+      // console.log(maResponse);
       return loanResponse as Loan;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -142,6 +142,36 @@ export class LoanService {
   }
 
   async viewCoopLoans(
+    cooperative_id: string,
+    profile_id: string,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('cooperative_id', cooperative_id)
+        .neq('profile_id', profile_id);
+      // .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching loan for coop ${cooperative_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewLoan for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewPendingLoan(
     cooperative_id: string,
     profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {

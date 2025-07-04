@@ -345,7 +345,7 @@ export class AuthService {
         dob: signupDto.dob,
         gender: signupDto.gender,
         wallet_id: signupDto.wallet_id,
-        cooperative_id: signupDto.cooperative_id,
+        // cooperative_id: signupDto.cooperative_id,
         business_id: signupDto.business_id,
         affiliations: signupDto.affiliations,
         coop_account_id: signupDto.coop_account_id,
@@ -395,7 +395,7 @@ export class AuthService {
       createTransactionDto.receiving_wallet = walletResponse['id'];
       createTransactionDto.amount = createWalletDto.balance;
       createTransactionDto.currency = createWalletDto.default_currency;
-      createTransactionDto.transaction_type = 'Opening deposit';
+      createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.category = 'transfer';
 
       const createTransactionResponse =
@@ -430,7 +430,7 @@ export class AuthService {
           dob: signupDto.dob,
           gender: signupDto.gender,
           wallet_id: signupDto.wallet_id,
-          cooperative_id: signupDto.cooperative_id,
+          // cooperative_id: signupDto.cooperative_id,
           business_id: signupDto.business_id,
           affiliations: signupDto.affiliations,
           coop_account_id: signupDto.coop_account_id,

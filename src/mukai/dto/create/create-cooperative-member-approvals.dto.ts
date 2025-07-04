@@ -37,6 +37,14 @@ export class CreateCooperativeMemberApprovalsDto {
   group_id?: string;
 
   @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'ID of the individual member',
+  })
+  @IsString()
+  @IsOptional()
+  profile_id?: string;
+
+  @ApiProperty({
     example: 150,
     description: 'Optional total member count',
     required: false,

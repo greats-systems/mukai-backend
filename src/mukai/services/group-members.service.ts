@@ -29,7 +29,6 @@ export class GroupMemberService {
   ): Promise<GroupMembers | object | ErrorResponseDto> {
     console.log(createGroupMemberDto);
     try {
-      await this.postgresrest.clearCache();
       const { data: createGroupMemberResponse, error } = await this.postgresrest
         .from('group_members')
         .upsert(createGroupMemberDto, {

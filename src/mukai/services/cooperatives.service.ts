@@ -62,6 +62,7 @@ export class CooperativesService {
       console.log(createCooperativeDto);
 
       // Create cooperative
+      this.logger.debug(createCooperativeDto);
       const { data: createCooperativeResponse, error } = await this.postgresrest
         .from('cooperatives')
         .insert(createCooperativeDto)
@@ -75,8 +76,12 @@ export class CooperativesService {
       console.log(createCooperativeResponse['id']);
 
       createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
+      createGroupMemberDto.member_id = createCooperativeDto.admin_id!;
       const response =
         await groupMembersService.createGroupMember(createGroupMemberDto);
+      if (response instanceof ErrorResponseDto) {
+        return response;
+      }
       console.log('group_member response');
       console.log(response);
 
@@ -88,20 +93,35 @@ export class CooperativesService {
       const walletResponse = await walletsService.createWallet(createWalletDto);
       console.log('Wallet response');
       console.log(walletResponse);
+      if (walletResponse instanceof ErrorResponseDto) {
+        return walletResponse;
+      }
+
+      const updateCoopDto = new UpdateCooperativeDto();
+      updateCoopDto.wallet_id = walletResponse['data']['id'];
+      updateCoopDto.id = createCooperativeResponse['id'];
+      const updateCoopResponse = await this.updateCooperativeWallet(
+        updateCoopDto.id!.toString(),
+        updateCoopDto,
+      );
+      this.logger.debug('updateCoopResponse');
+      this.logger.debug(updateCoopResponse);
 
       createTransactionDto.receiving_wallet = walletResponse['data']['id'];
       createTransactionDto.amount = createWalletDto.balance;
-      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.narrative = 'credit';
       createTransactionDto.currency = createWalletDto.default_currency;
       const transactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
 
       console.log(transactionResponse);
-      console.log(walletResponse);
+      if (transactionResponse instanceof ErrorResponseDto) {
+        return transactionResponse;
+      }
 
       updateUserDto.id = createCooperativeDto.admin_id!;
-      updateUserDto.cooperative_id = createCooperativeResponse['id'];
+      // updateUserDto.cooperative_id = createCooperativeResponse['id'];
 
       const { data: updateResponse, error: updateError } =
         await this.postgresrest
@@ -326,6 +346,33 @@ export class CooperativesService {
         `Exception in viewGroup for id ${cooperative_id}`,
         error,
       );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateCooperativeWallet(
+    id: string,
+    updateCooperativeDto: UpdateCooperativeDto,
+  ): Promise<Cooperative | ErrorResponseDto> {
+    console.log(updateCooperativeDto);
+    /**
+     * Before updating the interest rate, the members should vote on it first
+     */
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .update(updateCooperativeDto)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Cooperative;
+    } catch (error) {
+      this.logger.error(`Exception in updateCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

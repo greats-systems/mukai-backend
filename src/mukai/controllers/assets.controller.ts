@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { AssetsService } from '../services/assets.service';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
@@ -19,10 +20,14 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Asset } from '../entities/asset.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Assets')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
@@ -97,7 +102,7 @@ export class AssetsController {
     description: 'Group ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @ApiResponse({  
+  @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of assets for the group',
     type: [Asset],
@@ -109,7 +114,7 @@ export class AssetsController {
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Server error',
-  })  
+  })
   async getGroupAssets(@Param('id') id: string) {
     const response = await this.assetsService.getGroupAssets(id);
     if (response['statusCode'] === 400) {
@@ -135,7 +140,7 @@ export class AssetsController {
     description: 'Profile ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @ApiResponse({  
+  @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of assets for the profile',
     type: [Asset],
@@ -147,7 +152,7 @@ export class AssetsController {
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Server error',
-  })  
+  })
   async getProfileAssets(@Param('id') id: string) {
     const response = await this.assetsService.getProfileAssets(id);
     if (response['statusCode'] === 400) {

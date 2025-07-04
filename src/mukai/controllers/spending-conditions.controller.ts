@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateSpendingConditionsDto } from '../dto/create/create-spending-conditions.dto';
 import { UpdateSpendingConditionsDto } from '../dto/update/update-spending-conditions.dto';
@@ -19,10 +20,14 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SpendingConditions } from '../entities/spending-conditions.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Spending Conditions')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('spending-conditions')
 export class SpendingConditionsController {
   constructor(

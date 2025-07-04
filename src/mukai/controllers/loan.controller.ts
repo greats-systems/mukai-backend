@@ -10,6 +10,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { UpdateLoanDto } from '../dto/update/update-loan.dto';
@@ -20,11 +21,15 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Loan } from '../entities/loan.entity';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Loans')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}

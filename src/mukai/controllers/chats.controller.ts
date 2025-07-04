@@ -8,6 +8,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,13 +16,17 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ChatsService } from '../services/chats.service';
 import { CreateChatDto } from '../dto/create/create-chat.dto';
 import { UpdateChatDto } from '../dto/update/update-chat.dto';
 import { Chat } from '../entities/chat.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Chats')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}

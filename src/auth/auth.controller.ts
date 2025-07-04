@@ -10,13 +10,15 @@ import {
   HttpException,
   HttpStatus,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from './guards/jwt.auth.guard';
 
 /**
  * Controller for handling authentication-related operations.
@@ -31,6 +33,8 @@ export class AuthController {
    * @returns Promise<Profile[]> - Array of user profiles
    */
   @Get('profiles')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getProfiles() {
     return this.authService.getProfiles();
   }
@@ -56,7 +60,10 @@ export class AuthController {
   }
 
   @Get('profiles/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getProfile(@Param('id') id: string) {
+    console.log('AuthGuard works 🎉');
     return this.authService.getProfile(id);
   }
 
@@ -76,6 +83,8 @@ export class AuthController {
    * @returns Promise<any> - Result of the update operation
    */
   @Patch('update-account/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
   }
@@ -86,6 +95,8 @@ export class AuthController {
    * @returns Promise<any> - Result of the FCM update operation
    */
   @Put('update-fcm/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async updateFCM(@Body() profile: Profile) {
     return this.authService.updateFCM(profile);
   }

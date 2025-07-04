@@ -10,6 +10,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { UpdateWalletDto } from '../dto/update/update-wallet.dto';
 import {
@@ -18,13 +19,17 @@ import {
   ApiTags,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateSavingsDto } from '../dto/create/create-wallet-savings.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Savings Portfolio')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('savings-portfolio')
 export class SavingsController {
-  constructor(private readonly savingsService: SavingsService) { }
+  constructor(private readonly savingsService: SavingsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create portfolio' })
@@ -33,7 +38,8 @@ export class SavingsController {
   @ApiResponse({ status: 400, description: 'Bad request.' })
   @ApiResponse({ status: 500, description: 'Internal server error.' })
   async create(@Body() createSavingsDto: CreateSavingsDto) {
-    const response = await this.savingsService.createSavingsPortfolio(createSavingsDto);
+    const response =
+      await this.savingsService.createSavingsPortfolio(createSavingsDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(
         response['message'] ?? 'Bad request',
@@ -90,7 +96,8 @@ export class SavingsController {
   @ApiResponse({ status: 400, description: 'Bad request.' })
   @ApiResponse({ status: 500, description: 'Internal server error.' })
   async viewProfileSavings(@Param('wallet_id') wallet_id: string) {
-    const response = await this.savingsService.viewWalletProfileSavings(wallet_id);
+    const response =
+      await this.savingsService.viewWalletProfileSavings(wallet_id);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(
@@ -138,7 +145,6 @@ export class SavingsController {
     return response;
   }
 
-
   @Get(':id')
   @ApiOperation({ summary: 'Fetch Portfolio by ID' })
   @ApiParam({
@@ -146,7 +152,10 @@ export class SavingsController {
     description: 'Portfolio ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @ApiResponse({ status: 200, description: 'Savings Portfolio retrieved successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Savings Portfolio retrieved successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   @ApiResponse({ status: 500, description: 'Internal server error.' })
   async viewSavingsPortfolio(@Param('id') id: string) {
@@ -165,7 +174,6 @@ export class SavingsController {
     }
     return response;
   }
-
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a wallet by ID' })

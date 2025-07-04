@@ -26,7 +26,13 @@ import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.servic
   ],
   controllers: [AuthController],
 
-  providers: [JwtAuthGuard, SupabaseStrategy, PostgresRest, AuthService, SmileWalletService],
+  providers: [
+    JwtAuthGuard,
+    SupabaseStrategy,
+    PostgresRest,
+    AuthService,
+    SmileWalletService,
+  ],
   exports: [JwtAuthGuard, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

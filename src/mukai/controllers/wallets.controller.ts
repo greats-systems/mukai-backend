@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { WalletsService } from '../services/wallets.service';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
@@ -19,9 +20,13 @@ import {
   ApiTags,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Wallets')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('wallets')
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}

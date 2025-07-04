@@ -9,13 +9,23 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
-import { ApiOperation, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('cooperative_member_approvals')
 export class CooperativeMemberApprovalsController {
   constructor(
@@ -160,7 +170,7 @@ export class CooperativeMemberApprovalsController {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
         group_id,
-        userJson
+        userJson,
       );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

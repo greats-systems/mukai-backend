@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
@@ -19,11 +20,15 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperatives')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('cooperatives')
 export class CooperativesController {
   constructor(private readonly cooperativesService: CooperativesService) {}

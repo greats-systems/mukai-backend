@@ -9,6 +9,7 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CooperativeMemberRequestsService } from '../services/cooperative_member_requests.service';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
@@ -20,18 +21,14 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
-
-function isErrorResponseDto(obj: any): obj is ErrorResponseDto {
-  return (
-    obj &&
-    typeof (obj as ErrorResponseDto).statusCode === 'number' &&
-    typeof (obj as ErrorResponseDto).message === 'string'
-  );
-}
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperative Member Requests')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('cooperative_member_requests')
 export class CooperativeMemberRequestsController {
   constructor(

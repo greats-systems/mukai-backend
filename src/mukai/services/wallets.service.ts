@@ -290,7 +290,7 @@ export class WalletsService {
     }
   }
 
-  async getWalletsLike(id: string): Promise<Wallet | null> {
+  async getWalletsLike(id: string): Promise<Wallet[] | null> {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
@@ -300,13 +300,14 @@ export class WalletsService {
         .select("*")
         // Cast UUID to text for pattern matching
         .ilike("id_text", `%${searchTerm}%`)
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
+    this.logger.debug(data);
 
-      return data as Wallet;
+      return data as Wallet[];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
       throw new Error(

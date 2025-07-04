@@ -8,8 +8,6 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { UpdateLoanDto } from '../dto/update/update-loan.dto';
 import { Loan } from '../entities/loan.entity';
-import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
-import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 import { DateTime } from 'luxon';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -53,25 +51,38 @@ export class LoanService {
     // const maDto = new CreateCooperativeMemberApprovalsDto();
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
-      // createLoanDto.due_date = this.calculateDueDate(
-      //   createLoanDto.loan_term_months!,
-      // );
-      const { data: loanResponse, error } = await this.postgresrest
-        .from('loans')
-        .insert(createLoanDto)
-        .select()
-        .single();
-      if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+      createLoanDto.created_at = DateTime.now().toISO();
+
+      // Check if the user has an existing loan
+      const hasActiveLoan = await this.hasActiveLoan(createLoanDto);
+      if (hasActiveLoan instanceof ErrorResponseDto) {
+        return hasActiveLoan;
       }
-      // maDto.group_id = createLoanDto.cooperative_id;
-      // maDto.poll_description = 'loan application';
-      // // maDto.loan_id = createLoanDto.id;
-      // const maResponse =
-      //   await maService.createCooperativeMemberApprovals(maDto);
-      // console.log(maResponse);
-      return loanResponse as Loan;
+
+      // Accept the loan request if the applicant does not have active loans
+      if (!hasActiveLoan) {
+        const { data: loanResponse, error } = await this.postgresrest
+          .from('loans')
+          .insert(createLoanDto)
+          .select()
+          .single();
+        if (error) {
+          console.log(error);
+          return new ErrorResponseDto(400, error.message);
+        }
+        // maDto.group_id = createLoanDto.cooperative_id;
+        // maDto.poll_description = 'loan application';
+        // // maDto.loan_id = createLoanDto.id;
+        // const maResponse =
+        //   await maService.createCooperativeMemberApprovals(maDto);
+        // console.log(maResponse);
+        return loanResponse as Loan;
+      } else {
+        return new ErrorResponseDto(
+          403,
+          `User ${createLoanDto.profile_id} has an active loan and cannot apply for another one`,
+        );
+      }
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
@@ -112,6 +123,35 @@ export class LoanService {
       return data as Loan[];
     } catch (error) {
       this.logger.error(`Exception in viewLoan for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async hasActiveLoan(
+    loanDto: CreateLoanDto,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('profile_id', loanDto.profile_id)
+        .eq('cooperative_id', loanDto.cooperative_id)
+        .eq('status', 'disbursed')
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching loan ${loanDto.id}`, error);
+        if(error.details == 'The result contains 0 rows') {
+          return false; // No active loan found
+        }
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`Exception in viewLoan for id ${loanDto.id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -235,7 +275,7 @@ export class LoanService {
         })
         .eq('cooperative_id', cooperative_id)
         .select();
-        // .single();
+      // .single();
       if (error) {
         this.logger.error(`Error updating coop loan ${cooperative_id}`, error);
         return new ErrorResponseDto(400, error.message);

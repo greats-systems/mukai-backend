@@ -28,6 +28,7 @@ import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
 import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -264,7 +265,7 @@ export class AuthService {
     }
   }
 
-  async signup(signupDto: SignupDto) {
+  async signup(signupDto: SignupDto): Promise<any | ErrorResponseDto> {
     const walletsService = new WalletsService(
       this.postgresRest,
       this.smileWalletService,
@@ -285,7 +286,8 @@ export class AuthService {
         .maybeSingle();
 
       if (existingUser) {
-        throw new UnauthorizedException('Email already in use');
+        // throw new UnauthorizedException('Email already in use');
+        return new ErrorResponseDto(400, 'Email already in use');
       }
 
       // Hash password and generate UUID
@@ -307,12 +309,21 @@ export class AuthService {
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        throw new Error(`User creation failed: ${authError.message}`);
+        // throw new Error(`User creation failed: ${authError.message}`);
+        return new ErrorResponseDto(
+          400,
+          'User creation failed',
+          authError,
+        );
       }
 
       // Verify we got a valid user ID
       if (!newAuthUser?.user?.id) {
         throw new Error('Invalid user ID received from auth provider');
+        return new ErrorResponseDto(
+          400,
+          'Invalid user ID received from auth provider',
+        );
       }
 
       const now = new Date().toISOString();
@@ -520,7 +531,7 @@ export class AuthService {
     }
   }
 
-  async getProfilesLike(id: string): Promise<Profile> {
+  async getProfilesLike(id: string): Promise<Profile[] | ErrorResponseDto> {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
@@ -531,8 +542,8 @@ export class AuthService {
         .select('*')
         // Cast UUID to text for pattern matching
         .ilike('id_text', `%${searchTerm}%`)
-        .order('created_at', { ascending: false })
-        .maybeSingle();
+        .order('created_at', { ascending: false });
+      // .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
@@ -553,13 +564,18 @@ export class AuthService {
       console.log('profile data load', data);
 
       // return data?.length ? (data as Profile[]) : [];
-      return data as Profile;
+      return data as Profile[];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred while searching profiles',
+      // throw new Error(
+      //   error instanceof Error
+      //     ? error.message
+      //     : 'An unexpected error occurred while searching profiles',
+      // );
+      return new ErrorResponseDto(
+        500,
+        'An unexpected error occurred while searching profiles',
+        error,
       );
     }
   }

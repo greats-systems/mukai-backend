@@ -4,9 +4,6 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
-
-// import { PostgresRestHandlerModule } from './common/postgresrest';
-// import { OrdersModule } from './orders/orders.module';
 import { MessagingsModule } from './messagings/messagings.module';
 import { NodesModule } from './nodes/nodes.module';
 import { AgreementModule } from './mukai/modules/agreement.module';
@@ -69,6 +66,9 @@ import { SmartBizPostgresRestHandlerModule } from './common/postgresrest/smart_b
 import { PayslipsController } from './smartbiz/payroll/controllers/payslip.controller';
 import { PayslipsModule } from './smartbiz/payroll/modules/payslip.module';
 import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
+import { FinancialArticle } from './mukai/entities/financial_articles.entity';
+import { FinancialArticleController } from './mukai/controllers/financial-articles.controller';
+import { FinancialArticleService } from './mukai/services/financial-article.service';
 
 @Module({
   imports: [
@@ -99,6 +99,7 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     WalletTransactionModule,
     EmployeesModule,
     PayslipsModule,
+    FinancialArticle,
   ],
   controllers: [
     AppController,
@@ -122,6 +123,7 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     WalletTransactionController,
     EmployeesController,
     PayslipsController,
+    FinancialArticleController,
   ],
   providers: [
     AppService,
@@ -147,6 +149,7 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
     // WalletTransactionService,
     EmployeesService,
     PayslipsService,
+    FinancialArticleService,
     //   {
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,

@@ -548,19 +548,22 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
+      /*
       if (data && data.length > 0) {
         console.log('profile data', data);
-        console.log('profile data id', data['id']);
+        // console.log('profile data id', data['id']);
         const id = data['id'];
         const { data: walletData, error: WalletError } = await this.postgresRest
           .from('wallets')
           .select('id')
           // Cast UUID to text for pattern matching
           .eq('profile_id', id)
+          .eq('is_group_wallet', false)
           .single();
         console.log('wallet_id', walletData);
-        data[0]['wallet_id'] = walletData!['id'];
+        // data[0]['wallet_id'] = walletData!['id'];
       }
+      */
       console.log('profile data load', data);
 
       // return data?.length ? (data as Profile[]) : [];

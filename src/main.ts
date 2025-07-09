@@ -6,9 +6,29 @@ import {
   DocumentBuilder,
   SwaggerDocumentOptions,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from './auth/guards/jwt.auth.guard';
+import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Protect Swagger docs with JWT
+  const reflector = app.get(Reflector);
+  app.use('/docs/api', async (req, res, next) => {
+    // Create a context for the guard
+    const context = {
+      switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+      getHandler: () => null,
+      getClass: () => null,
+    };
+    const guard = new JwtAuthGuard(reflector);
+    const canActivate = await guard.canActivate(context as any);
+    if (canActivate) {
+      next();
+    } else {
+      res.status(401).json({ message: 'Unauthorized' });
+    }
+  });
   const config = new DocumentBuilder()
     .setTitle('Mukai API Docs')
     .setDescription(

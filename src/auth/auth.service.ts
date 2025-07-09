@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -9,6 +10,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -30,10 +32,14 @@ import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dt
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
+function initLogger(funcname: Function): Logger {
+  return new Logger(funcname.name);
+}
+
 @Injectable()
 export class AuthService {
   private supabaseAdmin;
-
+  private readonly logger = initLogger(AuthService);
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
@@ -265,7 +271,7 @@ export class AuthService {
     }
   }
 
-  async signup(signupDto: SignupDto): Promise<any | ErrorResponseDto> {
+  async signup(signupDto: SignupDto): Promise<object | ErrorResponseDto> {
     const walletsService = new WalletsService(
       this.postgresRest,
       this.smileWalletService,
@@ -290,6 +296,18 @@ export class AuthService {
         return new ErrorResponseDto(400, 'Email already in use');
       }
 
+      // Also check if phone number already exists
+      const { data: existingPhoneNumber } = await this.postgresRest
+        .from('profiles')
+        .select('phone')
+        .eq('phone', signupDto.phone)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingPhoneNumber) {
+        return new ErrorResponseDto(400, 'Phone number already in use');
+      }
+
       // Hash password and generate UUID
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);
       // const userId = uuidv4();
@@ -310,16 +328,12 @@ export class AuthService {
       if (authError) {
         console.error('Auth creation error:', authError);
         // throw new Error(`User creation failed: ${authError.message}`);
-        return new ErrorResponseDto(
-          400,
-          'User creation failed',
-          authError,
-        );
+        return new ErrorResponseDto(400, 'User creation failed', authError);
       }
 
       // Verify we got a valid user ID
       if (!newAuthUser?.user?.id) {
-        throw new Error('Invalid user ID received from auth provider');
+        // throw new Error('Invalid user ID received from auth provider');
         return new ErrorResponseDto(
           400,
           'Invalid user ID received from auth provider',
@@ -456,6 +470,7 @@ export class AuthService {
       };
     } catch (e) {
       console.error(e);
+      return new ErrorResponseDto(500, e);
     }
   }
 
@@ -542,8 +557,8 @@ export class AuthService {
         .select('*')
         // Cast UUID to text for pattern matching
         .ilike('id_text', `%${searchTerm}%`)
-        .order('created_at', { ascending: false });
-      // .maybeSingle();
+        .order('created_at', { ascending: false })
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
@@ -569,7 +584,7 @@ export class AuthService {
       // return data?.length ? (data as Profile[]) : [];
       return data as Profile[];
     } catch (error) {
-      // this.logger.error(`Error in getProfilesLike: ${error}`);
+      this.logger.error(`Error in getProfilesLike: ${error}`);
       // throw new Error(
       //   error instanceof Error
       //     ? error.message
@@ -737,45 +752,4 @@ export class AuthService {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return regex.test(uuid);
   }
-  /*
-  async logout(userId: string) {
-    console.log('logout id:');
-    console.log(userId['id']);
-    try {
-      // 1. Invalidate the user's session in Supabase
-      const { error: authError } =
-        await this.supabaseAdmin.auth.admin.signOut(userId);
-
-      if (authError) {
-        console.error('Supabase logout error:', authError);
-        throw new Error('Failed to invalidate session');
-      }
-
-      // 2. Optionally update user's FCM token or other logout-related data
-      // const now = new Date().toISOString();
-      // const { error: profileError } = await this.postgresRest
-      //   .from('profiles')
-      //   .update({
-      //     push_token: null, // Clear push token on logout
-      //     updated_at: now,
-      //   })
-      //   .eq('id', userId);
-
-      // if (profileError) {
-      //   console.error('Profile update error during logout:', profileError);
-      //   // You might choose to continue even if this fails
-      // }
-      console.log('Successfully logged out');
-
-      return {
-        status: 'success',
-        message: 'Logged out successfully',
-        error: null,
-      };
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw new Error('Logout failed');
-    }
-  }
-  */
 }

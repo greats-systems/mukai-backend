@@ -20,6 +20,7 @@ import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { DateTime } from 'luxon';
 import { GroupMemberService } from './group-members.service';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -126,7 +127,7 @@ export class CooperativeMemberApprovalsService {
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
     userJson: object,
-  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       this.logger.warn(userJson);
       // Fetch data from PostgreSQL
@@ -185,7 +186,11 @@ export class CooperativeMemberApprovalsService {
       });
 
       // console.log(approvals);
-      return approvals;
+      return {
+        statusCode: 200,
+        message: 'Approvals fetched successfully',
+        data: approvals,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMemberApprovals for group ${group_id}`,

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
-import { Int32 } from 'typeorm';
 
 export class CreateFinancialArticleDto {
   @ApiProperty({
@@ -105,13 +104,13 @@ export class CreateFinancialArticleDto {
     example: 500,
     description: 'Number of views for the financial article',
   })
-  views_count?: Int32;
+  views_count?: number;
 
   @ApiProperty({
     example: 400,
     description: 'Number of likes for the financial article',
   })
-  likes_count?: Int32;
+  likes_count?: number;
 
   @ApiProperty({
     example: true,

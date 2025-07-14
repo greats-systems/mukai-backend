@@ -7,6 +7,7 @@ import { SupabaseStrategy } from './strategies/supabase.strategy';
 import { PostgresRest } from 'src/common/postgresrest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 
 @Module({
   imports: [
@@ -25,7 +26,13 @@ import { AuthService } from './auth.service';
   ],
   controllers: [AuthController],
 
-  providers: [JwtAuthGuard, SupabaseStrategy, PostgresRest, AuthService],
+  providers: [
+    JwtAuthGuard,
+    SupabaseStrategy,
+    PostgresRest,
+    AuthService,
+    SmileWalletService,
+  ],
   exports: [JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

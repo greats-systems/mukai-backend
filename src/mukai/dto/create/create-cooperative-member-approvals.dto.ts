@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsInt, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  IsArray,
+  IsAlphanumeric,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateCooperativeMemberApprovalsDto {
   @ApiProperty({
@@ -28,6 +35,14 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   group_id?: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'ID of the individual member',
+  })
+  @IsString()
+  @IsOptional()
+  profile_id?: string;
 
   @ApiProperty({
     example: 150,
@@ -88,4 +103,29 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   loan_id: string;
+
+  @ApiProperty({
+    example: '11:05:27T19:28:51.0012354',
+    description: 'Timestamp of when record was updated',
+  })
+  @IsString()
+  @IsOptional()
+  updated_at: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Has the 75% consensus been reached?',
+  })
+  @IsBoolean()
+  @IsOptional()
+  consensus_reached: boolean;
+
+  @ApiProperty({
+    example: 0.05,
+    description:
+      'Additional information about the poll. Useful when updating the appropriate table',
+  })
+  @IsAlphanumeric()
+  @IsOptional()
+  additional_info: any;
 }

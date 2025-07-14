@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -9,6 +10,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -22,20 +24,27 @@ import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
-import { error } from 'console';
+import { count, error } from 'console';
 import { WalletsService } from 'src/mukai/services/wallets.service';
 import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
 import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+
+function initLogger(funcname: Function): Logger {
+  return new Logger(funcname.name);
+}
 
 @Injectable()
 export class AuthService {
   private supabaseAdmin;
-
+  private readonly logger = initLogger(AuthService);
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly smileWalletService: SmileWalletService,
   ) {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
@@ -171,6 +180,14 @@ export class AuthService {
       });
 
       if (authError || !user) {
+        console.log({
+          status: 'failed',
+          message: 'Invalid credentials',
+          access_token: null,
+          error: authError,
+          user: null,
+          statusCode: 401,
+        });
         return {
           status: 'failed',
           message: 'Invalid credentials',
@@ -254,13 +271,19 @@ export class AuthService {
     }
   }
 
-  async signup(signupDto: SignupDto) {
-    const walletsService = new WalletsService(this.postgresRest);
+  async signup(signupDto: SignupDto): Promise<object | ErrorResponseDto> {
+    const walletsService = new WalletsService(
+      this.postgresRest,
+      this.smileWalletService,
+    );
     const createWalletDto = new CreateWalletDto();
-    const transactionsService = new TransactionsService(this.postgresRest);
+    const transactionsService = new TransactionsService(
+      this.postgresRest,
+      this.smileWalletService,
+    );
     const createTransactionDto = new CreateTransactionDto();
-    // Check if user exists in auth.users
     try {
+      console.log('Creating transaction...', signupDto);
       const { data: existingUser } = await this.supabaseAdmin
         .from('users')
         .select('id')
@@ -269,7 +292,20 @@ export class AuthService {
         .maybeSingle();
 
       if (existingUser) {
-        throw new UnauthorizedException('Email already in use');
+        // throw new UnauthorizedException('Email already in use');
+        return new ErrorResponseDto(400, 'Email already in use');
+      }
+
+      // Also check if phone number already exists
+      const { data: existingPhoneNumber } = await this.postgresRest
+        .from('profiles')
+        .select('phone')
+        .eq('phone', signupDto.phone)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingPhoneNumber) {
+        return new ErrorResponseDto(400, 'Phone number already in use');
       }
 
       // Hash password and generate UUID
@@ -291,12 +327,17 @@ export class AuthService {
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        throw new Error(`User creation failed: ${authError.message}`);
+        // throw new Error(`User creation failed: ${authError.message}`);
+        return new ErrorResponseDto(400, 'User creation failed', authError);
       }
 
       // Verify we got a valid user ID
       if (!newAuthUser?.user?.id) {
-        throw new Error('Invalid user ID received from auth provider');
+        // throw new Error('Invalid user ID received from auth provider');
+        return new ErrorResponseDto(
+          400,
+          'Invalid user ID received from auth provider',
+        );
       }
 
       const now = new Date().toISOString();
@@ -320,6 +361,7 @@ export class AuthService {
 
       const profileData = {
         id: newAuthUser.user.id,
+        id_text: newAuthUser.user.id,
         email: signupDto.email,
         phone: signupDto.phone,
         first_name: signupDto.first_name,
@@ -328,7 +370,7 @@ export class AuthService {
         dob: signupDto.dob,
         gender: signupDto.gender,
         wallet_id: signupDto.wallet_id,
-        cooperative_id: signupDto.cooperative_id,
+        // cooperative_id: signupDto.cooperative_id,
         business_id: signupDto.business_id,
         affiliations: signupDto.affiliations,
         coop_account_id: signupDto.coop_account_id,
@@ -336,6 +378,10 @@ export class AuthService {
         avatar: signupDto.avatar,
         national_id_url: signupDto.national_id_url,
         passport_url: signupDto.passport_url,
+        country: signupDto.country,
+        city: signupDto.city,
+        national_id_number: signupDto.national_id_number,
+        date_of_birth: signupDto.date_of_birth,
       };
 
       // Create profile in public.profiles
@@ -374,7 +420,7 @@ export class AuthService {
       createTransactionDto.receiving_wallet = walletResponse['id'];
       createTransactionDto.amount = createWalletDto.balance;
       createTransactionDto.currency = createWalletDto.default_currency;
-      createTransactionDto.transaction_type = 'Opening deposit';
+      createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.category = 'transfer';
 
       const createTransactionResponse =
@@ -409,7 +455,7 @@ export class AuthService {
           dob: signupDto.dob,
           gender: signupDto.gender,
           wallet_id: signupDto.wallet_id,
-          cooperative_id: signupDto.cooperative_id,
+          // cooperative_id: signupDto.cooperative_id,
           business_id: signupDto.business_id,
           affiliations: signupDto.affiliations,
           coop_account_id: signupDto.coop_account_id,
@@ -424,6 +470,7 @@ export class AuthService {
       };
     } catch (e) {
       console.error(e);
+      return new ErrorResponseDto(500, e);
     }
   }
 
@@ -499,43 +546,54 @@ export class AuthService {
     }
   }
 
-  async getProfilesLike(id: string): Promise<Profile[]> {
+  async getProfilesLike(id: string): Promise<Profile[] | ErrorResponseDto> {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('getProfilesLike searchTerm', searchTerm)
+      console.log('getProfilesLike searchTerm', searchTerm);
 
       const { data, error } = await this.postgresRest
         .from('profiles')
         .select('*')
         // Cast UUID to text for pattern matching
         .ilike('id_text', `%${searchTerm}%`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-      if(data && data.length >0){
-        console.log('profile data',data)
-        console.log('profile data',data[0]['id'])
-        let id = data[0]['id']
-        const { data:walletData, error:WalletError } = await this.postgresRest
-        .from('wallets')
-        .select('id')
-        // Cast UUID to text for pattern matching
-        .eq('profile_id', id).single();
-        console.log('wallet_id',walletData)
-        data[0]['wallet_id'] = walletData!['id']
+      /*
+      if (data && data.length > 0) {
+        console.log('profile data', data);
+        // console.log('profile data id', data['id']);
+        const id = data['id'];
+        const { data: walletData, error: WalletError } = await this.postgresRest
+          .from('wallets')
+          .select('id')
+          // Cast UUID to text for pattern matching
+          .eq('profile_id', id)
+          .eq('is_group_wallet', false)
+          .single();
+        console.log('wallet_id', walletData);
+        // data[0]['wallet_id'] = walletData!['id'];
       }
-      console.log('profile data load',data)
+      */
+      console.log('profile data load', data);
 
-      return data?.length ? (data as Profile[]) : [];
+      // return data?.length ? (data as Profile[]) : [];
+      return data as Profile[];
     } catch (error) {
-      // this.logger.error(`Error in getProfilesLike: ${error}`);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred while searching profiles',
+      this.logger.error(`Error in getProfilesLike: ${error}`);
+      // throw new Error(
+      //   error instanceof Error
+      //     ? error.message
+      //     : 'An unexpected error occurred while searching profiles',
+      // );
+      return new ErrorResponseDto(
+        500,
+        'An unexpected error occurred while searching profiles',
+        error,
       );
     }
   }
@@ -544,7 +602,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('searchTerm', searchTerm)
+      console.log('searchTerm', searchTerm);
       const { data, error } = await this.postgresRest
         .from('wallets')
         .select('*')
@@ -555,7 +613,7 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-      console.log('data', data)
+      console.log('data', data);
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
@@ -694,45 +752,4 @@ export class AuthService {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return regex.test(uuid);
   }
-  /*
-  async logout(userId: string) {
-    console.log('logout id:');
-    console.log(userId['id']);
-    try {
-      // 1. Invalidate the user's session in Supabase
-      const { error: authError } =
-        await this.supabaseAdmin.auth.admin.signOut(userId);
-
-      if (authError) {
-        console.error('Supabase logout error:', authError);
-        throw new Error('Failed to invalidate session');
-      }
-
-      // 2. Optionally update user's FCM token or other logout-related data
-      // const now = new Date().toISOString();
-      // const { error: profileError } = await this.postgresRest
-      //   .from('profiles')
-      //   .update({
-      //     push_token: null, // Clear push token on logout
-      //     updated_at: now,
-      //   })
-      //   .eq('id', userId);
-
-      // if (profileError) {
-      //   console.error('Profile update error during logout:', profileError);
-      //   // You might choose to continue even if this fails
-      // }
-      console.log('Successfully logged out');
-
-      return {
-        status: 'success',
-        message: 'Logged out successfully',
-        error: null,
-      };
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw new Error('Logout failed');
-    }
-  }
-  */
 }

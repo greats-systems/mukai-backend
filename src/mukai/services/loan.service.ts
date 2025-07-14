@@ -8,10 +8,8 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { UpdateLoanDto } from '../dto/update/update-loan.dto';
 import { Loan } from '../entities/loan.entity';
-import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
-import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
-import uuidv4 from 'supabase/apps/studio/lib/uuid';
 import { DateTime } from 'luxon';
+import { v4 as uuidv4 } from 'uuid';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -49,29 +47,42 @@ export class LoanService {
   async createLoan(
     createLoanDto: CreateLoanDto,
   ): Promise<Loan | ErrorResponseDto> {
-    const maService = new CooperativeMemberApprovalsService(this.postgresrest);
-    const maDto = new CreateCooperativeMemberApprovalsDto();
+    // const maService = new CooperativeMemberApprovalsService(this.postgresrest);
+    // const maDto = new CreateCooperativeMemberApprovalsDto();
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
-      createLoanDto.due_date = this.calculateDueDate(
-        createLoanDto.loan_term_months!,
-      );
-      const { data: loanResponse, error } = await this.postgresrest
-        .from('loans')
-        .insert(createLoanDto)
-        .select()
-        .single();
-      if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+      createLoanDto.created_at = DateTime.now().toISO();
+
+      // Check if the user has an existing loan
+      const hasActiveLoan = await this.hasActiveLoan(createLoanDto);
+      if (hasActiveLoan instanceof ErrorResponseDto) {
+        return hasActiveLoan;
       }
-      maDto.group_id = createLoanDto.cooperative_id;
-      maDto.poll_description = 'loan application';
-      maDto.loan_id = createLoanDto.id;
-      const maResponse =
-        await maService.createCooperativeMemberApprovals(maDto);
-      console.log(maResponse);
-      return loanResponse as Loan;
+
+      // Accept the loan request if the applicant does not have active loans
+      if (!hasActiveLoan) {
+        const { data: loanResponse, error } = await this.postgresrest
+          .from('loans')
+          .insert(createLoanDto)
+          .select()
+          .single();
+        if (error) {
+          console.log(error);
+          return new ErrorResponseDto(400, error.message);
+        }
+        // maDto.group_id = createLoanDto.cooperative_id;
+        // maDto.poll_description = 'loan application';
+        // // maDto.loan_id = createLoanDto.id;
+        // const maResponse =
+        //   await maService.createCooperativeMemberApprovals(maDto);
+        // console.log(maResponse);
+        return loanResponse as Loan;
+      } else {
+        return new ErrorResponseDto(
+          403,
+          `User ${createLoanDto.profile_id} has an active loan and cannot apply for another one`,
+        );
+      }
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
@@ -112,6 +123,35 @@ export class LoanService {
       return data as Loan[];
     } catch (error) {
       this.logger.error(`Exception in viewLoan for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async hasActiveLoan(
+    loanDto: CreateLoanDto,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('profile_id', loanDto.profile_id)
+        .eq('cooperative_id', loanDto.cooperative_id)
+        .eq('status', 'disbursed')
+        .single();
+
+      if (error) {
+        this.logger.error(`Error fetching loan ${loanDto.id}`, error);
+        if(error.details == 'The result contains 0 rows') {
+          return false; // No active loan found
+        }
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`Exception in viewLoan for id ${loanDto.id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -171,6 +211,36 @@ export class LoanService {
     }
   }
 
+  async viewPendingLoan(
+    cooperative_id: string,
+    profile_id: string,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .select()
+        .eq('cooperative_id', cooperative_id)
+        .neq('profile_id', profile_id);
+      // .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching loan for coop ${cooperative_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewLoan for id ${cooperative_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async updateLoan(
     id: string,
     updateLoanDto: UpdateLoanDto,
@@ -189,6 +259,33 @@ export class LoanService {
       return data as Loan;
     } catch (error) {
       this.logger.error(`Exception in updateLoan for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateCoop(
+    cooperative_id: string,
+    updateLoanDto: UpdateLoanDto,
+  ): Promise<Loan[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('loans')
+        .update({
+          interest_rate: updateLoanDto.interest_rate,
+        })
+        .eq('cooperative_id', cooperative_id)
+        .select();
+      // .single();
+      if (error) {
+        this.logger.error(`Error updating coop loan ${cooperative_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      return data as Loan[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateLoan for id ${cooperative_id}`,
+        error,
+      );
       return new ErrorResponseDto(500, error);
     }
   }

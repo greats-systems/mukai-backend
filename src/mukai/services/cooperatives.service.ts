@@ -18,6 +18,11 @@ import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { SignupDto } from 'src/auth/dto/signup.dto';
+import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
+import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -25,27 +30,39 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CooperativesService {
   private readonly logger = initLogger(CooperativesService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
     /* When a cooperative is created, the following steps should be taken:
     1. The new coop is created in the cooperatives table
     2. The coop is also create in the group_members table. Coop ID will act as a foreign key that links the coop and its members
-    2. A wallet, with an initial deposit of $100, for said coop is created. The coop ID will act as a foreign key 
-    to the cooperatives table
-    3. The deposit is recorded in the transactions table
+    3. A wallet, with an initial deposit of $100, for said coop is created. The coop ID will act as a foreign key 
+       to the cooperatives table
+    4. The deposit is recorded in the transactions table
+    5. The coop's admin is updated in the profiles table
      */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
+      const updateUserDto = new SignupDto();
       console.log(createCooperativeDto);
 
       // Create cooperative
+      this.logger.debug(createCooperativeDto);
       const { data: createCooperativeResponse, error } = await this.postgresrest
         .from('cooperatives')
         .insert(createCooperativeDto)
@@ -59,8 +76,12 @@ export class CooperativesService {
       console.log(createCooperativeResponse['id']);
 
       createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
+      createGroupMemberDto.member_id = createCooperativeDto.admin_id!;
       const response =
         await groupMembersService.createGroupMember(createGroupMemberDto);
+      if (response instanceof ErrorResponseDto) {
+        return response;
+      }
       console.log('group_member response');
       console.log(response);
 
@@ -72,18 +93,47 @@ export class CooperativesService {
       const walletResponse = await walletsService.createWallet(createWalletDto);
       console.log('Wallet response');
       console.log(walletResponse);
+      if (walletResponse instanceof ErrorResponseDto) {
+        return walletResponse;
+      }
+
+      const updateCoopDto = new UpdateCooperativeDto();
+      updateCoopDto.wallet_id = walletResponse['data']['id'];
+      updateCoopDto.id = createCooperativeResponse['id'];
+      const updateCoopResponse = await this.updateCooperativeWallet(
+        updateCoopDto.id!.toString(),
+        updateCoopDto,
+      );
+      this.logger.debug('updateCoopResponse');
+      this.logger.debug(updateCoopResponse);
 
       createTransactionDto.receiving_wallet = walletResponse['data']['id'];
       createTransactionDto.amount = createWalletDto.balance;
-      createTransactionDto.transaction_type = 'deposit';
+      createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.narrative = 'credit';
       createTransactionDto.currency = createWalletDto.default_currency;
       const transactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
 
       console.log(transactionResponse);
-      console.log(walletResponse);
+      if (transactionResponse instanceof ErrorResponseDto) {
+        return transactionResponse;
+      }
 
+      updateUserDto.id = createCooperativeDto.admin_id!;
+      // updateUserDto.cooperative_id = createCooperativeResponse['id'];
+
+      const { data: updateResponse, error: updateError } =
+        await this.postgresrest
+          .from('profiles')
+          .update(updateUserDto)
+          .eq('id', updateUserDto.id)
+          .select()
+          .maybeSingle();
+      if (updateError) {
+        return new ErrorResponseDto(400, updateError.toString());
+      }
+      console.log(updateResponse);
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -212,7 +262,7 @@ export class CooperativesService {
       return new ErrorResponseDto(500, error);
     }
   }
-  
+
   async viewCooperativeWallet(
     cooperative_id: string,
   ): Promise<Cooperative[] | ErrorResponseDto> {
@@ -245,8 +295,14 @@ export class CooperativesService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest);
+      const walletService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')
@@ -294,13 +350,15 @@ export class CooperativesService {
     }
   }
 
-  async updateCooperative(
+  async updateCooperativeWallet(
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
+    console.log(updateCooperativeDto);
+    /**
+     * Before updating the interest rate, the members should vote on it first
+     */
     try {
-      const groupMembersService = new GroupMemberService(this.postgresrest);
-      const createGroupMemberDto = new CreateGroupMemberDto();
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .update(updateCooperativeDto)
@@ -311,19 +369,75 @@ export class CooperativesService {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      if (updateCooperativeDto.members != null) {
-        for (const member of updateCooperativeDto.members) {
-          createGroupMemberDto.member_id = member;
-          createGroupMemberDto.cooperative_id = id;
-          const groupMemberResponse =
-            await groupMembersService.createGroupMember(createGroupMemberDto);
-          console.log('groupMemberResponse');
-          console.log(groupMemberResponse);
-        }
-      } else {
-        console.log('Nothing to update');
-      }
+
       return data as Cooperative;
+    } catch (error) {
+      this.logger.error(`Exception in updateCooperative for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateCooperative(
+    id: string,
+    updateCooperativeDto: UpdateCooperativeDto,
+  ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
+    console.log(updateCooperativeDto);
+    /**
+     * Before updating the interest rate, the members should vote on it first
+     */
+    try {
+      const cmaDto = new CreateCooperativeMemberApprovalsDto();
+      const cmaService = new CooperativeMemberApprovalsService(
+        this.postgresrest,
+      );
+      cmaDto.group_id = id;
+      cmaDto.poll_description = 'set interest rate';
+      cmaDto.additional_info = updateCooperativeDto.additional_info;
+      console.log(cmaDto);
+      const cmaResponse =
+        await cmaService.createCooperativeMemberApprovals(cmaDto);
+      console.log(cmaResponse);
+      /*
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .update(updateCooperativeDto)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      */
+      return cmaResponse as CooperativeMemberApprovals;
+    } catch (error) {
+      this.logger.error(`Exception in updateCooperative for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async updateCooperativeAfterVoting(
+    id: string,
+    updateCooperativeDto: UpdateCooperativeDto,
+  ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
+    console.log(updateCooperativeDto);
+    /**
+     * Before updating the interest rate, the members should vote on it first
+     */
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .update(updateCooperativeDto)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      console.log('Coop data after voting');
+      console.log(data);
+      return data as CooperativeMemberApprovals;
     } catch (error) {
       this.logger.error(`Exception in updateCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);

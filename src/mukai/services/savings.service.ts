@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -6,34 +5,33 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ErrorResponseDto } from "src/common/dto/error-response.dto";
 import { PostgresRest } from "src/common/postgresrest";
-import { CreateWalletDto } from "../dto/create/create-wallet.dto";
 import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
 import { SmileWalletService } from "src/wallet/services/zb_digital_wallet.service";
 import e from "express";
+import { CreateSavingsDto, SavingsPortfolioDto } from "../dto/create/create-wallet-savings.dto";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
 
 @Injectable()
-export class WalletsService {
-  private readonly logger = initLogger(WalletsService);
+export class SavingsService {
+  private readonly logger = initLogger(SavingsService);
   constructor(private readonly postgresrest: PostgresRest,
     private readonly smileWalletService: SmileWalletService,
   ) { }
 
-  async createWallet(
-    createWalletDto: CreateWalletDto,
+  async createSavingsPortfolio(
+    createSavingsDto: CreateSavingsDto,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        // .insert(createWalletDto)
-        .upsert(createWalletDto, {
-          onConflict: "group_id,default_currency",
+        .upsert(createSavingsDto, {
+          onConflict: "wallet_id,is_group_wallet,default_currency",
           ignoreDuplicates: true,
         })
         .select()
@@ -41,11 +39,10 @@ export class WalletsService {
       if (error) {
         console.log(error);
         if (error.details == "The result contains 0 rows") {
-          return new ErrorResponseDto(403, `User ${createWalletDto.profile_id} cannot create a wallet of the same type`)
-          // return {
-          //   data:
-          //     `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
-          // };
+          return {
+            data:
+              `User ${createSavingsDto.wallet_id} cannot create a wallet of the same type`,
+          };
         }
         return new ErrorResponseDto(400, error.message);
       }
@@ -54,9 +51,9 @@ export class WalletsService {
       // Create profile in public.profiles
       const { error: profileError, data: profileData } = await this.postgresrest
         .from('profiles')
-        .select('*').eq('id', createWalletDto.profile_id).single();
+        .select('*').eq('id', createSavingsDto.wallet_id).single();
       if (profileError) {
-        this.logger.error(`Error fetching profile ${createWalletDto.profile_id}`, profileError);
+        this.logger.error(`Error fetching profile ${createSavingsDto.wallet_id}`, profileError);
       }
       this.logger.log(`Profile creation profileData: ${JSON.stringify(profileData)}`);
       // Call SmileWalletService to create a wallet in the digital wallet system
@@ -114,12 +111,12 @@ export class WalletsService {
     }
   }
 
-  async viewWallet(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async viewSavingsPortfolio(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .select()
-        .eq("profile_id", id);
+        .eq("wallet_id", id);
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
@@ -143,7 +140,7 @@ export class WalletsService {
     }
   }
 
-  async viewCoopWallet(
+  async viewCoopSavingsProfiles(
     coop_id: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
@@ -161,6 +158,12 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
 
+      console.log({
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet,
+      });
+
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
@@ -172,19 +175,18 @@ export class WalletsService {
     }
   }
 
-  async viewIndividualWallets(
+  async viewIndividualSavingsProfiles(
     profile_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from("wallets")
+        .from("savings_portfolios")
         .select()
-        .eq("profile_id", profile_id)
-        .eq("is_group_wallet", false);
+        .eq("profile_id", profile_id);
 
       if (error) {
         this.logger.error(
-          `Error fetching individual wallet ${profile_id}`,
+          `Error fetching profile savings portfolios ${profile_id}`,
           error,
         );
         return new ErrorResponseDto(400, error.message);
@@ -192,30 +194,33 @@ export class WalletsService {
 
       console.log({
         statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet[],
+        message: "Portfolio fetched successfully",
+        data: data as SavingsPortfolioDto[],
       });
 
       return {
         statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet[],
+        message: "Portfolio fetched successfully",
+        data: data as SavingsPortfolioDto[],
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
+      this.logger.error(`Exception in Portfolio for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewChildrenWallets(
+
+
+
+  async viewWalletProfileSavings(
     wallet_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from("wallets")
+        .from("savings_portfolios")
         .select()
-        .eq("id", wallet_id)
-        .eq("is_group_wallet", true);
+        .eq("wallet_id", wallet_id)
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
@@ -224,8 +229,8 @@ export class WalletsService {
 
       return {
         statusCode: 200,
-        message: "Wallets fetched successfully",
-        data: data as Wallet[],
+        message: "Wallet fetched successfully",
+        data: data as Wallet,
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
@@ -233,64 +238,7 @@ export class WalletsService {
     }
   }
 
-  async viewCooperativeWallet(
-    cooperative_id: string,
-    currency: string = "usd",
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from("wallets")
-        .select()
-        .eq("group_id", cooperative_id)
-        .eq("default_currency", currency)
-        .single();
-
-      if (error) {
-        this.logger.error(`Error fetching Wallet ${cooperative_id}`, error);
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      return {
-        statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Exception in viewWallet for id ${cooperative_id}`,
-        error,
-      );
-      return new ErrorResponseDto(500, error);
-    }
-  }
-
-  async viewProfileWalletID(
-    profile_id: string,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from("wallets")
-        .select()
-        .eq("profile_id", profile_id)
-        .single();
-
-      if (error) {
-        this.logger.error(`Error fetching Wallet ${profile_id}`, error);
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      return {
-        statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet,
-      };
-    } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
-      return new ErrorResponseDto(500, error);
-    }
-  }
-
-  async getWalletsLike(id: string): Promise<Wallet[] | null> {
+  async getWalletsLike(id: string): Promise<Wallet | null> {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
@@ -300,14 +248,13 @@ export class WalletsService {
         .select("*")
         // Cast UUID to text for pattern matching
         .ilike("id_text", `%${searchTerm}%`)
-        .maybeSingle();
+        .single();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-    this.logger.debug(data);
 
-      return data as Wallet[];
+      return data as Wallet;
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
       throw new Error(
@@ -332,11 +279,10 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
       // get profile
-      const profile_id = data["profile_id"];
       const { data: profileData, error: profileError } = await this.postgresrest
         .from("profiles")
         .select("*")
-        .eq("id", profile_id)
+        .eq("wallet_id", wallet_id)
         .single();
 
       if (error) {
@@ -401,7 +347,7 @@ export class WalletsService {
       const { data: updateData, error: updateError } = await this.postgresrest
         .from("wallets")
         .update({
-          balance: balance + parseFloat(amount.toString()),
+          balance: balance + amount,
         })
         .eq("id", receiving_wallet_id)
         .select()

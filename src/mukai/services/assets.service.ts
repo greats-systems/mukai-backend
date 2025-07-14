@@ -25,6 +25,33 @@ export class AssetsService {
   private readonly logger = initLogger(AssetsService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
+  async createIndividualAsset(
+    createAssetDto: CreateAssetDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      console.log(createAssetDto.group_id);
+
+      // Create the asset
+      const { data, error } = await this.postgresrest
+        .from('assets')
+        .insert(createAssetDto)
+        .select()
+        .single();
+      if (error) {
+        console.log(error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return {
+        statusCode: 201,
+        message: 'Asset created successfully',
+        data: data as Asset,
+      };
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async createAsset(
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
@@ -61,7 +88,7 @@ export class AssetsService {
       createCoopMemberApproval.poll_description =
         createAssetDto.asset_description!;
       createCoopMemberApproval.number_of_members = groupSize;
-      createCoopMemberApproval.asset_id = data['id'];
+      createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll
       const pollResponse =

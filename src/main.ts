@@ -10,6 +10,7 @@ import {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
+    .addBasicAuth()
     .setTitle('Mukai API Docs')
     .setDescription(
       'Mukai Savings and Credit Co-operatives Management API Documentation',

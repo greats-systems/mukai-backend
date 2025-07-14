@@ -7,10 +7,15 @@ import {
   Param,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
@@ -53,6 +58,23 @@ export class TransactionsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const response = await this.transactionsService.viewTransaction(id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('contributions/:wallet_id')
+  async viewWalletContributions(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.viewWalletContributions(wallet_id);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

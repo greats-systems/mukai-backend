@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -8,11 +9,18 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
-import { AssetsService } from './assets.service';
-import { UpdateAssetDto } from '../dto/update/update-asset.dto';
 import { UUID } from 'crypto';
+import { CooperativesService } from './cooperatives.service';
+import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { LoanService } from './loan.service';
-import { UpdateLoanDto } from '../dto/update/update-loan.dto';
+import { WalletsService } from './wallets.service';
+import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
+import { TransactionsService } from './transactions.service';
+import { DateTime } from 'luxon';
+import { GroupMemberService } from './group-members.service';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -27,12 +35,34 @@ export class CooperativeMemberApprovalsService {
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
+      this.logger.debug(createCooperativeMemberApprovalsDto);
+      const gmService = new GroupMemberService(this.postgresrest);
+      const gmResponse = await gmService.findMembersInGroup(
+        createCooperativeMemberApprovalsDto.group_id!,
+      );
+      if (gmResponse instanceof ErrorResponseDto) {
+        return gmResponse;
+      }
+      const groupSize = gmResponse.length;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .upsert(createCooperativeMemberApprovalsDto, {
-          onConflict: 'group_id,poll_description,asset_id',
-          ignoreDuplicates: true,
-        })
+        .upsert(
+          {
+            group_id: createCooperativeMemberApprovalsDto.group_id,
+            number_of_members: groupSize,
+            profile_id: createCooperativeMemberApprovalsDto.profile_id,
+            poll_description:
+              createCooperativeMemberApprovalsDto.poll_description,
+            additional_info:
+              createCooperativeMemberApprovalsDto.additional_info,
+            asset_id: createCooperativeMemberApprovalsDto.asset_id,
+            loan_id: createCooperativeMemberApprovalsDto.loan_id,
+          },
+          {
+            // onConflict: 'group_id,poll_description,asset_id',
+            ignoreDuplicates: true,
+          },
+        )
         .select()
         .single();
       if (error) {
@@ -94,310 +124,79 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
-  async checkIfMemberVoted(
-    member_id: string,
-    asset_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberVoted');
-    console.log(member_id);
+  async viewCooperativeMemberApprovalsByCoop(
+    group_id: string,
+    userJson: object,
+  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
+      this.logger.warn(userJson);
+      // Fetch data from PostgreSQL
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select()
-        .eq('asset_id', asset_id)
-        .or(
-          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
-        );
+        .neq('profile_id', userJson['profile_id'])
+        .eq('consensus_reached', false)
+        .eq('group_id', group_id);
 
       if (error) {
         this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
+          `Error fetching approvals for group ${group_id}`,
           error,
         );
         return new ErrorResponseDto(400, error.message);
       }
 
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member voted');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
+      console.log(data);
+      if (!data || data.length === 0) {
+        this.logger.log(`No approvals found for group ${group_id}`);
+        return [];
       }
-      // console.log(!data);
-      return true;
+
+      // Type assertion
+      const approvals = data as CooperativeMemberApprovals[];
+
+      // Process each approval record
+      approvals.forEach((record) => {
+        // Safely get vote counts (default to 0 if null/undefined)
+        const supportingCount = record.supporting_votes?.length || 0;
+        const opposingCount = record.opposing_votes?.length || 0;
+
+        // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
+        const totalMembersExcludingAdmin = Math.max(
+          (record.number_of_members || 1) - 1,
+          1,
+        );
+
+        // Calculate approval ratio (using members excluding admin)
+        const approvalRatio = supportingCount / totalMembersExcludingAdmin;
+        const has75PercentApproval = approvalRatio >= 0.75;
+
+        // Log detailed information
+        this.logger.debug(`Approval ID: ${record.id}`);
+        this.logger.debug(`- Supporting votes: ${supportingCount}`);
+        this.logger.debug(`- Opposing votes: ${opposingCount}`);
+        this.logger.debug(
+          `- Total members (excluding admin): ${totalMembersExcludingAdmin}`,
+        );
+        this.logger.debug(
+          `- Approval ratio: ${(approvalRatio * 100).toFixed(0)}%`,
+        );
+        this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
+        record.consensus_reached = has75PercentApproval;
+      });
+
+      // console.log(approvals);
+      return {
+        statusCode: 200,
+        message: 'Approvals fetched successfully',
+        data: approvals,
+      };
     } catch (error) {
       this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
+        `Exception in viewCooperativeMemberApprovals for group ${group_id}`,
+        error,
       );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  async checkIfMemberSupported(
-    member_id: string,
-    asset_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberSupported');
-    console.log(member_id);
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .contains('supporting_votes', [member_id])
-        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member voted');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
-      }
-      // console.log(!data);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  async checkIfMemberOpposed(
-    member_id: string,
-    asset_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberOpposed');
-    console.log(member_id);
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .contains('opposing_votes', [member_id])
-        .eq('asset_id', asset_id); // Use maybeSingle instead of single to handle empty results
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member voted');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
-      }
-      // console.log(!data);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  async checkIfMemberVotedLoan(
-    member_id: string,
-    loan_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberVotedLoan');
-    console.log(member_id);
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .eq('loan_id', loan_id)
-        .or(
-          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
-        );
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member voted for loan');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
-      }
-      // console.log(!data);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  async checkIfMemberSupportedLoan(
-    member_id: string,
-    loan_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberSupportedLoan');
-    console.log(member_id);
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .contains('supporting_votes', [member_id])
-        .eq('loan_id', loan_id); // Use maybeSingle instead of single to handle empty results
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member voted');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
-      }
-      // console.log(!data);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  async checkIfMemberOpposedLoan(
-    member_id: string,
-    loan_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
-    console.log('checkIfMemberOpposedLoan');
-    console.log(member_id);
-    try {
-      const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
-        .select()
-        .contains('opposing_votes', [member_id])
-        .eq('loan_id', loan_id); // Use maybeSingle instead of single to handle empty results
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id.toString()}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      // Return true if record exists (member has voted), false otherwise
-      console.log('Checking if member opposed loan');
-      if (data.length === 0) {
-        console.log(data.length);
-        return false;
-      }
-      // console.log(!data);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Exception in checkIfMemberVoted for member ${member_id.toString()}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
-    }
-  }
-
-  private async checkVoteStatus(
-    member_id: string,
-    filter: { asset_id?: string; loan_id?: string },
-    voteType?: 'supporting' | 'opposing',
-  ): Promise<boolean | ErrorResponseDto> {
-    try {
-      if (!filter.asset_id && !filter.loan_id) {
-        throw new Error('Either asset_id or loan_id must be provided');
-      }
-
-      let query = this.postgresrest
-        .from('cooperative_member_approvals')
-        .select();
-
-      // Apply filters
-      if (filter.asset_id) {
-        query = query.eq('asset_id', filter.asset_id);
-      }
-      if (filter.loan_id) {
-        query = query.eq('loan_id', filter.loan_id);
-      }
-
-      // Apply vote type filter if specified
-      if (voteType) {
-        const column =
-          voteType === 'supporting' ? 'supporting_votes' : 'opposing_votes';
-        query = query.contains(column, [member_id]);
-      } else {
-        // For general vote check, look in either array
-        query = query.or(
-          `supporting_votes.cs.{${member_id}},opposing_votes.cs.{${member_id}}`,
-        );
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        this.logger.error(
-          `Error checking vote status for member ${member_id}`,
-          error,
-        );
-        return new ErrorResponseDto(400, error.message);
-      }
-
-      return data.length > 0;
-    } catch (error) {
-      this.logger.error(
-        `Exception in vote check for member ${member_id}`,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return new ErrorResponseDto(
-        500,
-        error instanceof Error ? error.message : 'Internal server error',
-      );
+      return new ErrorResponseDto(500, 'Internal server error');
     }
   }
 
@@ -410,7 +209,20 @@ export class CooperativeMemberApprovalsService {
       // const approval = await this.viewCooperativeMemberApprovals(u)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .update(updateCooperativeMemberApprovalsDto)
+        .update({
+          group_id: updateCooperativeMemberApprovalsDto.group_id,
+          number_of_members:
+            updateCooperativeMemberApprovalsDto.number_of_members,
+          supporting_votes:
+            updateCooperativeMemberApprovalsDto.supporting_votes,
+          opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
+          poll_description:
+            updateCooperativeMemberApprovalsDto.poll_description,
+          additional_info: updateCooperativeMemberApprovalsDto.additional_info,
+          updated_at: updateCooperativeMemberApprovalsDto.updated_at,
+          consensus_reached:
+            updateCooperativeMemberApprovalsDto.consensus_reached,
+        })
         .eq('id', id)
         .select()
         .single();
@@ -421,6 +233,103 @@ export class CooperativeMemberApprovalsService {
         );
         return new ErrorResponseDto(400, error.message);
       }
+      this.logger.debug(updateCooperativeMemberApprovalsDto.consensus_reached);
+      this.logger.debug(updateCooperativeMemberApprovalsDto.poll_description);
+      if (updateCooperativeMemberApprovalsDto.consensus_reached) {
+        if (
+          updateCooperativeMemberApprovalsDto.poll_description ==
+          'set interest rate'
+        ) {
+          const coopService = new CooperativesService(
+            this.postgresrest,
+            new SmileWalletService(),
+          );
+          const updateCoopDto = new UpdateCooperativeDto();
+          updateCoopDto.interest_rate =
+            updateCooperativeMemberApprovalsDto.additional_info;
+          updateCoopDto.id =
+            updateCooperativeMemberApprovalsDto.group_id as UUID;
+          this.logger.debug(updateCoopDto);
+          const updateCoopResponse =
+            await coopService.updateCooperativeAfterVoting(
+              updateCoopDto.id.toString(),
+              updateCoopDto,
+            );
+          console.log(updateCoopResponse);
+        } else if (
+          updateCooperativeMemberApprovalsDto.poll_description ==
+          'loan application'
+        ) {
+          // Take money from coop wallet and deposit it into the group wallet
+          const walletService = new WalletsService(
+            this.postgresrest,
+            new SmileWalletService(),
+          );
+          this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
+          const receivingWallet = await walletService.viewProfileWalletID(
+            updateCooperativeMemberApprovalsDto.profile_id!,
+          );
+          this.logger.debug('receivingWallet');
+          this.logger.debug(receivingWallet['data']['id']);
+          const disbursingWallet = await walletService.viewCoopWallet(
+            updateCooperativeMemberApprovalsDto.group_id!,
+          );
+          this.logger.debug('disbursingWallet');
+          this.logger.debug(disbursingWallet['data']['id']);
+          const updateLoanDto = new CreateLoanDto();
+          const loanService = new LoanService(this.postgresrest);
+          // updateLoanDto.cooperative_id =
+          //   updateCooperativeMemberApprovalsDto.group_id;
+          // updateLoanDto.borrower_wallet_id = receivingWallet['data']['id'];
+          // updateLoanDto.lender_wallet_id = disbursingWallet['data']['id'];
+          // updateLoanDto.principal_amount = parseFloat(
+          //   updateCooperativeMemberApprovalsDto.additional_info,
+          // );
+          updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
+          updateLoanDto.status = 'disbursed';
+          updateLoanDto.updated_at = DateTime.now().toISO();
+          // updateLoanDto.remaining_balance = parseFloat(
+          //   updateCooperativeMemberApprovalsDto.additional_info,
+          // );
+          // updateLoanDto.profile_id =
+          //   updateCooperativeMemberApprovalsDto.profile_id;
+          // updateLoanDto.cooperative_id =
+          //   updateCooperativeMemberApprovalsDto.group_id;
+          this.logger.debug('updateLoanDto');
+          this.logger.debug(updateLoanDto);
+          const loanResponse = await loanService.updateLoan(
+            updateLoanDto.id!,
+            updateLoanDto,
+          );
+          this.logger.debug('loanResponse');
+          this.logger.debug(loanResponse);
+          if (loanResponse instanceof ErrorResponseDto) {
+            return loanResponse;
+          }
+
+          // Record the transaction
+          const transactionDto = new CreateTransactionDto();
+          transactionDto.transaction_type = 'loan disbursement';
+          transactionDto.category = 'transfer';
+          transactionDto.amount =
+            updateCooperativeMemberApprovalsDto.additional_info as number;
+          transactionDto.narrative = 'credit';
+          transactionDto.currency = 'usd';
+          transactionDto.receiving_wallet = receivingWallet['data']['id'];
+          transactionDto.sending_wallet = disbursingWallet['data']['id'];
+
+          const transService = new TransactionsService(
+            this.postgresrest,
+            new SmileWalletService(),
+          );
+          const transactionResponse =
+            await transService.createTransaction(transactionDto);
+          this.logger.debug('transactionResponse');
+          this.logger.debug(transactionResponse);
+        }
+      } else {
+        this.logger.debug('Consensus not yet reached');
+      }
       return data as CooperativeMemberApprovals;
     } catch (error) {
       this.logger.error(
@@ -430,123 +339,84 @@ export class CooperativeMemberApprovalsService {
       return new ErrorResponseDto(500, error);
     }
   }
-
   async updateCooperativeMemberApprovalsByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
-    // console.log(group_id);
-    // Check if member has already voted
-    let hasVotedBefore;
-    let hasSupported;
-    let hasOpposed;
-    const assetsService = new AssetsService(this.postgresrest);
-    const updateAssetsDto = new UpdateAssetDto();
+    try {
+      // Determine vote type (support or oppose)
+      const isSupporting =
+        !!updateCooperativeMemberApprovalsDto.supporting_votes;
+      const memberId = isSupporting
+        ? updateCooperativeMemberApprovalsDto.supporting_votes
+        : updateCooperativeMemberApprovalsDto.opposing_votes;
 
-    if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-      hasVotedBefore = await this.checkIfMemberVoted(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-      hasSupported = await this.checkIfMemberSupported(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-    }
-    if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      hasVotedBefore = await this.checkIfMemberVoted(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-      hasOpposed = await this.checkIfMemberOpposed(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.asset_id!,
-      );
-    }
-    console.log('Voted?');
-    console.log(hasVotedBefore);
-    console.log('Supported?');
-    console.log(hasSupported);
-    console.log('Opposed?');
-    console.log(hasOpposed);
-    if (
-      (!hasVotedBefore || hasVotedBefore == undefined) &&
-      (!hasSupported || hasSupported == undefined) &&
-      (!hasOpposed || hasOpposed == undefined)
-    ) {
-      console.log('This user has not voted yet');
-      console.log(updateCooperativeMemberApprovalsDto);
-      try {
-        let data;
-
-        // Conditionally append to supporting_votes if provided
-        if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-          console.log(updateCooperativeMemberApprovalsDto.supporting_votes);
-          console.log(
-            typeof updateCooperativeMemberApprovalsDto.supporting_votes,
-          );
-          // Get the first member ID if it's an array, or use the value directly
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.supporting_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.supporting_votes[0]
-            : updateCooperativeMemberApprovalsDto.supporting_votes;
-
-          data = await this.postgresrest.rpc('add_supporting_vote', {
-            p_group_id: group_id,
-            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
-            p_member_id: memberId, // No .toString() needed if it's already a UUID string
-          });
-          console.log(data);
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding supporting vote: ${data.error.message},`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Conditionally append to opposing_votes if provided
-        if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.opposing_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.opposing_votes[0]
-            : updateCooperativeMemberApprovalsDto.opposing_votes;
-
-          data = await this.postgresrest.rpc('add_opposing_vote', {
-            p_group_id: group_id,
-            p_asset_id: updateCooperativeMemberApprovalsDto.asset_id,
-            p_member_id: memberId,
-          });
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding opposing vote: ${data.error.message}`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Update asset status
-        updateAssetsDto.id = updateCooperativeMemberApprovalsDto.asset_id;
-        updateAssetsDto.has_received_vote = true;
-        await assetsService.updateAsset(updateAssetsDto.id!, updateAssetsDto);
-        return data as UpdateCooperativeMemberApprovalsDto;
-      } catch (error) {
-        this.logger.error(
-          `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
-          error,
+      if (!memberId) {
+        return new ErrorResponseDto(
+          400,
+          'Must provide either supporting_votes or opposing_votes',
         );
-        return new ErrorResponseDto(500, error);
       }
-    } else {
-      console.log('This user has voted before');
-      return { data: 'You have voted already' };
+
+      // Check current vote status
+      const currentVoteStatus = await this.checkMemberVoteStatus(
+        group_id,
+        memberId.toString(),
+        updateCooperativeMemberApprovalsDto.poll_description!,
+      );
+
+      // Cast the vote
+      const data = await this.postgresrest.rpc('cast_vote', {
+        p_group_id: group_id,
+        p_poll_description:
+          updateCooperativeMemberApprovalsDto.poll_description,
+        p_member_id: memberId,
+        p_is_supporting: isSupporting,
+      });
+
+      if (data.error) {
+        this.logger.error(`Error casting vote: ${data.error.message}`);
+        return new ErrorResponseDto(400, data.error.message);
+      }
+
+      return {
+        previousVote: currentVoteStatus,
+        newVote: isSupporting ? 'support' : 'oppose',
+        data: data,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error.message);
     }
   }
 
+  private async checkMemberVoteStatus(
+    groupId: string,
+    memberId: string,
+    pollDescription: string,
+  ): Promise<'support' | 'oppose' | 'none'> {
+    const result = await this.postgresrest
+      .from('cooperative_member_approvals')
+      .select('supporting_votes, opposing_votes')
+      .eq('group_id', groupId)
+      .eq('poll_description', pollDescription)
+      .single();
+
+    if (result.error) throw new Error(result.error.message);
+
+    if (result.data.supporting_votes?.includes(memberId)) {
+      return 'support';
+    }
+    if (result.data.opposing_votes?.includes(memberId)) {
+      return 'oppose';
+    }
+    return 'none';
+  }
+
+  /*
   async updateCooperativeMemberApprovalsLoanByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
@@ -664,6 +534,7 @@ export class CooperativeMemberApprovalsService {
       return { data: 'You have voted already' };
     }
   }
+  */
 
   async deleteCooperativeMemberApprovals(
     id: string,

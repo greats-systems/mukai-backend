@@ -9,13 +9,23 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 import { UpdateCooperativeMemberApprovalsDto } from '../dto/update/update-cooperative-member-approvals.dto';
-import { ApiOperation, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('cooperative_member_approvals')
 export class CooperativeMemberApprovalsController {
   constructor(
@@ -129,6 +139,51 @@ export class CooperativeMemberApprovalsController {
     return response;
   }
 
+  @Get('coop/:group_id')
+  @ApiOperation({ summary: 'Get specific poll details for a group' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCooperativeMemberApprovalsByCoop(
+    @Param('group_id') group_id: string,
+    @Body() userJson: object,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
+        group_id,
+        userJson,
+      );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update a poll' })
   @ApiParam({
@@ -225,6 +280,7 @@ export class CooperativeMemberApprovalsController {
     }
   }
 
+  /*
   @Patch('/coop/:coop_id/loans')
   @ApiOperation({ summary: 'Update a loan poll by coop_id' })
   @ApiParam({
@@ -273,6 +329,7 @@ export class CooperativeMemberApprovalsController {
       return response;
     }
   }
+  */
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a poll' })

@@ -16,6 +16,7 @@ import {
   SmilePayGateway,
 } from 'src/common/zb_payment_gateway/payments';
 import { Profile } from 'src/user/entities/user.entity';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
@@ -29,7 +30,10 @@ const paymentGateway = new SmilePayGateway(
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
 
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
 
   async createTransaction(
     senderTransactionDto: CreateTransactionDto,
@@ -41,7 +45,10 @@ export class TransactionsService {
        3. the receiver's wallet is credited
        4 the receiver's credit is recorded in the transactions table
        */
-      const walletsService = new WalletsService(this.postgresrest);
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const receiverTransactionDto = new CreateTransactionDto();
       const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')
@@ -54,6 +61,7 @@ export class TransactionsService {
       }
       console.log(sender);
       console.log('Updating sender wallet');
+
       const debitResponse = await walletsService.updateSenderBalance(
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,
@@ -65,6 +73,28 @@ export class TransactionsService {
         senderTransactionDto.amount,
       );
       console.log(creditResponse);
+      receiverTransactionDto.sending_wallet =
+        senderTransactionDto.sending_wallet;
+      receiverTransactionDto.receiving_wallet =
+        senderTransactionDto.receiving_wallet;
+      receiverTransactionDto.amount = senderTransactionDto.amount;
+      receiverTransactionDto.category = senderTransactionDto.category;
+      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
+      receiverTransactionDto.transaction_type =
+        senderTransactionDto.transaction_type;
+      receiverTransactionDto.currency = senderTransactionDto.currency;
+      receiverTransactionDto.narrative = 'credit';
+
+      const { data: receiver, error: receiverError } = await this.postgresrest
+        .from('transactions')
+        .insert(receiverTransactionDto)
+        .select()
+        .single();
+      if (receiverError) {
+        console.log(receiverError);
+        return new ErrorResponseDto(400, receiverError.message);
+      }
+      console.log(receiver);
 
       if (senderTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
@@ -112,30 +142,7 @@ export class TransactionsService {
       // console.log(debitResponse);
       // console.log(creditResponse);
       // send notification to the user
-      */
-      receiverTransactionDto.sending_wallet =
-        senderTransactionDto.sending_wallet;
-      receiverTransactionDto.receiving_wallet =
-        senderTransactionDto.receiving_wallet;
-      receiverTransactionDto.amount = senderTransactionDto.amount;
-      receiverTransactionDto.category = senderTransactionDto.category;
-      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
-      receiverTransactionDto.transaction_type =
-        senderTransactionDto.transaction_type;
-      receiverTransactionDto.currency = senderTransactionDto.currency;
-      receiverTransactionDto.narrative = 'credit';
-
-      const { data: receiver, error: receiverError } = await this.postgresrest
-        .from('transactions')
-        .insert(receiverTransactionDto)
-        .select()
-        .single();
-      if (receiverError) {
-        console.log(receiverError);
-        return new ErrorResponseDto(400, receiverError.message);
-      }
-      console.log(receiver);
-      return {
+      */ return {
         statusCode: 201,
         message: 'Transaction created successfully',
         data: {
@@ -186,6 +193,35 @@ export class TransactionsService {
       return data as Transaction;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewWalletContributions(
+    wallet_id: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select('sending_wallet, wallets(profile_id),profiles(*)')
+        .eq('sending_wallet', wallet_id)
+        .eq('transaction_type', 'contribution')
+        .single();
+
+      if (error) {
+        this.logger.error(
+          `Error fetching contribution for ${wallet_id}`,
+          error,
+        );
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewTransaction for id ${wallet_id}`,
+        error,
+      );
       return new ErrorResponseDto(500, error);
     }
   }

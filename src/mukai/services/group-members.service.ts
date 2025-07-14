@@ -29,13 +29,16 @@ export class GroupMemberService {
   ): Promise<GroupMembers | object | ErrorResponseDto> {
     console.log(createGroupMemberDto);
     try {
-      await this.postgresrest.clearCache();
       const { data: createGroupMemberResponse, error } = await this.postgresrest
         .from('group_members')
-        .upsert(createGroupMemberDto, {
-          onConflict: 'member_id,cooperative_id',
-          ignoreDuplicates: false,
+        .insert({
+          member_id: createGroupMemberDto.member_id,
+          cooperative_id: createGroupMemberDto.cooperative_id,
         })
+        // .upsert(createGroupMemberDto, {
+        //   onConflict: 'member_id,cooperative_id',
+        //   ignoreDuplicates: true,
+        // })
         .select()
         .single();
       if (error) {

@@ -10,13 +10,15 @@ import {
   HttpException,
   HttpStatus,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from './guards/jwt.auth.guard';
 
 /**
  * Controller for handling authentication-related operations.
@@ -45,19 +47,19 @@ export class AuthController {
     return this.authService.getProfilesLikeWalletID(id);
   }
 
-    /**
+  /**
    * Retrieves user profiles similar to the given ID.
    * @param id - The ID to search similar profiles for
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
-    @Get('profiles/like/:id')
-    async getProfilesLike(@Param('id') id: string) {
-      return this.authService.getProfilesLike(id);
-    }
-  
+  @Get('profiles/like/:id')
+  async getProfilesLike(@Param('id') id: string) {
+    return this.authService.getProfilesLike(id);
+  }
 
   @Get('profiles/:id')
   async getProfile(@Param('id') id: string) {
+    console.log('AuthGuard works 🎉');
     return this.authService.getProfile(id);
   }
 

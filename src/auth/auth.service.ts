@@ -24,13 +24,14 @@ import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
-import { count, error } from 'console';
+import { count, error, log } from 'console';
 import { WalletsService } from 'src/mukai/services/wallets.service';
 import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
 import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { ToroGateway } from 'src/common/toronet/auth_wallets';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -45,6 +46,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly smileWalletService: SmileWalletService,
+    private readonly toroGateway: ToroGateway,
   ) {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
@@ -415,6 +417,24 @@ export class AuthService {
         })
         .eq('id', newAuthUser.user.id)
         .select();
+      try {
+        const toronetResponse = await this.toroGateway.createKey(newAuthUser.user.id);
+        log(toronetResponse['message']);
+        if (toronetResponse['result'] === true) {
+          log('ToroNet key created successfully');
+          await this.postgresRest
+            .from('wallets')
+            .update({
+              toro_wallet_address: toronetResponse['address'],
+              toro_wallet_token_balance: 0.0,
+            })
+            .eq('profile_id', newAuthUser.user.id)
+            .select();
+        }
+
+      } catch (error) {
+
+      }
 
       // Record the trasaction
       createTransactionDto.receiving_wallet = walletResponse['id'];

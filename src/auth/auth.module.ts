@@ -8,6 +8,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { ToroGateway } from 'src/common/toronet/auth_wallets';
 
 @Module({
   imports: [
@@ -32,6 +33,8 @@ import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.servic
     PostgresRest,
     AuthService,
     SmileWalletService,
+    ToroGateway,
+
   ],
   exports: [JwtAuthGuard, JwtModule],
 })

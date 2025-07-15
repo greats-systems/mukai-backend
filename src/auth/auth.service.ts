@@ -418,10 +418,13 @@ export class AuthService {
         .eq('id', newAuthUser.user.id)
         .select();
       try {
-        const toronetResponse = await this.toroGateway.createKey(newAuthUser.user.id);
-        log(toronetResponse['message']);
+        const toronetResponse = await this.toroGateway.createKey(
+          newAuthUser.user.id,
+        );
+        this.logger.log('toronetResponse');
+        this.logger.log(toronetResponse['message']);
         if (toronetResponse['result'] === true) {
-          log('ToroNet key created successfully');
+          this.logger.log('ToroNet key created successfully');
           await this.postgresRest
             .from('wallets')
             .update({
@@ -431,9 +434,8 @@ export class AuthService {
             .eq('profile_id', newAuthUser.user.id)
             .select();
         }
-
       } catch (error) {
-
+        this.logger.error(error.toString());
       }
 
       // Record the trasaction

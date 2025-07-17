@@ -396,7 +396,7 @@ export class AuthService {
           .from('users')
           .delete()
           .eq('id', newAuthUser.user.id);
-        throw new Error(`Profile creation failed: ${profileError.message}`);
+        return new Error(`Profile creation failed: ${profileError.message}`);
       }
 
       // Create wallet

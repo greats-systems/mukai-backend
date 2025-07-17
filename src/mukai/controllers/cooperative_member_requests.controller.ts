@@ -187,7 +187,7 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
-  @Patch(':id')
+  @Patch()
   @ApiOperation({ summary: 'Update a member request' })
   @ApiParam({
     name: 'id',

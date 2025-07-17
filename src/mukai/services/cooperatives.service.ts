@@ -131,7 +131,7 @@ export class CooperativesService {
           .select()
           .maybeSingle();
       if (updateError) {
-        return new ErrorResponseDto(400, updateError);
+        return new ErrorResponseDto(400, updateError.toString());
       }
       console.log(updateResponse);
       return createCooperativeResponse as Cooperative;

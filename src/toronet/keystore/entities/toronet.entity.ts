@@ -1,7 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
+// import { ApiProperty } from "@nestjs/swagger";
 
-export class Key {
-    @ApiProperty({
-        example
-    })
-}
+// export class Key {
+//     @ApiProperty({
+//         example
+//     })
+// }

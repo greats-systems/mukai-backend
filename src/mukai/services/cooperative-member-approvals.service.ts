@@ -240,6 +240,14 @@ export class CooperativeMemberApprovalsService {
           updateCooperativeMemberApprovalsDto.poll_description ==
           'set interest rate'
         ) {
+          const setInterestReponse = await this.setInterestRate(
+            updateCooperativeMemberApprovalsDto,
+          );
+          if (setInterestReponse == false) {
+            this.logger.error('Failed to update interest rate');
+            return new ErrorResponseDto(500, 'Failed to update interest rate');
+          }
+          /*
           const coopService = new CooperativesService(
             this.postgresrest,
             new SmileWalletService(),
@@ -256,10 +264,19 @@ export class CooperativeMemberApprovalsService {
               updateCoopDto,
             );
           console.log(updateCoopResponse);
+          */
         } else if (
           updateCooperativeMemberApprovalsDto.poll_description ==
           'loan application'
         ) {
+          const loanResponse = await this.disburseLoan(
+            updateCooperativeMemberApprovalsDto,
+          );
+          if (loanResponse == false) {
+            this.logger.error('Failed to disburse loan');
+            return new ErrorResponseDto(500, 'Failed to disburse loan');
+          }
+          /*
           // Take money from coop wallet and deposit it into the group wallet
           const walletService = new WalletsService(
             this.postgresrest,
@@ -326,6 +343,7 @@ export class CooperativeMemberApprovalsService {
             await transService.createTransaction(transactionDto);
           this.logger.debug('transactionResponse');
           this.logger.debug(transactionResponse);
+          */
         }
       } else {
         this.logger.debug('Consensus not yet reached');
@@ -339,6 +357,108 @@ export class CooperativeMemberApprovalsService {
       return new ErrorResponseDto(500, error);
     }
   }
+
+  // Execute these functions when consensus is reached
+
+  async setInterestRate(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const coopService = new CooperativesService(
+      this.postgresrest,
+      new SmileWalletService(),
+    );
+    const updateCoopDto = new UpdateCooperativeDto();
+    updateCoopDto.interest_rate =
+      updateCooperativeMemberApprovalsDto.additional_info;
+    updateCoopDto.id = updateCooperativeMemberApprovalsDto.group_id as UUID;
+    this.logger.debug(updateCoopDto);
+    const updateCoopResponse = await coopService.updateCooperativeAfterVoting(
+      updateCoopDto.id.toString(),
+      updateCoopDto,
+    );
+    console.log(updateCoopResponse);
+    if (updateCoopResponse instanceof ErrorResponseDto) {
+      this.logger.error(`Failed to update coop: ${updateCoopResponse.message}`);
+      // return new ErrorResponseDto(400, updateCoopDto);
+      return false;
+    }
+    return true;
+  }
+
+  async disburseLoan(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const walletService = new WalletsService(
+      this.postgresrest,
+      new SmileWalletService(),
+    );
+    this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
+    const receivingWallet = await walletService.viewProfileWalletID(
+      updateCooperativeMemberApprovalsDto.profile_id!,
+    );
+    this.logger.debug('receivingWallet');
+    this.logger.debug(receivingWallet['data']['id']);
+    const disbursingWallet = await walletService.viewCoopWallet(
+      updateCooperativeMemberApprovalsDto.group_id!,
+    );
+    this.logger.debug('disbursingWallet');
+    this.logger.debug(disbursingWallet['data']['id']);
+    const updateLoanDto = new CreateLoanDto();
+    const loanService = new LoanService(this.postgresrest);
+    // updateLoanDto.cooperative_id =
+    //   updateCooperativeMemberApprovalsDto.group_id;
+    // updateLoanDto.borrower_wallet_id = receivingWallet['data']['id'];
+    // updateLoanDto.lender_wallet_id = disbursingWallet['data']['id'];
+    // updateLoanDto.principal_amount = parseFloat(
+    //   updateCooperativeMemberApprovalsDto.additional_info,
+    // );
+    updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
+    updateLoanDto.status = 'disbursed';
+    updateLoanDto.updated_at = DateTime.now().toISO();
+    // updateLoanDto.remaining_balance = parseFloat(
+    //   updateCooperativeMemberApprovalsDto.additional_info,
+    // );
+    // updateLoanDto.profile_id =
+    //   updateCooperativeMemberApprovalsDto.profile_id;
+    // updateLoanDto.cooperative_id =
+    //   updateCooperativeMemberApprovalsDto.group_id;
+    this.logger.debug('updateLoanDto');
+    this.logger.debug(updateLoanDto);
+    const loanResponse = await loanService.updateLoan(
+      updateLoanDto.id!,
+      updateLoanDto,
+    );
+    this.logger.debug('loanResponse');
+    this.logger.debug(loanResponse);
+    if (loanResponse instanceof ErrorResponseDto) {
+      return false;
+    }
+
+    // Record the transaction
+    const transactionDto = new CreateTransactionDto();
+    transactionDto.transaction_type = 'loan disbursement';
+    transactionDto.category = 'transfer';
+    transactionDto.amount =
+      updateCooperativeMemberApprovalsDto.additional_info as number;
+    transactionDto.narrative = 'credit';
+    transactionDto.currency = 'usd';
+    transactionDto.receiving_wallet = receivingWallet['data']['id'];
+    transactionDto.sending_wallet = disbursingWallet['data']['id'];
+
+    const transService = new TransactionsService(
+      this.postgresrest,
+      new SmileWalletService(),
+    );
+    const transactionResponse =
+      await transService.createTransaction(transactionDto);
+    if (transactionResponse instanceof ErrorResponseDto) {
+      return false;
+    }
+    this.logger.debug('transactionResponse');
+    this.logger.debug(transactionResponse);
+    return true;
+  }
+
   async updateCooperativeMemberApprovalsByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,

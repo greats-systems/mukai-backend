@@ -209,6 +209,7 @@ export class AuthService {
 
       if (profileError) {
         console.error('Profile fetch error:', profileError);
+        return;
         // Continue without profile data
       }
       const response = {

@@ -16,7 +16,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class FinancialArticleService {
   private readonly logger = initLogger(FinancialArticleService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async createFinancialArticle(
     createFinancialArticleDto: CreateFinancialArticleDto,
@@ -44,6 +44,7 @@ export class FinancialArticleService {
     SuccessResponseDto | ErrorResponseDto
   > {
     try {
+      this.logger.debug('Fetching articles');
       const { data, error } = await this.postgresrest
         .from('financial_articles')
         .select()
@@ -59,6 +60,8 @@ export class FinancialArticleService {
         message: 'Financial articles fetched successfully',
         data: data as FinancialArticle[],
       };
+
+      // return data as FinancialArticle[];
     } catch (error) {
       this.logger.error('Exception in findAllFinancialArticle', error);
       return new ErrorResponseDto(500, error);

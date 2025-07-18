@@ -49,6 +49,8 @@ export class TransactionsService {
         this.postgresrest,
         this.smileWalletService,
       );
+      // wall
+
       const receiverTransactionDto = new CreateTransactionDto();
       const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')
@@ -59,15 +61,15 @@ export class TransactionsService {
         console.log(senderError);
         return new ErrorResponseDto(400, senderError.message);
       }
-      console.log(sender);
-      console.log('Updating sender wallet');
+      // console.log(sender);
+      this.logger.warn('Updating sender wallet');
 
       const debitResponse = await walletsService.updateSenderBalance(
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,
       );
       console.log(debitResponse);
-      console.log('Updating receiver wallet');
+      this.logger.warn('Updating receiver wallet');
       const creditResponse = await walletsService.updateReceiverBalance(
         senderTransactionDto.receiving_wallet,
         senderTransactionDto.amount,
@@ -157,6 +159,55 @@ export class TransactionsService {
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
+  }
+
+  async getCoopTotalContributions(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    const { data, error } = await this.postgresrest.rpc(
+      'get_total_contributions',
+      { wallet_id },
+    );
+    if (error) {
+      return new ErrorResponseDto(400, error.message);
+    }
+    if (!data) {
+      return 0;
+    }
+    return Number(data);
+  }
+
+  async getCoopTotalSubscriptions(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    const { data, error } = await this.postgresrest.rpc(
+      'get_total_subscriptions',
+      { wallet_id },
+    );
+    if (error) {
+      return new ErrorResponseDto(400, error.message);
+    }
+    if (!data) {
+      return 0;
+    }
+    return Number(data);
+  }
+
+  async getCoopTotalsByCategory(
+    wallet_id: string,
+    category: string,
+  ): Promise<number | ErrorResponseDto> {
+    const { data, error } = await this.postgresrest.rpc(
+      'get_transactions_total_by_category',
+      { wallet_id: wallet_id, category: category },
+    );
+    if (error) {
+      return new ErrorResponseDto(400, error.message);
+    }
+    if (!data) {
+      return 0;
+    }
+    return data as number;
   }
 
   async findAllTransactions(): Promise<Transaction[] | ErrorResponseDto> {

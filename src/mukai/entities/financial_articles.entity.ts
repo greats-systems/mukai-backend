@@ -96,19 +96,19 @@ export class FinancialArticle {
     example: 'J. Murray, L. Smith',
     description: 'Tagged authors for the financial article',
   })
-  tags: string;
+  tags: object[];
 
   @ApiProperty({
     example: 500,
     description: 'Number of views for the financial article',
   })
-  views_count: number;
+  views: string[];
 
   @ApiProperty({
     example: 400,
     description: 'Number of likes for the financial article',
   })
-  likes_count: number;
+  likes: string[];
 
   @ApiProperty({
     example: true,

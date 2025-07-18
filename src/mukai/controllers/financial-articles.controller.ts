@@ -33,7 +33,7 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 export class FinancialArticleController {
   constructor(
     private readonly financialArticlesService: FinancialArticleService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new financial_article' })
@@ -87,6 +87,7 @@ export class FinancialArticleController {
   async findAll() {
     const response =
       await this.financialArticlesService.findAllFinancialArticles();
+    console.log(response);
     if (response instanceof ErrorResponseDto) {
       if (response.statusCode === 400) {
         throw new HttpException(response.message!, HttpStatus.BAD_REQUEST);
@@ -97,8 +98,8 @@ export class FinancialArticleController {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-      return response;
     }
+    return response;
   }
 
   @Get(':id')

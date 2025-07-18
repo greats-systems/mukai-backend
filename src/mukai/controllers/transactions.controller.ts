@@ -138,4 +138,60 @@ export class TransactionsController {
     }
     return response;
   }
+
+  @Get('contributions/:wallet_id/sum')
+  async getCoopTotalContributions(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.getCoopTotalContributions(wallet_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('subscriptions/:wallet_id/sum')
+  async getCoopTotalSubscriptions(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.getCoopTotalSubscriptions(wallet_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get(':wallet_id/:category')
+  async getCoopTotalsByCategory(
+    @Param('wallet_id') wallet_id: string,
+    @Param('category') category: string,
+  ) {
+    const response = await this.transactionsService.getCoopTotalsByCategory(
+      wallet_id,
+      category,
+    );
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
 }

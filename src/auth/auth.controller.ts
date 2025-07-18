@@ -26,7 +26,7 @@ import { JwtAuthGuard } from './guards/jwt.auth.guard';
  */
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   /**
    * Retrieves all user profiles.
@@ -121,19 +121,19 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginDto) {
     const response = await this.authService.login(loginDto);
-    if (response['error'] !== null) {
+    if (response != null && response['error'] !== null) {
       throw new HttpException(
         response['error']['message'] ?? 'Bad request',
         HttpStatus.BAD_REQUEST,
       );
     }
-    if (response['statusCode'] === 500) {
+    if (response != null && response['statusCode'] === 500) {
       throw new HttpException(
         response['message'] ?? 'Internal server error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    if (response['statusCode'] === 401) {
+    if (response != null && response['statusCode'] === 401) {
       throw new HttpException(
         response['error']?.message ?? 'Invalid credentials',
         HttpStatus.UNAUTHORIZED,

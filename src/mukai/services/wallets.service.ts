@@ -120,6 +120,7 @@ export class WalletsService {
         .from("wallets")
         .select()
         .eq("profile_id", id);
+        // .eq('is_group_wallet', false);
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);

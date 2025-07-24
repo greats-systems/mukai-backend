@@ -33,6 +33,31 @@ export class CooperativeMemberApprovalsService {
   private readonly logger = initLogger(CooperativeMemberApprovalsService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
+  // A coop admin can create a new poll only if there are no active polls
+  async checkActivePolls(
+    cooperative_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', cooperative_id)
+        .eq('consensus_reached', false);
+
+      if (error) {
+        this.logger.error(`Error checking for active polls: ${error.message}`);
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`checkActivePolls error: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async createCooperativeMemberApprovals(
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
@@ -46,6 +71,19 @@ export class CooperativeMemberApprovalsService {
         return gmResponse;
       }
       const groupSize = gmResponse.length;
+
+      // Check if there is an active poll
+      /*
+      const activePolls = await this.checkActivePolls(
+        createCooperativeMemberApprovalsDto.group_id!,
+      );
+      if (activePolls) {
+        return new ErrorResponseDto(
+          409,
+          'There is already an active poll at the moment.',
+        );
+      }
+      */
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .upsert(
@@ -573,126 +611,6 @@ export class CooperativeMemberApprovalsService {
     }
     return 'none';
   }
-
-  /*
-  async updateCooperativeMemberApprovalsLoanByCoopID(
-    group_id: string,
-    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-  ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
-    // console.log(group_id);
-    // Check if member has already voted
-    let hasVotedBefore;
-    let hasSupported;
-    let hasOpposed;
-    const loanService = new LoanService(this.postgresrest);
-    const updateLoanDto = new UpdateLoanDto();
-
-    if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-      hasVotedBefore = await this.checkIfMemberVotedLoan(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-      hasSupported = await this.checkIfMemberSupportedLoan(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-    }
-    if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      hasVotedBefore = await this.checkIfMemberVotedLoan(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-      hasOpposed = await this.checkIfMemberOpposedLoan(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-    }
-    console.log('Voted?');
-    console.log(hasVotedBefore);
-    console.log('Supported?');
-    console.log(hasSupported);
-    console.log('Opposed?');
-    console.log(hasOpposed);
-    if (
-      (!hasVotedBefore || hasVotedBefore == undefined) &&
-      (!hasSupported || hasSupported == undefined) &&
-      (!hasOpposed || hasOpposed == undefined)
-    ) {
-      console.log('This user has not voted yet');
-      console.log(updateCooperativeMemberApprovalsDto);
-      try {
-        let data;
-
-        // Conditionally append to supporting_votes if provided
-        if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-          console.log(updateCooperativeMemberApprovalsDto.supporting_votes);
-          console.log(
-            typeof updateCooperativeMemberApprovalsDto.supporting_votes,
-          );
-          // Get the first member ID if it's an array, or use the value directly
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.supporting_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.supporting_votes[0]
-            : updateCooperativeMemberApprovalsDto.supporting_votes;
-
-          data = await this.postgresrest.rpc('add_loan_supporting_vote', {
-            p_group_id: group_id,
-            p_loan_id: updateCooperativeMemberApprovalsDto.loan_id,
-            p_member_id: memberId, // No .toString() needed if it's already a UUID string
-          });
-          console.log(data);
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding supporting vote: ${data.error.message},`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Conditionally append to opposing_votes if provided
-        if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.opposing_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.opposing_votes[0]
-            : updateCooperativeMemberApprovalsDto.opposing_votes;
-
-          data = await this.postgresrest.rpc('add_loan_opposing_vote', {
-            p_group_id: group_id,
-            p_loan_id: updateCooperativeMemberApprovalsDto.loan_id,
-            p_member_id: memberId,
-          });
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding opposing vote: ${data.error.message}`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Update loan status
-        updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
-        updateLoanDto.has_received_vote = true;
-        console.log('updateLoanDto');
-        console.log(updateLoanDto);
-        await loanService.updateLoan(updateLoanDto.id!, updateLoanDto);
-        return data as UpdateCooperativeMemberApprovalsDto;
-      } catch (error) {
-        this.logger.error(
-          `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
-          error,
-        );
-        return new ErrorResponseDto(500, error);
-      }
-    } else {
-      console.log('This user has voted before');
-      return { data: 'You have voted already' };
-    }
-  }
-  */
 
   async deleteCooperativeMemberApprovals(
     id: string,

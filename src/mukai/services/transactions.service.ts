@@ -75,6 +75,7 @@ export class TransactionsService {
         senderTransactionDto.amount,
       );
       console.log(creditResponse);
+
       receiverTransactionDto.sending_wallet =
         senderTransactionDto.sending_wallet;
       receiverTransactionDto.receiving_wallet =
@@ -180,19 +181,24 @@ export class TransactionsService {
   async getCoopTotalSubscriptions(
     wallet_id: string,
   ): Promise<number | ErrorResponseDto> {
-    const { data, error } = await this.postgresrest.rpc(
-      'get_total_subscriptions',
-      { wallet_id },
-    );
-    if (error) {
-      return new ErrorResponseDto(400, error.message);
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_subscriptions',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total subs paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
     }
-    if (!data) {
-      return 0;
-    }
-    this.logger.debug(`Total subs paid for ${wallet_id}`);
-    this.logger.debug(data);
-    return Number(data);
   }
 
   async getCoopTotalsByCategory(

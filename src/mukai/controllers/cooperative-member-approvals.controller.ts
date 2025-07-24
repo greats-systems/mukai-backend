@@ -59,6 +59,9 @@ export class CooperativeMemberApprovalsController {
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
+    if (response['statusCode'] === 409) {
+      throw new HttpException(response['message'], HttpStatus.CONFLICT);
+    }
     if (response['statusCode'] === 500) {
       throw new HttpException(
         response['message'],

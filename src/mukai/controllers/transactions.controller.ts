@@ -160,7 +160,8 @@ export class TransactionsController {
   async getCoopTotalSubscriptions(@Param('wallet_id') wallet_id: string) {
     const response =
       await this.transactionsService.getCoopTotalSubscriptions(wallet_id);
-
+    console.log('getCoopTotalSubscriptions response');
+    console.log(response);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

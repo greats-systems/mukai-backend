@@ -4,7 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Profile, User } from './entities/user.entity';
 import { PostgresRest } from 'src/common/postgresrest/postgresrest';
-import { ProfileSeeder } from './profile_seeder.service';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 // private readonly userRepository: Repository<User>,
 @Injectable()
 export class UserService {
@@ -70,9 +70,9 @@ export class UserService {
   }
 
   async updateUser(
-    id: number,
+    id: string,
     updateUserDto: UpdateUserDto,
-  ): Promise<User | null> {
+  ): Promise<User | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
@@ -89,13 +89,13 @@ export class UserService {
 
       if (error) {
         this.logger.error(`Error updating user ${id}`, error);
-        return null;
+        return new ErrorResponseDto(400, error.message);
       }
 
       return data as User;
     } catch (error) {
       this.logger.error(`Exception in updateUser for id ${id}`, error);
-      return null;
+      return new ErrorResponseDto(500, error);
     }
   }
 
@@ -104,7 +104,8 @@ export class UserService {
       const { error } = await this.postgresrest
         .from('profiles')
         .delete()
-        .eq('id', id).single();
+        .eq('id', id)
+        .single();
 
       if (error) {
         this.logger.error(`Error deleting user ${id}`, error);
@@ -144,7 +145,7 @@ export class UserService {
         return null;
       }
 
-      return profile;
+      return profile as Profile;
     } catch (error) {
       this.logger.error('Unexpected error in getUser', {
         error,

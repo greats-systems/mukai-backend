@@ -97,6 +97,14 @@ export class CreateCooperativeMemberApprovalsDto {
 
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Profile ID of elected member',
+  })
+  @IsString()
+  @IsOptional()
+  elected_member_profile_id?: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
     description:
       'Loan ID from loans table (useful when voting for loan application)',
   })

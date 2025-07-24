@@ -60,6 +60,15 @@ export class SignupDto {
   account_type: string;
 
   @ApiProperty({
+    example: 'secretary',
+    description: 'User role in a cooperative (chairman, secretary, financier)',
+    required: true,
+  })
+  @IsString()
+  @MinLength(2)
+  role: string;
+
+  @ApiProperty({
     example: '1990-01-01',
     description: 'Date of birth of the user',
     required: true,

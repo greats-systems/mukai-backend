@@ -190,6 +190,8 @@ export class TransactionsService {
     if (!data) {
       return 0;
     }
+    this.logger.debug(`Total subs paid for ${wallet_id}`);
+    this.logger.debug(data);
     return Number(data);
   }
 

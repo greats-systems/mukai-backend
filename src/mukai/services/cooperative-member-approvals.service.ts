@@ -21,6 +21,8 @@ import { TransactionsService } from './transactions.service';
 import { DateTime } from 'luxon';
 import { GroupMemberService } from './group-members.service';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { SignupDto } from 'src/auth/dto/signup.dto';
+import { UserService } from 'src/user/user.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -56,6 +58,8 @@ export class CooperativeMemberApprovalsService {
             additional_info:
               createCooperativeMemberApprovalsDto.additional_info,
             asset_id: createCooperativeMemberApprovalsDto.asset_id,
+            elected_member_profile_id:
+              createCooperativeMemberApprovalsDto.elected_member_profile_id,
             loan_id: createCooperativeMemberApprovalsDto.loan_id,
           },
           {
@@ -134,7 +138,7 @@ export class CooperativeMemberApprovalsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select()
-        .neq('profile_id', userJson['profile_id'])
+        // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
         .eq('group_id', group_id);
 
@@ -243,7 +247,7 @@ export class CooperativeMemberApprovalsService {
           const setInterestReponse = await this.setInterestRate(
             updateCooperativeMemberApprovalsDto,
           );
-          if (setInterestReponse == false) {
+          if (!setInterestReponse) {
             this.logger.error('Failed to update interest rate');
             return new ErrorResponseDto(500, 'Failed to update interest rate');
           }
@@ -272,7 +276,7 @@ export class CooperativeMemberApprovalsService {
           const loanResponse = await this.disburseLoan(
             updateCooperativeMemberApprovalsDto,
           );
-          if (loanResponse == false) {
+          if (!loanResponse) {
             this.logger.error('Failed to disburse loan');
             return new ErrorResponseDto(500, 'Failed to disburse loan');
           }
@@ -344,6 +348,18 @@ export class CooperativeMemberApprovalsService {
           this.logger.debug('transactionResponse');
           this.logger.debug(transactionResponse);
           */
+        } else if (
+          updateCooperativeMemberApprovalsDto.poll_description
+            ?.toLowerCase()
+            .includes('elect')
+        ) {
+          const electionResponse = await this.updateMemberRole(
+            updateCooperativeMemberApprovalsDto,
+          );
+          if (!electionResponse) {
+            // this.logger.error('Failed to update member role');
+            return new ErrorResponseDto(400, 'Failed to update member role');
+          }
         }
       } else {
         this.logger.debug('Consensus not yet reached');
@@ -431,6 +447,7 @@ export class CooperativeMemberApprovalsService {
     this.logger.debug('loanResponse');
     this.logger.debug(loanResponse);
     if (loanResponse instanceof ErrorResponseDto) {
+      this.logger.error(loanResponse);
       return false;
     }
 
@@ -452,10 +469,31 @@ export class CooperativeMemberApprovalsService {
     const transactionResponse =
       await transService.createTransaction(transactionDto);
     if (transactionResponse instanceof ErrorResponseDto) {
+      this.logger.error(transactionResponse);
       return false;
     }
     this.logger.debug('transactionResponse');
     this.logger.debug(transactionResponse);
+    return true;
+  }
+
+  async updateMemberRole(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const updateUserDto = new SignupDto();
+    const userService = new UserService(this.postgresrest);
+    updateUserDto.role = updateCooperativeMemberApprovalsDto.additional_info;
+
+    this.logger.warn(
+      `Updating user role to ${updateCooperativeMemberApprovalsDto.additional_info}`,
+    );
+    const updateUserResponse = await userService.updateUser(
+      updateCooperativeMemberApprovalsDto.elected_member_profile_id!,
+      updateUserDto,
+    );
+    if (updateUserResponse instanceof ErrorResponseDto) {
+      return false;
+    }
     return true;
   }
 

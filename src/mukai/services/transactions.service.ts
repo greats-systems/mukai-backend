@@ -17,15 +17,20 @@ import {
 } from 'src/common/zb_payment_gateway/payments';
 import { Profile } from 'src/user/entities/user.entity';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
-const paymentGateway = new SmilePayGateway(
-  process.env.SMILEPAY_BASE_URL ?? '',
-  process.env.SMILEPAY_API_KEY ?? '',
-);
+const paymentGateway = new SmilePayGateway();
+// const smileCashWalletService = new SmileCashWalletService();
+// const smileCashWalletController = new SmileCashWalletController(
+//   smileCashWalletService,
+// );
+
 @Injectable()
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
@@ -39,6 +44,7 @@ export class TransactionsService {
     senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
        2. the initiator's wallet is debited
@@ -62,6 +68,40 @@ export class TransactionsService {
         return new ErrorResponseDto(400, senderError.message);
       }
       // console.log(sender);
+
+      // Initiate peer-to-peer transaction
+      /**
+       * export interface WalletToWalletTransferRequest {
+        receiverMobile: string; //DESTINATION WALLET
+        senderPhone: string; //SOURCE WALLET
+        amount: number;
+        currency: string;
+        channel: string;
+        narration: string;
+        transactionId: string;
+      }
+      */
+      const request = {
+        receiverMobile: senderTransactionDto.receiving_phone,
+        senderPhone: senderTransactionDto.sending_phone,
+        amount: senderTransactionDto.amount,
+        currency: senderTransactionDto.currency,
+        channel: senderTransactionDto.transfer_mode,
+        narration: senderTransactionDto.narrative,
+      };
+      this.logger.warn('Initiating wallet to wallet transfer');
+      const response = await scwService.walletToWallet(
+        request as WalletToWalletTransferRequest,
+      );
+      if (response instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in wallet to wallet transfer: ${JSON.stringify(response.errorObject)}`,
+        );
+        return response;
+      }
+      this.logger.debug(
+        `Wallet to wallet transfer response: ${JSON.stringify(response)}`,
+      );
       this.logger.warn('Updating sender wallet');
 
       const debitResponse = await walletsService.updateSenderBalance(

@@ -57,7 +57,6 @@ import { WalletTransactionService } from './wallet/services/wallet-transaction.s
 import { GroupMembersModule } from './mukai/modules/group-member.module';
 import { GroupMemberController } from './mukai/controllers/group_members.controller';
 import { GroupMemberService } from './mukai/services/group-members.service';
-import { SmilePayGateway } from './common/zb_payment_gateway/payments';
 import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
 import { EmployeesModule } from './smartbiz/payroll/modules/employee.module';
 import { EmployeesController } from './smartbiz/payroll/controllers/employee.controller';
@@ -69,6 +68,9 @@ import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
 import { FinancialArticle } from './mukai/entities/financial_articles.entity';
 import { FinancialArticleController } from './mukai/controllers/financial-articles.controller';
 import { FinancialArticleService } from './mukai/services/financial-article.service';
+import { SmileCashWalletModule } from './common/zb_smilecash_wallet/modules/smilecash-wallet.module';
+import { SmileCashWalletController } from './common/zb_smilecash_wallet/controllers/smilecash-wallet.controller';
+import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 @Module({
   imports: [
@@ -100,6 +102,7 @@ import { FinancialArticleService } from './mukai/services/financial-article.serv
     EmployeesModule,
     PayslipsModule,
     FinancialArticle,
+    SmileCashWalletModule,
   ],
   controllers: [
     AppController,
@@ -124,6 +127,7 @@ import { FinancialArticleService } from './mukai/services/financial-article.serv
     EmployeesController,
     PayslipsController,
     FinancialArticleController,
+    SmileCashWalletController,
   ],
   providers: [
     AppService,
@@ -154,6 +158,7 @@ import { FinancialArticleService } from './mukai/services/financial-article.serv
     //   provide: APP_GUARD,
     //   useClass: PostgresRestHandlerGuard,
     // },
+    SmileCashWalletService,
   ],
 })
 export class AppModule {}

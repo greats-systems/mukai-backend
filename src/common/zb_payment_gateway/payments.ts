@@ -52,7 +52,7 @@ export class SmilePayGateway {
   private readonly baseUrl: string;
   private readonly apiKey: string;
 
-  constructor(baseUrl: string, apiKey: string) {
+  constructor() {
     this.baseUrl =
       process.env.SMILEPAY_API_URL ||
       'https://zbnet.zb.co.zw/wallet_sandbox_api/payments-gateway';

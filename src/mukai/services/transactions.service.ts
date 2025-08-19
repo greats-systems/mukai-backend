@@ -7,15 +7,10 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
-import { WalletsService } from './wallets.service';
+
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 // import { Wallet } from '../entities/wallet.entity';
-import {
-  PaymentInitiateRequest,
-  PaymentMethod,
-  SmilePayGateway,
-} from 'src/common/zb_payment_gateway/payments';
-import { Profile } from 'src/user/entities/user.entity';
+// import { SmilePayGateway } from 'src/common/zb_payment_gateway/payments';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
@@ -25,7 +20,7 @@ import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.d
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
-const paymentGateway = new SmilePayGateway();
+// const paymentGateway = new SmilePayGateway();
 // const smileCashWalletService = new SmileCashWalletService();
 // const smileCashWalletController = new SmileCashWalletController(
 //   smileCashWalletService,
@@ -51,13 +46,11 @@ export class TransactionsService {
        3. the receiver's wallet is credited
        4 the receiver's credit is recorded in the transactions table
        */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        this.smileWalletService,
-      );
+      // const walletsService = new WalletsService(
+      //   this.postgresrest,
+      //   this.smileWalletService,
+      // );
       // wall
-
-      const receiverTransactionDto = new CreateTransactionDto();
       const { data: sender, error: senderError } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
@@ -67,8 +60,32 @@ export class TransactionsService {
         console.log(senderError);
         return new ErrorResponseDto(400, senderError.message);
       }
-      // console.log(sender);
+      /*
+      const receiverTransactionDto = new CreateTransactionDto();
+      receiverTransactionDto.sending_wallet =
+        senderTransactionDto.sending_wallet;
+      receiverTransactionDto.receiving_wallet =
+        senderTransactionDto.receiving_wallet;
+      receiverTransactionDto.amount = senderTransactionDto.amount;
+      receiverTransactionDto.category = senderTransactionDto.category;
+      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
+      receiverTransactionDto.transaction_type =
+        senderTransactionDto.transaction_type;
+      receiverTransactionDto.currency = senderTransactionDto.currency;
+      receiverTransactionDto.narrative = 'credit';
 
+      const { data: receiver, error: receiverError } = await this.postgresrest
+        .from('transactions')
+        .insert(receiverTransactionDto)
+        .select()
+        .single();
+      if (receiverError) {
+        console.log(receiverError);
+        return new ErrorResponseDto(400, receiverError.message);
+      }
+      console.log(receiver);
+      // console.log(sender);
+      */
       // Initiate peer-to-peer transaction
       /**
        * export interface WalletToWalletTransferRequest {
@@ -87,7 +104,7 @@ export class TransactionsService {
         amount: senderTransactionDto.amount,
         currency: senderTransactionDto.currency,
         channel: senderTransactionDto.transfer_mode,
-        narration: senderTransactionDto.narrative,
+        narration: senderTransactionDto.transaction_type,
       };
       this.logger.warn('Initiating wallet to wallet transfer');
       const response = await scwService.walletToWallet(
@@ -102,8 +119,9 @@ export class TransactionsService {
       this.logger.debug(
         `Wallet to wallet transfer response: ${JSON.stringify(response)}`,
       );
+      /*
       this.logger.warn('Updating sender wallet');
-
+      
       const debitResponse = await walletsService.updateSenderBalance(
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,

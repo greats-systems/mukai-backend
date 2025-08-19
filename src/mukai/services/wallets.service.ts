@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
@@ -12,7 +13,8 @@ import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
 import { SmileWalletService } from "src/wallet/services/zb_digital_wallet.service";
-import e from "express";
+import { SmileCashWalletService } from "src/common/zb_smilecash_wallet/services/smilecash-wallet.service";
+import { BalanceEnquiryRequest } from "src/common/zb_smilecash_wallet/requests/transactions.requests";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -96,6 +98,7 @@ export class WalletsService {
 
   async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.debug("Fetching all wallets");
       const { data, error } = await this.postgresrest.from("wallets").select();
 
       if (error) {
@@ -119,12 +122,51 @@ export class WalletsService {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .select()
-        .eq("profile_id", id);
-        // .eq('is_group_wallet', false);
+        .eq("profile_id", id)
+        .eq('is_group_wallet', false)
+        // .single();
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.message);
+      }
+      console.log("Wallet data:", data);
+
+      // A coop manager has 2 SmileCash wallets: one associated with the coop and one with their individual account
+      // We will fetch the individual wallet if the profile is a coop manager
+
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      const { data: role, error: roleError } = await this.postgresrest.from("profiles").select("account_type").eq("id", id).single();
+      if (roleError) {
+        this.logger.error(`Error fetching profile role for ${id}`, roleError);
+      }
+      // this.logger.debug(`Profile role: ${JSON.stringify(role)}`);
+      if (role?.account_type == 'coop-manager' || role?.account_type == 'manager') {
+        console.debug('This is a coop manager');
+        const walletPhone = data[0]?.phone2;
+        const balanceEnquiryParams = {
+          transactorMobile: walletPhone.split("+")[1],
+          currency: data[0]?.default_currency.toUpperCase(),
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
+          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        }
+      }
+      else {
+        const walletPhone = data[0]?.phone;
+        const balanceEnquiryParams = {
+          transactorMobile: walletPhone.split("+")[1],
+          currency: data[0]?.default_currency.toUpperCase(),
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
+          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        }
       }
 
       console.log({
@@ -160,6 +202,20 @@ export class WalletsService {
           return { data: "No wallet found" };
         }
         return new ErrorResponseDto(400, error.message);
+      }
+
+      this.logger.debug('Fetching SmileCash Wallet Balance');
+      const walletPhone = data?.phone;
+      const balanceEnquiryParams = {
+        transactorMobile: walletPhone.split("+")[1],
+        currency: data?.default_currency.toUpperCase(),
+        channel: 'USSD',
+        transactionId: ''
+      } as BalanceEnquiryRequest;
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+      if (balanceEnquiryResponse instanceof SuccessResponseDto) {
+        data.balance = balanceEnquiryResponse.data.data.billerResponse.balance;
       }
 
       return {
@@ -306,7 +362,7 @@ export class WalletsService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-    this.logger.debug(data);
+      this.logger.debug(data);
 
       return data as Wallet[];
     } catch (error) {

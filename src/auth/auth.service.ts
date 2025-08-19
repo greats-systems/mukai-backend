@@ -284,7 +284,7 @@ export class AuthService {
       this.postgresRest,
       this.smileWalletService,
     );
-    const createTransactionDto = new CreateTransactionDto();
+    // const createTransactionDto = new CreateTransactionDto();
     try {
       console.log('Creating transaction...', signupDto);
       const { data: existingUser } = await this.supabaseAdmin
@@ -402,7 +402,7 @@ export class AuthService {
 
       // Create wallet
       createWalletDto.profile_id = user_data.id;
-      createWalletDto.balance = 20;
+      // createWalletDto.balance = 20;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = false;
       createWalletDto.is_active = true;
@@ -440,20 +440,22 @@ export class AuthService {
       }
 
       // Record the trasaction
+      /*
       createTransactionDto.receiving_wallet = walletResponse['id'];
-      createTransactionDto.amount = createWalletDto.balance;
+      // createTransactionDto.amount = createWalletDto.balance;
       createTransactionDto.currency = createWalletDto.default_currency;
       createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.category = 'transfer';
 
       const createTransactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
+        */
 
       // Verify if everything succeeded
       console.log('updateProfileResponse');
       console.log(updateProfileResponse);
-      console.log('createTransactionResponse');
-      console.log(createTransactionResponse);
+      // console.log('createTransactionResponse');
+      // console.log(createTransactionResponse);
 
       // Generate JWT
       const payload = {

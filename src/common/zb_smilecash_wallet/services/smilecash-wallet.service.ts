@@ -73,6 +73,50 @@ export class SmileCashWalletService {
     return response?.status === 'CONFLICT';
   }
 
+  parseTransactionDescription(response) {
+    const result = JSON.parse(JSON.stringify(response));
+    // console.debug('Parsing transaction description:', result);
+    const description = result.data.transactionStateDescription;
+
+    if (description) {
+      const lines = description
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      const parsedDetails = {
+        status: lines[0],
+        details: {},
+      };
+      // console.debug('Parsed details:', parsedDetails);
+
+      // Helper function to extract numerical value
+      const extractNumber = (str) => {
+        const match = str.match(/(\d+\.?\d*)/);
+        return match ? parseFloat(match[1]) : null;
+      };
+
+      for (let i = 1; i < lines.length; i++) {
+        const [key, ...valueParts] = lines[i].split(':');
+        if (key && valueParts.length) {
+          const value = valueParts.join(':').trim();
+
+          // Special handling for Amount and Balance
+          if (key.trim() === 'Amount' || key.trim() === 'Balance') {
+            parsedDetails.details[key.trim()] = extractNumber(value);
+            parsedDetails.details[`${key.trim()}Raw`] = value; // Keep original
+          } else {
+            parsedDetails.details[key.trim()] = value;
+          }
+        }
+      }
+
+      result.data.parsedDetails = parsedDetails;
+    }
+
+    return result;
+  }
+
   // private isLoginSuccess(response: any): response is LoginResponse {}
 
   // private isTransactionError(response: any): response is TransactionError {
@@ -264,10 +308,20 @@ export class SmileCashWalletService {
         TransactionResponsePayment,
         payResponse.data,
       );
+      console.debug(`Balance enquiry successful:`, paymentData);
+      if (!paymentData?.data) {
+        return new GeneralErrorResponseDto(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          'Invalid payment response structure',
+          paymentData,
+        );
+      }
+      const formattedResponse = this.parseTransactionDescription(paymentData);
+      console.debug(`Formatted response:`, formattedResponse);
       return new SuccessResponseDto(
         HttpStatus.OK,
         'Balance enquiry successful',
-        paymentData,
+        formattedResponse,
       );
     } catch (error) {
       console.error(`Balance enquiry error:`, error);
@@ -409,7 +463,7 @@ export class SmileCashWalletService {
         { headers: this.getTransactionHeaders() },
       );
       const payError = plainToInstance(TransactionError, payResponse.data);
-      console.debug('Payment response:', payResponse.data);
+      // console.debug('Payment response:', payResponse.data);
       if (payError?.responseCode === '304') {
         console.debug(
           `walletToWallet payment error: ${JSON.stringify(payResponse.data)}`,
@@ -435,6 +489,10 @@ export class SmileCashWalletService {
         payResponse.data,
       );
       const loggedResponse = this.parseTransactionDescription(paymentData);
+      console.debug(
+        'Parsed transaction description:',
+        JSON.stringify(loggedResponse.data.parsedDetails),
+      );
       /**
        * create table public.transaction_logs (
             id uuid not null default gen_random_uuid (),
@@ -463,98 +521,48 @@ export class SmileCashWalletService {
             balance numeric null,
             constraint transaction_logs_pkey primary key (id)
           ) TABLESPACE pg_default;
-       */
+       
+      */
+      await this.postgresrest.from('transaction_logs').insert({
+        response_code: loggedResponse.responseCode,
+        response_description: loggedResponse.responseDescription,
+        transaction_id: loggedResponse.data.id,
+        reference: loggedResponse.data.reference,
+        currency: loggedResponse.data.currency,
+        product: loggedResponse.data.product,
+        amount: loggedResponse.data.amount,
+        transactor_id: loggedResponse.data.transactorId,
+        transactor_name: loggedResponse.data.transactorName,
+        source: loggedResponse.data.source,
+        destination: loggedResponse.data.destination,
+        transaction_date: loggedResponse.data.transactionDate,
+        channel: loggedResponse.data.channel,
+        description: loggedResponse.data.description,
+        transaction_status: loggedResponse.data.transactionStatus,
+        type_of_transaction: loggedResponse.data.typeOfTransaction,
+        auth_response: loggedResponse.data.authResponse,
+        biller_response: loggedResponse.data.billerResponse,
+        additional_data: loggedResponse.data.additionalData,
+        transaction_state_description:
+          loggedResponse.data.transactionStateDescription,
+        date: loggedResponse.data.parsedDetails.details.Date,
+        balance: loggedResponse.data.parsedDetails.details.Balance,
+      });
 
-      const dbResponse = await this.postgresrest
-        .from('transaction_logs')
-        .insert({
-          response_code: loggedResponse.data.responseCode,
-          response_description: loggedResponse.data.responseDescription,
-          transaction_id: loggedResponse.data.id,
-          reference: loggedResponse.data.reference,
-          currency: loggedResponse.data.currency,
-          product: loggedResponse.data.product,
-          amount: loggedResponse.data.amount,
-          transactor_id: loggedResponse.data.transactorId,
-          transactor_name: loggedResponse.data.transactorName,
-          source: loggedResponse.data.source,
-          destination: loggedResponse.data.destination,
-          transaction_date: loggedResponse.data.transactionDate,
-          channel: loggedResponse.data.channel,
-          description: loggedResponse.data.description,
-          transaction_status: loggedResponse.data.transactionStatus,
-          type_of_transaction: loggedResponse.data.typeOfTransaction,
-          auth_response: loggedResponse.data.authResponse,
-          biller_response: loggedResponse.data.billerResponse,
-          additional_data: loggedResponse.data.additionalData,
-          transaction_state_description:
-            loggedResponse.data.transactionStateDescription,
-          // date: loggedResponse.data.date,
-          balance: loggedResponse.data.balance,
-        })
-        .select()
-        .single();
-
-      console.debug('Database response:', dbResponse);
-
+      // console.debug('Database response:', dbResponse);
       return new SuccessResponseDto(
         HttpStatus.OK,
         'wallet to wallet transfer successful',
         paymentData,
       );
     } catch (error) {
-      console.error(
-        `walletToWallet error: ${JSON.stringify(error.response?.data)}`,
-      );
+      console.error(`walletToWallet error: ${error.toString()}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',
         error.response?.data.toString(),
       );
     }
-  }
-
-  parseTransactionDescription(response) {
-    const result = JSON.parse(JSON.stringify(response));
-
-    const description = result.data.data.transactionStateDescription;
-
-    if (description) {
-      const lines = description
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-
-      const parsedDetails = {
-        status: lines[0],
-        details: {},
-      };
-
-      // Helper function to extract numerical value
-      const extractNumber = (str) => {
-        const match = str.match(/(\d+\.?\d*)/);
-        return match ? parseFloat(match[1]) : null;
-      };
-
-      for (let i = 1; i < lines.length; i++) {
-        const [key, ...valueParts] = lines[i].split(':');
-        if (key && valueParts.length) {
-          const value = valueParts.join(':').trim();
-
-          // Special handling for Amount and Balance
-          if (key.trim() === 'Amount' || key.trim() === 'Balance') {
-            parsedDetails.details[key.trim()] = extractNumber(value);
-            parsedDetails.details[`${key.trim()}Raw`] = value; // Keep original
-          } else {
-            parsedDetails.details[key.trim()] = value;
-          }
-        }
-      }
-
-      result.data.data.parsedDetails = parsedDetails;
-    }
-
-    return result;
   }
 
   async walletToOwnBank(

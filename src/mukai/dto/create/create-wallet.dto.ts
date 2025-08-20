@@ -107,6 +107,22 @@ export class CreateWalletDto {
   provider?: string;
 
   @ApiPropertyOptional({
+    example: '+263771234567',
+    description: 'Individual wallet phone number',
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({
+    example: '+263712987654',
+    description: 'Cooperative wallet phone number',
+  })
+  @IsString()
+  @IsOptional()
+  coop_phone?: string;
+
+  @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'Associated business ID',
   })

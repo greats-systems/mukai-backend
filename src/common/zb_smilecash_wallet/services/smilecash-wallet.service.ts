@@ -147,7 +147,15 @@ export class SmileCashWalletService {
         { headers: this.getHeaders() },
       );
       if (response.data) {
-        const error = response.data as CreateWalletError;
+        const error = plainToInstance(CreateWalletError, response.data);
+        console.error(`Wallet creation failed: ${JSON.stringify(error)}`);
+        if (error.message == 'Mobile already taken') {
+          return new GeneralErrorResponseDto(
+            HttpStatus.CONFLICT,
+            'Mobile number already taken',
+            error,
+          );
+        }
         return new GeneralErrorResponseDto(
           HttpStatus.BAD_REQUEST,
           'Wallet creation failed',

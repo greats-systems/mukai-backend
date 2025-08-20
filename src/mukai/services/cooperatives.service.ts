@@ -12,7 +12,6 @@ import { Cooperative } from '../entities/cooperative.entity';
 import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { WalletsService } from './wallets.service';
-import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { CreateWalletDto } from '../dto/create/create-wallet.dto';
 import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
@@ -52,11 +51,7 @@ export class CooperativesService {
         this.postgresrest,
         this.smileWalletService,
       );
-      const transactionsService = new TransactionsService(
-        this.postgresrest,
-        this.smileWalletService,
-      );
-      const createTransactionDto = new CreateTransactionDto();
+
       const createWalletDto = new CreateWalletDto();
       const updateUserDto = new SignupDto();
       console.log(createCooperativeDto);
@@ -86,7 +81,8 @@ export class CooperativesService {
       console.log(response);
 
       createWalletDto.profile_id = createCooperativeDto.admin_id;
-      createWalletDto.balance = 100;
+      // createWalletDto.balance = 100;
+      createWalletDto.coop_phone = createCooperativeDto.coop_phone;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
       createWalletDto.group_id = createCooperativeResponse['id'];
@@ -107,8 +103,9 @@ export class CooperativesService {
       this.logger.debug('updateCoopResponse');
       this.logger.debug(updateCoopResponse);
 
+      /*
       createTransactionDto.receiving_wallet = walletResponse['data']['id'];
-      createTransactionDto.amount = createWalletDto.balance;
+      // createTransactionDto.amount = createWalletDto.balance;
       createTransactionDto.transaction_type = 'initial deposit';
       createTransactionDto.narrative = 'credit';
       createTransactionDto.currency = createWalletDto.default_currency;
@@ -119,8 +116,10 @@ export class CooperativesService {
       if (transactionResponse instanceof ErrorResponseDto) {
         return transactionResponse;
       }
+      */
 
       updateUserDto.id = createCooperativeDto.admin_id!;
+      updateUserDto.coop_phone = createCooperativeDto.coop_phone!;
       // updateUserDto.cooperative_id = createCooperativeResponse['id'];
 
       const { data: updateResponse, error: updateError } =
@@ -131,7 +130,7 @@ export class CooperativesService {
           .select()
           .maybeSingle();
       if (updateError) {
-        return new ErrorResponseDto(400, updateError.toString());
+        return new ErrorResponseDto(400, JSON.stringify(updateError));
       }
       console.log(updateResponse);
       return createCooperativeResponse as Cooperative;

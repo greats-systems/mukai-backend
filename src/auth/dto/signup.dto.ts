@@ -33,6 +33,15 @@ export class SignupDto {
   phone: string;
 
   @ApiProperty({
+    example: '+1234567890',
+    description: 'Coop phone number of the user (for which they are the admin)',
+    required: true,
+  })
+  @IsString()
+  @MinLength(2)
+  coop_phone: string;
+
+  @ApiProperty({
     example: 'John',
     description: 'First name of the user',
     required: true,

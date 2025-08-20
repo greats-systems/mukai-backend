@@ -32,6 +32,9 @@ import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dt
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { ToroGateway } from 'src/common/toronet/auth_wallets';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -275,15 +278,23 @@ export class AuthService {
   }
 
   async signup(signupDto: SignupDto): Promise<object | ErrorResponseDto> {
+    /**
+     * * Sign up a new user and create their profile and wallet.
+     * * This method handles user creation, profile setup, and initial wallet creation.
+     * * When a user signs up, we will create a SmileCash wallet for them using their phone number
+     * * If the phone number is already registered, we proceed to the next steps
+     */
     const walletsService = new WalletsService(
       this.postgresRest,
       this.smileWalletService,
     );
+    const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
     const transactionsService = new TransactionsService(
       this.postgresRest,
       this.smileWalletService,
     );
+    let canProceed: boolean = true;
     // const createTransactionDto = new CreateTransactionDto();
     try {
       console.log('Creating transaction...', signupDto);
@@ -309,6 +320,29 @@ export class AuthService {
 
       if (existingPhoneNumber) {
         return new ErrorResponseDto(400, 'Phone number already in use');
+      }
+
+      const scwParams = {
+        firstName: signupDto.first_name,
+        lastName: signupDto.last_name,
+        mobile: signupDto.phone,
+        dateOfBirth: signupDto.dob,
+        idNumber: signupDto.national_id_number,
+        gender: signupDto.gender,
+        source: 'Smile SACCO',
+      } as CreateWalletRequest;
+
+      const scwResponse = await scwService.createWallet(scwParams);
+      if (scwResponse instanceof GeneralErrorResponseDto) {
+        if (scwResponse.statusCode != 409) {
+          // If the phone number is already registered, we proceed to the next steps
+          canProceed = false;
+          // return scwResponse;
+        }
+      }
+      // If the error is not related to an existing phone number, we leave the signup process
+      if (!canProceed) {
+        return scwResponse;
       }
 
       // Hash password and generate UUID
@@ -407,6 +441,7 @@ export class AuthService {
       createWalletDto.is_group_wallet = false;
       createWalletDto.is_active = true;
       createWalletDto.status = 'active';
+      createWalletDto.phone = signupDto.phone;
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       // Update wallet_id in profiles

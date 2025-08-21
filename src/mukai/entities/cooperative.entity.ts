@@ -86,4 +86,10 @@ export class Cooperative {
     description: 'Coop interest rate',
   })
   interest_rate: number;
+
+  @ApiProperty({
+    example: '263770123456',
+    description: 'Cooperative phone number (for SmileCash transactions)',
+  })
+  phone: string;
 }

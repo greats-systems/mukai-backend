@@ -144,7 +144,7 @@ export class SmileCashWalletService {
       const response = await axios.post(
         `${this.baseUrl}/accounts/api/v1/subscribers/create`,
         request, // Let axios handle JSON serialization
-        { headers: this.getHeaders() },
+        // { headers: this.getHeaders() },
       );
       if (response.data) {
         const error = plainToInstance(CreateWalletError, response.data);
@@ -568,7 +568,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',
-        error.response?.data.toString(),
+        error.response?.data.toString() || error.toString(),
       );
     }
   }

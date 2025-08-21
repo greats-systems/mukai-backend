@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -29,11 +30,8 @@ export class SavingsService {
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from("wallets")
-        .upsert(createSavingsDto, {
-          onConflict: "wallet_id,is_group_wallet,default_currency",
-          ignoreDuplicates: true,
-        })
+        .from('savings_portfolios')
+        .insert(createSavingsDto)
         .select()
         .single();
       if (error) {
@@ -46,45 +44,11 @@ export class SavingsService {
         }
         return new ErrorResponseDto(400, error.message);
       }
-      // get wallet profile
-
-      // Create profile in public.profiles
-      const { error: profileError, data: profileData } = await this.postgresrest
-        .from('profiles')
-        .select('*').eq('id', createSavingsDto.wallet_id).single();
-      if (profileError) {
-        this.logger.error(`Error fetching profile ${createSavingsDto.wallet_id}`, profileError);
-      }
-      this.logger.log(`Profile creation profileData: ${JSON.stringify(profileData)}`);
-      // Call SmileWalletService to create a wallet in the digital wallet system
-      const smileWalletResponse = await this.smileWalletService.createSubscriber({
-        firstName: profileData.first_name,
-        lastName: profileData.last_name,
-        mobile: profileData.phone,
-        dateOfBirth: profileData.date_of_birth,
-        idNumber: profileData.national_id_number,
-        gender: profileData.gender.toUpperCase() ?? 'MALE',
-        source: 'MkandoWallet',
-      });
-
-      if (smileWalletResponse != null) {
-        this.logger.log(`Native Wallet data: ${JSON.stringify(data)}`);
-        await this.postgresrest
-          .from("wallets")
-          .update({
-            is_smile_cash_activated: true,
-          })
-          .eq("id", data.id);
-        this.logger.log('Smile Wallet Activated');
-
-      } else {
-        this.logger.error('Smile Wallet Not Activated');
-      }
 
       return {
         statusCode: 201,
-        message: "Wallet created successfully",
-        data: data as Wallet,
+        message: "Portfolio created successfully",
+        data: data as SavingsPortfolioDto,
       };
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -182,7 +146,8 @@ export class SavingsService {
       const { data, error } = await this.postgresrest
         .from("savings_portfolios")
         .select()
-        .eq("profile_id", profile_id);
+        .eq("profile_id", profile_id)
+        .order("created_at", { ascending: false });
 
       if (error) {
         this.logger.error(

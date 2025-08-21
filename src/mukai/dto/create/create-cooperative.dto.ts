@@ -140,4 +140,11 @@ export class CreateCooperativeDto {
   })
   @IsNumber()
   additional_info: any;
+
+  @ApiProperty({
+    example: '263789012345',
+    description: 'Cooperative phone number (for SmileCash transactions)',
+  })
+  @IsString()
+  phone: string;
 }

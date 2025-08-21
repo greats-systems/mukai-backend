@@ -277,7 +277,7 @@ export class AuthService {
     }
   }
 
-  async signup(signupDto: SignupDto): Promise<object | ErrorResponseDto> {
+  async signup(signupDto: SignupDto): Promise<object | undefined> {
     /**
      * * Sign up a new user and create their profile and wallet.
      * * This method handles user creation, profile setup, and initial wallet creation.
@@ -326,11 +326,13 @@ export class AuthService {
         firstName: signupDto.first_name,
         lastName: signupDto.last_name,
         mobile: signupDto.phone,
-        dateOfBirth: signupDto.dob,
+        dateOfBirth: signupDto.date_of_birth,
         idNumber: signupDto.national_id_number,
-        gender: signupDto.gender,
+        gender: signupDto.gender.toUpperCase(),
         source: 'Smile SACCO',
       } as CreateWalletRequest;
+
+      this.logger.debug('Creating SmileCash wallet with params:', scwParams);
 
       const scwResponse = await scwService.createWallet(scwParams);
       if (scwResponse instanceof GeneralErrorResponseDto) {
@@ -340,12 +342,14 @@ export class AuthService {
           // return scwResponse;
         }
       }
+      this.logger.debug(scwResponse);
       // If the error is not related to an existing phone number, we leave the signup process
       if (!canProceed) {
         return scwResponse;
       }
 
       // Hash password and generate UUID
+      
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);
       // const userId = uuidv4();
 
@@ -473,18 +477,6 @@ export class AuthService {
       } catch (error) {
         this.logger.error(error.toString());
       }
-
-      // Record the trasaction
-      /*
-      createTransactionDto.receiving_wallet = walletResponse['id'];
-      // createTransactionDto.amount = createWalletDto.balance;
-      createTransactionDto.currency = createWalletDto.default_currency;
-      createTransactionDto.transaction_type = 'initial deposit';
-      createTransactionDto.category = 'transfer';
-
-      const createTransactionResponse =
-        await transactionsService.createTransaction(createTransactionDto);
-        */
 
       // Verify if everything succeeded
       console.log('updateProfileResponse');

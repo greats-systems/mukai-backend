@@ -34,7 +34,6 @@ import { ToroGateway } from 'src/common/toronet/auth_wallets';
     AuthService,
     SmileWalletService,
     ToroGateway,
-
   ],
   exports: [JwtAuthGuard, JwtModule],
 })

@@ -349,7 +349,7 @@ export class AuthService {
       }
 
       // Hash password and generate UUID
-      
+
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);
       // const userId = uuidv4();
 
@@ -553,6 +553,34 @@ export class AuthService {
       const { data, error } = await this.postgresRest
         .from('profiles')
         .select('*')
+        // .ilike('id', `%${suffix}`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return []; // Return empty array rather than throwing if no profiles found
+      }
+
+      return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
+  async getProfilesExcept(id: string): Promise<Profile[]> {
+    try {
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .neq('id', id)
         // .ilike('id', `%${suffix}`)
         .order('created_at', { ascending: false });
 

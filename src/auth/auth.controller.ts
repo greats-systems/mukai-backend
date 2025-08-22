@@ -26,7 +26,7 @@ import { JwtAuthGuard } from './guards/jwt.auth.guard';
  */
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * Retrieves all user profiles.
@@ -35,6 +35,11 @@ export class AuthController {
   @Get('profiles')
   async getProfiles() {
     return this.authService.getProfiles();
+  }
+
+  @Get('profiles/except/:id')
+  async getProfilesExcept(@Param('id') id: string) {
+    return this.authService.getProfilesExcept(id);
   }
 
   /**

@@ -119,7 +119,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*, wallets_profile_id_fkey(*)')
         .eq("profile_id", id)
         .eq('is_group_wallet', false)
         // .single();

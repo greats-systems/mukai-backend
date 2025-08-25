@@ -91,5 +91,5 @@ export class Cooperative {
     example: '263770123456',
     description: 'Cooperative phone number (for SmileCash transactions)',
   })
-  phone: string;
+  coop_phone: string;
 }

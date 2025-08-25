@@ -168,7 +168,7 @@ export class TransactionsService {
         channel: 'USSD',
         transactionId: '',
       } as BalanceEnquiryRequest;
-      this.logger.warn('Updating receiver SmileCash balance');
+      this.logger.warn(`Updating receiver SmileCash balance`);
       const scReceiverResponse =
         await scwService.balanceEnquiry(scReceiverParams);
       if (scReceiverResponse instanceof GeneralErrorResponseDto) {

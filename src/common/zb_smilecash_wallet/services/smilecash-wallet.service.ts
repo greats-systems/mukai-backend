@@ -244,6 +244,7 @@ export class SmileCashWalletService {
   async balanceEnquiry(
     request: BalanceEnquiryRequest,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    console.debug(`Initiating balance enquiry for ${request.transactorMobile}`);
     try {
       // Auth request
       const authResponse = await axios.post(

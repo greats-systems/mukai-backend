@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
@@ -174,7 +173,7 @@ export class LoanController {
     return response;
   }
 
-  @Get('coop/:cooperative_id')
+  @Get('cooperative/:cooperative_id')
   @ApiOperation({ summary: 'Get list of coop loans' })
   @ApiParam({
     name: 'profile_id',
@@ -200,8 +199,9 @@ export class LoanController {
   })
   async viewCoopLoans(
     @Param('cooperative_id') profile_id,
-    @Body() profileBody,
+    @Body() profileBody: object,
   ) {
+    console.debug(`viewCoopLoans profile_id: ${profileBody['profile_id']}`);
     const response = await this.loanService.viewCoopLoans(
       profile_id,
       profileBody['profile_id'],

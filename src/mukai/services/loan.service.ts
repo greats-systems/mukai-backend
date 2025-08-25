@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -141,7 +140,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error(`Error fetching loan ${loanDto.id}`, error);
-        if(error.details == 'The result contains 0 rows') {
+        if (error.details == 'The result contains 0 rows') {
           return false; // No active loan found
         }
         return new ErrorResponseDto(400, error.message);
@@ -185,12 +184,13 @@ export class LoanService {
     cooperative_id: string,
     profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {
+    this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
     try {
       const { data, error } = await this.postgresrest
         .from('loans')
         .select()
-        .eq('cooperative_id', cooperative_id)
-        .neq('profile_id', profile_id);
+        .eq('cooperative_id', cooperative_id);
+      // .neq('profile_id', profile_id);
       // .single();
 
       if (error) {
@@ -200,7 +200,7 @@ export class LoanService {
         );
         return new ErrorResponseDto(400, error.message);
       }
-
+      this.logger.debug(`viewCoopLoans data: ${JSON.stringify(data)}`);
       return data as Loan[];
     } catch (error) {
       this.logger.error(

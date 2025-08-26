@@ -13,6 +13,8 @@ import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
 import { SmileWalletService } from "src/wallet/services/zb_digital_wallet.service";
+import { BalanceEnquiryRequest } from "src/common/zb_smilecash_wallet/requests/transactions.requests";
+import { SmileCashWalletService } from "src/common/zb_smilecash_wallet/services/smilecash-wallet.service";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -129,7 +131,19 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
       // console.log("Wallet data:", data);
-
+      this.logger.debug(`Fetching SmileCash balance for ${data[0].phone}`);
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      const walletPhone = data[0]?.phone;
+        const balanceEnquiryParams = {
+          transactorMobile: walletPhone,
+          currency: data[0]?.default_currency.toUpperCase(),
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
+          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        }
       // A coop manager has 2 SmileCash wallets: one associated with the coop and one with their individual account
       // We will fetch the individual wallet if the profile is a coop manager
       /*
@@ -204,11 +218,11 @@ export class WalletsService {
         }
         return new ErrorResponseDto(400, error.message);
       }
-      /*
-      this.logger.debug('Fetching SmileCash Wallet Balance');
-      const walletPhone = data?.phone;
+      this.logger.log(`Coop data: ${JSON.stringify(data)}`);
+      this.logger.debug('Fetching SmileCash Coop Wallet balance');
+      const walletPhone = data?.coop_phone;
       const balanceEnquiryParams = {
-        transactorMobile: walletPhone.split("+")[1],
+        transactorMobile: walletPhone,
         currency: data?.default_currency.toUpperCase(),
         channel: 'USSD',
         transactionId: ''
@@ -217,8 +231,12 @@ export class WalletsService {
       const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
       if (balanceEnquiryResponse instanceof SuccessResponseDto) {
         data.balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        const updateWalletDto = new UpdateWalletDto();
+        updateWalletDto.id = data.id;
+        updateWalletDto.balance = data.balance;
+        await this.updateWallet(updateWalletDto.id!, updateWalletDto);
       }
-      */
+      
 
       return {
         statusCode: 200,
@@ -226,7 +244,7 @@ export class WalletsService {
         data: data as Wallet,
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${coop_id}`, error);
+      this.logger.error(`Exception in viewCoopWallet for id ${coop_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -261,7 +279,7 @@ export class WalletsService {
         data: data as Wallet[],
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
+      this.logger.error(`Exception in viewIndividualWallets for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -287,7 +305,7 @@ export class WalletsService {
         data: data as Wallet[],
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
+      this.logger.error(`Exception in viewChildrenWallets for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -316,7 +334,7 @@ export class WalletsService {
       };
     } catch (error) {
       this.logger.error(
-        `Exception in viewWallet for id ${cooperative_id}`,
+        `Exception in viewCooperativeWallet for id ${cooperative_id}`,
         error,
       );
       return new ErrorResponseDto(500, error);
@@ -344,7 +362,7 @@ export class WalletsService {
         data: data as Wallet,
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${profile_id}`, error);
+      this.logger.error(`Exception in viewProfileWalletID for id ${profile_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -408,7 +426,7 @@ export class WalletsService {
         data: profileData as Profile,
       };
     } catch (error) {
-      this.logger.error(`Exception in viewWallet for id ${wallet_id}`, error);
+      this.logger.error(`Exception in getProfileByWalletID for id ${wallet_id}`, error);
       return new ErrorResponseDto(500, error);
     }
   }

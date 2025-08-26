@@ -55,6 +55,7 @@ export class SmilePayService {
         body: JSON.stringify(authRequest),
         redirect: 'follow',
       } as RequestInit;
+      this.logger.log(JSON.stringify(authRequest));
       const authResponse = await fetch(
         `${this.baseUrl}/payments/express-checkout/zb-payment`,
         requestOptions,

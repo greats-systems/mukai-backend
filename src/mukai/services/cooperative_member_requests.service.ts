@@ -199,8 +199,7 @@ export class CooperativeMemberRequestsService {
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
         .eq('member_id', updateCooperativeMemberRequestDto.member_id)
-        .select()
-        .single();
+        .select();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error);
         return new ErrorResponseDto(400, error.message);
@@ -208,7 +207,7 @@ export class CooperativeMemberRequestsService {
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
-        data: data as CooperativeMemberRequest,
+        data: data as CooperativeMemberRequest[],
       };
     } catch (error) {
       this.logger.error(

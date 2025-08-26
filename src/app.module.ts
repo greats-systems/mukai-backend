@@ -71,6 +71,9 @@ import { FinancialArticleService } from './mukai/services/financial-article.serv
 import { SmileCashWalletModule } from './common/zb_smilecash_wallet/modules/smilecash-wallet.module';
 import { SmileCashWalletController } from './common/zb_smilecash_wallet/controllers/smilecash-wallet.controller';
 import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { SmilePayController } from './common/zb_payment_gateway/controllers/smilepay.controller';
+import { SmilePayService } from './common/zb_payment_gateway/services/smilepay.service';
+import { SmilePayModule } from './common/zb_payment_gateway/modules/smilepay.module';
 
 @Module({
   imports: [
@@ -103,6 +106,7 @@ import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/sm
     PayslipsModule,
     FinancialArticle,
     SmileCashWalletModule,
+    SmilePayModule,
   ],
   controllers: [
     AppController,
@@ -128,6 +132,7 @@ import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/sm
     PayslipsController,
     FinancialArticleController,
     SmileCashWalletController,
+    SmilePayController,
   ],
   providers: [
     AppService,
@@ -159,6 +164,7 @@ import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/sm
     //   useClass: PostgresRestHandlerGuard,
     // },
     SmileCashWalletService,
+    SmilePayService,
   ],
 })
 export class AppModule {}

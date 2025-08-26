@@ -294,7 +294,7 @@ export class AuthService {
       this.postgresRest,
       this.smileWalletService,
     );
-    let canProceed: boolean = true;
+    // let canProceed: boolean = true;
     // const createTransactionDto = new CreateTransactionDto();
     try {
       console.log('Creating transaction...', signupDto);
@@ -335,6 +335,7 @@ export class AuthService {
       this.logger.debug('Creating SmileCash wallet with params:', scwParams);
 
       const scwResponse = await scwService.createWallet(scwParams);
+      /*
       if (scwResponse instanceof GeneralErrorResponseDto) {
         if (scwResponse.statusCode != 409) {
           // If the phone number is already registered, we proceed to the next steps
@@ -342,11 +343,12 @@ export class AuthService {
           // return scwResponse;
         }
       }
+      */
       this.logger.debug(scwResponse);
       // If the error is not related to an existing phone number, we leave the signup process
-      if (!canProceed) {
-        return scwResponse;
-      }
+      // if (!canProceed) {
+      //   return scwResponse;
+      // }
 
       // Hash password and generate UUID
 

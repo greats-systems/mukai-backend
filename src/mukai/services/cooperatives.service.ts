@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import { Logger, Injectable } from '@nestjs/common';
+import { Logger, Injectable, HttpStatus } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
@@ -22,6 +22,9 @@ import { SignupDto } from 'src/auth/dto/signup.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -35,7 +38,7 @@ export class CooperativesService {
   ) {}
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
-  ): Promise<Cooperative | ErrorResponseDto> {
+  ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     /* When a cooperative is created, the following steps should be taken:
     1. The new coop is created in the cooperatives table
     2. The coop is also create in the group_members table. Coop ID will act as a foreign key that links the coop and its members
@@ -86,6 +89,24 @@ export class CooperativesService {
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
       createWalletDto.group_id = createCooperativeResponse['id'];
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      const balanceEnquiryParams = {
+        transactorMobile: createCooperativeDto.coop_phone,
+        currency: createWalletDto.default_currency.toUpperCase(), // ZWG | USD
+        channel: 'USSD',
+      } as BalanceEnquiryRequest;
+      const scwBalanceResponse =
+        await scwService.balanceEnquiry(balanceEnquiryParams);
+      if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
+        createWalletDto.balance = 0.0;
+        return new GeneralErrorResponseDto(
+          HttpStatus.BAD_REQUEST,
+          'Failed to check balance',
+          scwBalanceResponse,
+        );
+      }
+      createWalletDto.balance =
+        scwBalanceResponse.data.data.billerResponse.balance;
       const walletResponse = await walletsService.createWallet(createWalletDto);
       console.log('Wallet response');
       console.log(walletResponse);

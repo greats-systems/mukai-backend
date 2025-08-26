@@ -30,7 +30,7 @@ export class SmilePayService {
 
   constructor(private readonly postgresrest: PostgresRest) {
     this.baseUrl = process.env.SMILEPAY_API_URL || '';
-    this.apiKey = process.env.SMILECASH_WALLET_API_KEY || '';
+    this.apiKey = process.env.SMILEPAY_API_KEY || '';
     this.apiSecret = process.env.SMILEPAY_API_SECRET || '';
   }
 
@@ -65,17 +65,18 @@ export class SmilePayService {
         ExpressPaymentSmilePayResponse,
         authResponse,
       );
-      if (parsedResponse.responseCode != '00') {
+      if (authResponseJson.responseCode !== '00') {
         return new GeneralErrorResponseDto(
           HttpStatus.BAD_REQUEST,
           'Failed to authorize payment request',
           authResponseJson,
         );
       }
+      this.logger.log('Success');
       return new SuccessResponseDto(
         HttpStatus.OK,
         'Waiting for authorization',
-        parsedResponse as ExpressPaymentSmilePayResponse,
+        authResponseJson as ExpressPaymentSmilePayResponse,
       );
     } catch (error) {
       this.logger.debug(`InitiateExpressCheckoutSmilePay error: ${error}`);
@@ -102,13 +103,14 @@ export class SmilePayService {
         `${this.baseUrl}/payments/express-checkout/zb-payment/confirmation`,
         requestOptions,
       );
+      const confirmResponseJson = await confirmResponse.json();
       const parsedResponse = plainToInstance(
         ExpressPaymentSmilePayResponse,
-        confirmResponse,
+        confirmResponseJson,
       );
-      if (parsedResponse.responseCode != '00') {
+      if (confirmResponseJson.responseCode != '00') {
         this.logger.debug(
-          `Error confirming payment: ${JSON.stringify(parsedResponse)}`,
+          `Error confirming payment: ${JSON.stringify(confirmResponseJson)}`,
         );
         return new GeneralErrorResponseDto(
           400,
@@ -116,6 +118,7 @@ export class SmilePayService {
           parsedResponse,
         );
       }
+      this.logger.log('Success');
       return new SuccessResponseDto(200, 'Payment successful', parsedResponse);
     } catch (error) {
       this.logger.debug(`confirmExpressCheckoutSmilePay error: ${error} `);

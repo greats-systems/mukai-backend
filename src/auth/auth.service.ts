@@ -35,6 +35,7 @@ import { ToroGateway } from 'src/common/toronet/auth_wallets';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -307,7 +308,7 @@ export class AuthService {
 
       if (existingUser) {
         // throw new UnauthorizedException('Email already in use');
-        return new ErrorResponseDto(400, 'Email already in use');
+        return new ErrorResponseDto(422, 'Email already in use');
       }
 
       // Also check if phone number already exists
@@ -319,7 +320,7 @@ export class AuthService {
         .maybeSingle();
 
       if (existingPhoneNumber) {
-        return new ErrorResponseDto(400, 'Phone number already in use');
+        return new ErrorResponseDto(422, 'Phone number already in use');
       }
 
       const scwParams = {
@@ -441,6 +442,9 @@ export class AuthService {
       }
 
       // Create wallet
+      // Check wallet SmileCash balance
+
+
       createWalletDto.profile_id = user_data.id;
       // createWalletDto.balance = 20;
       createWalletDto.default_currency = 'usd';
@@ -448,6 +452,17 @@ export class AuthService {
       createWalletDto.is_active = true;
       createWalletDto.status = 'active';
       createWalletDto.phone = signupDto.phone;
+      const balanceEnquiryParams = {
+        transactorMobile: signupDto.phone,
+        currency: createWalletDto.default_currency.toUpperCase(), // ZWG | USD
+        channel: 'USSD',
+      } as BalanceEnquiryRequest
+      const scwBalanceResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+      if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
+        createWalletDto.balance = 0.0;
+        return new GeneralErrorResponseDto(HttpStatus.BAD_REQUEST, 'Failed to check balance', scwBalanceResponse);
+      }
+      createWalletDto.balance = scwBalanceResponse.data.data.billerResponse.balance;
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       // Update wallet_id in profiles

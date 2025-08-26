@@ -189,12 +189,13 @@ export class WalletsService {
   async viewCoopWallet(
     coop_id: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
+    this.logger.debug(`Fetching coop wallet for ${coop_id}`);
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .select()
         .eq("group_id", coop_id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         this.logger.error(`Error fetching coop Wallet ${coop_id}`, error);

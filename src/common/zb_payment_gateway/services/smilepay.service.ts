@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
@@ -32,11 +33,12 @@ export class SmilePayService {
   }
 
   private getHeaders() {
-    return {
+    const headers = new Headers({
       'Content-Type': 'application/json',
       'x-api-key': `${this.apiKey}`,
       'x-api-secret': `${this.apiSecret}`,
-    };
+    });
+    return headers;
   }
 
   async initiateExpressCheckoutSmilePay(
@@ -55,7 +57,8 @@ export class SmilePayService {
         `${this.baseUrl}/payments/express-checkout/zb-payment`,
         requestOptions,
       );
-      this.logger.debug(`authResponse: ${JSON.stringify(authResponse)}`);
+      const authResponseJson = await authResponse.json();
+      this.logger.debug(`authResponse: ${JSON.stringify(authResponseJson)}`);
       const parsedResponse = plainToInstance(
         ExpressPaymentSmilePayResponse,
         authResponse,
@@ -64,7 +67,7 @@ export class SmilePayService {
         return new GeneralErrorResponseDto(
           HttpStatus.BAD_REQUEST,
           'Failed to authorize payment request',
-          authResponse,
+          authResponseJson,
         );
       }
       return new SuccessResponseDto(

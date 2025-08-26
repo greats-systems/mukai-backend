@@ -288,6 +288,195 @@ export class TransactionsService {
     }
   }
 
+  async createSmilePayTransaction(
+    senderTransactionDto: CreateTransactionDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      /*When a transaction is initiated, 4 steps should take place:
+       1. the initiator's transaction is recorded in the transactions table
+       2. the initiator's wallet is debited
+       3. the receiver's wallet is credited
+       4 the receiver's credit is recorded in the transactions table
+
+       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
+       */
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+      if (error) {
+        console.log(error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
+
+      /**
+       * "transactorMobile":"263777757603",
+    "currency":"USD", // ZWG | USD
+    "channel":"USSD", //USSD | APP | WEB
+    "transactionId":""
+       */
+
+      const scSenderParams = {
+        transactorMobile: senderTransactionDto.sending_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      // Update sender's SmileCash balance
+      this.logger.warn('Updating sender SmileCash balance');
+      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      if (scSenderResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
+        );
+        return scSenderResponse;
+      }
+      const senderResponse = await walletsService.updateSmileCashSenderBalance(
+        senderTransactionDto.sending_wallet,
+        scSenderResponse.data.data.billerResponse.balance,
+      );
+
+      this.logger.debug(
+        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
+      );
+
+      // Update receiver's SmileCash balance
+      const scReceiverParams = {
+        transactorMobile: senderTransactionDto.receiving_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      this.logger.warn(`Updating receiver SmileCash balance`);
+      const scReceiverResponse =
+        await scwService.balanceEnquiry(scReceiverParams);
+      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
+        );
+        return scReceiverResponse;
+      }
+      const receiverResponse =
+        await walletsService.updateSmileCashReceiverBalance(
+          senderTransactionDto.receiving_wallet,
+          scReceiverResponse.data.data.billerResponse.balance,
+        );
+
+      this.logger.debug(
+        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
+      );
+
+      /*
+      this.logger.warn('Updating sender wallet');
+      
+      const debitResponse = await walletsService.updateSenderBalance(
+        senderTransactionDto.sending_wallet,
+        senderTransactionDto.amount,
+      );
+      console.log(debitResponse);
+      this.logger.warn('Updating receiver wallet');
+      const creditResponse = await walletsService.updateReceiverBalance(
+        senderTransactionDto.receiving_wallet,
+        senderTransactionDto.amount,
+      );
+      console.log(creditResponse);
+
+      receiverTransactionDto.sending_wallet =
+        senderTransactionDto.sending_wallet;
+      receiverTransactionDto.receiving_wallet =
+        senderTransactionDto.receiving_wallet;
+      receiverTransactionDto.amount = senderTransactionDto.amount;
+      receiverTransactionDto.category = senderTransactionDto.category;
+      receiverTransactionDto.transfer_mode = senderTransactionDto.transfer_mode;
+      receiverTransactionDto.transaction_type =
+        senderTransactionDto.transaction_type;
+      receiverTransactionDto.currency = senderTransactionDto.currency;
+      receiverTransactionDto.narrative = 'credit';
+
+      const { data: receiver, error: receiverError } = await this.postgresrest
+        .from('transactions')
+        .insert(receiverTransactionDto)
+        .select()
+        .single();
+      if (receiverError) {
+        console.log(receiverError);
+        return new ErrorResponseDto(400, receiverError.message);
+      }
+      console.log(receiver);
+
+      if (senderTransactionDto.receiving_phone) {
+        // GET SENDING PROFILE
+        const { data: sendingProfile, error: sendingProfileError } =
+          await this.postgresrest
+            .from('profiles')
+            .select()
+            .eq('id', senderTransactionDto.account_id)
+            .single();
+        if (sendingProfileError) {
+          return new ErrorResponseDto(400, sendingProfileError.message);
+        }
+        const sendingProfileData = sendingProfile as Profile;
+        const paymentRequest: PaymentInitiateRequest = {
+          amount: senderTransactionDto.amount,
+          currency: 'ZWL',
+          customerEmail: sendingProfileData.email,
+          customerName: sendingProfileData.first_name,
+          customerPhone: senderTransactionDto.receiving_phone,
+          paymentMethod:
+            senderTransactionDto.transfer_mode == 'ecocash'
+              ? PaymentMethod.ECOCASH
+              : senderTransactionDto.transfer_mode == 'omari'
+                ? PaymentMethod.OMARI
+                : senderTransactionDto.transfer_mode == 'innbucks'
+                  ? PaymentMethod.INNBUCKS
+                  : senderTransactionDto.transfer_mode == 'walletplus'
+                    ? PaymentMethod.WALLETPLUS
+                    : senderTransactionDto.transfer_mode == 'card'
+                      ? PaymentMethod.CARD
+                      : senderTransactionDto.transfer_mode == 'onemoney'
+                        ? PaymentMethod.ONEMONEY
+                        : PaymentMethod.ECOCASH,
+          reference: sender.id,
+          callbackUrl: `https://f309-41-173-239-81.ngrok-free.app/tradingservices/payment/callback`,
+          // callbackUrl: `${process.env.API_BASE_URL}/tradingservices/payment/callback`,
+        };
+
+        // Initiate payment
+        const paymentResponse =
+          await paymentGateway.initiateExpressPayment(paymentRequest);
+        console.log(paymentResponse);
+      }
+      /*
+      // console.log(debitResponse);
+      // console.log(creditResponse);
+      // send notification to the user
+      */ return {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+        data: {
+          message: senderTransactionDto,
+          // transaction_id: data.id,
+          // date: data.created_date,
+          // new_balance: debitResponse['balance'] ?? 0.0,
+        },
+        // debitResponse,
+        // creditResponse
+      };
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async getCoopTotalContributions(
     wallet_id: string,
   ): Promise<number | ErrorResponseDto> {

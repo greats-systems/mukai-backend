@@ -119,7 +119,7 @@ export class SmilePayService {
           parsedResponse,
         );
       }
-      this.logger.log('Success');
+      this.logger.log(JSON.stringify(confirmResponseJson));
       return new SuccessResponseDto(200, 'Payment successful', parsedResponse);
     } catch (error) {
       this.logger.debug(`confirmExpressCheckoutSmilePay error: ${error} `);

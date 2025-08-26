@@ -40,6 +40,30 @@ export class TransactionsController {
     return response;
   }
 
+  @Post('smilepay')
+  async createSmilePayTransaction(
+    @Body() createTransactionDto: CreateTransactionDto,
+  ) {
+    const response =
+      await this.transactionsService.createSmilePayTransaction(
+        createTransactionDto,
+      );
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get()
   async findAll() {
     const response = await this.transactionsService.findAllTransactions();

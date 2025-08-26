@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PostgresRest } from 'src/common/postgresrest';
+import {v4} from 'uuid';
 import {
   ExpressPaymentSmilePayRequestAuth,
   ExpressPaymentSmilePayRequestConfirm,
@@ -14,6 +15,7 @@ import { plainToInstance } from 'class-transformer';
 import { ExpressPaymentSmilePayResponse } from '../responses/smilepay.responses';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import uuidv4 from 'supabase/apps/studio/lib/uuid';
+// import uuidv4 from 'supabase/apps/studio/lib/uuid';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);

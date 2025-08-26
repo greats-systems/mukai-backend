@@ -14,7 +14,7 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { ExpressPaymentSmilePayResponse } from '../responses/smilepay.responses';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
-import uuidv4 from 'supabase/apps/studio/lib/uuid';
+// import uuidv4 from 'supabase/apps/studio/lib/uuid';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 
 function initLogger(funcname: Function): Logger {
@@ -48,7 +48,7 @@ export class SmilePayService {
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug(`Initiating SmilePay payment using ${this.baseUrl}`);
-      authRequest.orderReference = uuidv4();
+      authRequest.orderReference = v4();
       const requestOptions = {
         method: 'POST',
         headers: this.getHeaders(),

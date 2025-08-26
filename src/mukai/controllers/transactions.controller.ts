@@ -20,6 +20,29 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
+  @Post('up-to-date')
+  async hasPaidSubscription(@Body() subsParams: object) {
+    const response = await this.transactionsService.hasPaidSubscription(
+      subsParams['sending_wallet'],
+      subsParams['year'],
+      subsParams['month'],
+    );
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Post()
   async create(@Body() createTransactionDto: CreateTransactionDto) {
     const response =

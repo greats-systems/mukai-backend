@@ -418,6 +418,52 @@ export class TransactionsService {
     }
   }
 
+  async getCoopTotalSubscriptionsZWG(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_subscriptions_zwg',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total zwg subs paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch zwg subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getCoopTotalContributionsZWG(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_contributions_zwg',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total zwg contributions paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch zwg contributions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async getCoopTotalsByCategory(
     wallet_id: string,
     category: string,

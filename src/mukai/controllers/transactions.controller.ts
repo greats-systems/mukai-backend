@@ -221,6 +221,42 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('subscriptions/:wallet_id/sum/zwg')
+  async getCoopTotalSubscriptionsZWG(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.getCoopTotalSubscriptionsZWG(wallet_id);
+    console.log('getCoopTotalSubscriptionsZWG response');
+    console.log(response);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('contributions/:wallet_id/sum/zwg')
+  async getCoopTotalContributionsZWG(@Param('wallet_id') wallet_id: string) {
+    const response =
+      await this.transactionsService.getCoopTotalContributionsZWG(wallet_id);
+    console.log('getCoopTotalContributionsZWG response');
+    console.log(response);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':wallet_id/:category')
   async getCoopTotalsByCategory(
     @Param('wallet_id') wallet_id: string,

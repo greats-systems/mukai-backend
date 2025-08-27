@@ -27,7 +27,10 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class GroupService {
   private readonly logger = initLogger(GroupService);
-  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -35,10 +38,16 @@ export class GroupService {
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       const cooperativeMemberRequestDto =
@@ -201,8 +210,14 @@ export class GroupService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(this.postgresrest, this.smileWalletService);
-      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
+      const walletService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')

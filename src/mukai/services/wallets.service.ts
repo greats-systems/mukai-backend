@@ -117,6 +117,67 @@ export class WalletsService {
     }
   }
 
+  async viewQRWallet(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from("wallets")
+        .select('*, wallets_profile_id_fkey(*)')
+        .eq("id", id)
+        .eq('is_group_wallet', false)
+      // .single();
+
+      if (error) {
+        this.logger.error(`Error fetching Wallet ${id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      // this.logger.log("Wallet data:", JSON.stringify(data));
+      if (data[0].phone != null) {
+        this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
+        const scwService = new SmileCashWalletService(this.postgresrest);
+        const walletPhone = data[0]?.phone;
+        // USD balance enquiry
+        const balanceEnquiryParamsUSD = {
+          transactorMobile: walletPhone,
+          currency: 'USD',
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(balanceEnquiryParamsUSD);
+        if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
+          data[0].balance = balanceEnquiryResponseUSD.data.data.billerResponse.balance;
+        }
+
+        // ZWG balance enquiry
+        this.logger.debug(`Fetching SmileCash ZWG balance for ${data[0].phone}`);
+        const balanceEnquiryParamsZWG = {
+          transactorMobile: walletPhone,
+          currency: 'ZWG',
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+        if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
+          data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
+        }
+
+        console.log({
+          statusCode: 200,
+          message: "Wallet fetched successfully",
+          data: data as Wallet[],
+        });
+      }
+
+      return {
+        statusCode: 200,
+        message: "Wallet fetched successfully",
+        data: data as Wallet[],
+      };
+    } catch (error) {
+      this.logger.error(`Exception in viewWallet for id ${id}`, error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async viewWallet(id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
@@ -124,70 +185,48 @@ export class WalletsService {
         .select('*, wallets_profile_id_fkey(*)')
         .eq("profile_id", id)
         .eq('is_group_wallet', false)
-        // .single();
+      // .single();
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      // console.log("Wallet data:", data);
-      this.logger.debug(`Fetching SmileCash balance for ${data[0].phone}`);
-      const scwService = new SmileCashWalletService(this.postgresrest);
-      const walletPhone = data[0]?.phone;
-        const balanceEnquiryParams = {
-          transactorMobile: walletPhone,
-          currency: data[0]?.default_currency.toUpperCase(),
-          channel: 'USSD',
-          transactionId: ''
-        } as BalanceEnquiryRequest;
-        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
-        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
-          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
-        }
-      // A coop manager has 2 SmileCash wallets: one associated with the coop and one with their individual account
-      // We will fetch the individual wallet if the profile is a coop manager
-      /*
-      const scwService = new SmileCashWalletService(this.postgresrest);
-      const { data: role, error: roleError } = await this.postgresrest.from("profiles").select("account_type").eq("id", id).single();
-      if (roleError) {
-        this.logger.error(`Error fetching profile role for ${id}`, roleError);
-      }
-      // this.logger.debug(`Profile role: ${JSON.stringify(role)}`);
-      
-      if (role?.account_type == 'coop-manager' || role?.account_type == 'manager') {
-        console.debug('This is a coop manager');
-        const walletPhone = data[0]?.coop_phone;
-        const balanceEnquiryParams = {
-          transactorMobile: walletPhone.split("+")[1],
-          currency: data[0]?.default_currency.toUpperCase(),
-          channel: 'USSD',
-          transactionId: ''
-        } as BalanceEnquiryRequest;
-        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
-        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
-          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
-        }
-      }
-      else {
+      // this.logger.log("Wallet data:", JSON.stringify(data));
+      if (data[0].phone != null) {
+        this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
+        const scwService = new SmileCashWalletService(this.postgresrest);
         const walletPhone = data[0]?.phone;
-        const balanceEnquiryParams = {
-          transactorMobile: walletPhone.split("+")[1],
-          currency: data[0]?.default_currency.toUpperCase(),
+        const balanceEnquiryParamsUSD = {
+          transactorMobile: walletPhone,
+          currency: 'USD',
           channel: 'USSD',
           transactionId: ''
         } as BalanceEnquiryRequest;
-        const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
-        if (balanceEnquiryResponse instanceof SuccessResponseDto) {
-          data[0].balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(balanceEnquiryParamsUSD);
+        if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
+          data[0].balance = balanceEnquiryResponseUSD.data.data.billerResponse.balance;
         }
-      }
-      */
 
-      console.log({
-        statusCode: 200,
-        message: "Wallet fetched successfully",
-        data: data as Wallet[],
-      });
+        this.logger.debug(`Fetching SmileCash ZWG balance for ${data[0].phone}`);
+        const balanceEnquiryParamsZWG = {
+          transactorMobile: walletPhone,
+          currency: 'ZWG',
+          channel: 'USSD',
+          transactionId: ''
+        } as BalanceEnquiryRequest;
+        const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+        if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
+          data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
+        }
+
+        
+
+        console.log({
+          statusCode: 200,
+          message: "Wallet fetched successfully",
+          data: data as Wallet[],
+        });
+      }
 
       return {
         statusCode: 200,
@@ -236,7 +275,7 @@ export class WalletsService {
         updateWalletDto.balance = data.balance;
         await this.updateWallet(updateWalletDto.id!, updateWalletDto);
       }
-      
+
 
       return {
         statusCode: 200,

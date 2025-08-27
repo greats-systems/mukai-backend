@@ -46,6 +46,8 @@ export class CooperativesService {
        to the cooperatives table
     4. The deposit is recorded in the transactions table
     5. The coop's admin is updated in the profiles table
+
+    - Each cooperative will be allocated a ZB merchant account
      */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);

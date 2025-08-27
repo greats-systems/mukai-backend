@@ -32,6 +32,12 @@ export class Wallet {
   })
   balance: number;
 
+  @ApiProperty({
+    example: 1000,
+    description: 'Current balance (ZWG)',
+  })
+  balance_zwg: number;
+
   @ApiPropertyOptional({
     example: '2023-10-01T12:00:00Z',
     description: 'Timestamp of last transaction',

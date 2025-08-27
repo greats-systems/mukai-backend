@@ -177,7 +177,6 @@ export class WalletsController {
   })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   @ApiResponse({ status: 500, description: 'Internal server error.' })
-
   async viewQRWallet(@Param('wallet_id') wallet_id: string) {
     const response = await this.walletsService.viewQRWallet(wallet_id);
 

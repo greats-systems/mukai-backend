@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PostgresRest } from 'src/common/postgresrest';
-import {v4} from 'uuid';
+import { v4 } from 'uuid';
 import {
   ExpressPaymentSmilePayRequestAuth,
   ExpressPaymentSmilePayRequestConfirm,
@@ -14,6 +14,10 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { ExpressPaymentSmilePayResponse } from '../responses/smilepay.responses';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
+import { TransactionsService } from 'src/mukai/services/transactions.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 
@@ -64,13 +68,13 @@ export class SmilePayService {
       this.logger.debug(`authResponse: ${JSON.stringify(authResponseJson)}`);
       const parsedResponse = plainToInstance(
         ExpressPaymentSmilePayResponse,
-        authResponse,
+        authResponseJson,
       );
-      if (authResponseJson.responseCode !== '00') {
+      if (parsedResponse.responseCode !== '00') {
         return new GeneralErrorResponseDto(
           HttpStatus.BAD_REQUEST,
           'Failed to authorize payment request',
-          authResponseJson,
+          parsedResponse,
         );
       }
       this.logger.log('Success');
@@ -109,7 +113,7 @@ export class SmilePayService {
         ExpressPaymentSmilePayResponse,
         confirmResponseJson,
       );
-      if (confirmResponseJson.responseCode != '00') {
+      if (parsedResponse.responseCode != '00') {
         this.logger.debug(
           `Error confirming payment: ${JSON.stringify(confirmResponseJson)}`,
         );

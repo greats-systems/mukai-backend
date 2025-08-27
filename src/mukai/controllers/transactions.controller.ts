@@ -87,6 +87,28 @@ export class TransactionsController {
     return response;
   }
 
+  @Post('p2p')
+  async createP2PTransaction(
+    @Body() createTransactionDto: CreateTransactionDto,
+  ) {
+    const response =
+      await this.transactionsService.createP2PTransaction(createTransactionDto);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get()
   async findAll() {
     const response = await this.transactionsService.findAllTransactions();

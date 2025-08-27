@@ -192,6 +192,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
+      /*
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
         const scwService = new SmileCashWalletService(this.postgresrest);
@@ -218,7 +219,6 @@ export class WalletsService {
         if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
           data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
         }
-
         
 
         console.log({
@@ -227,6 +227,7 @@ export class WalletsService {
           data: data as Wallet[],
         });
       }
+      */
 
       return {
         statusCode: 200,
@@ -547,6 +548,7 @@ export class WalletsService {
   async updateSmileCashSenderBalance(
     sending_wallet_id: string,
     balance: number,
+    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
@@ -568,10 +570,33 @@ export class WalletsService {
       }
       const balance = parseFloat(balanceData["balance"]);
       */
+      if (currency == 'USD') {
+        const { data: updateData, error: updateError } = await this.postgresrest
+          .from("wallets")
+          .update({
+            balance: balance,
+          })
+          .eq("id", sending_wallet_id)
+          .select()
+          .single();
+        if (updateError) {
+          this.logger.error(
+            `Error fetching sender balance ${sending_wallet_id}`,
+            updateError,
+          );
+          return new ErrorResponseDto(400, updateError.message);
+        }
+
+        return {
+          statusCode: 200,
+          message: "USD sender wallet updated successfully",
+          data: updateData as Wallet,
+        };
+      }
       const { data: updateData, error: updateError } = await this.postgresrest
         .from("wallets")
         .update({
-          balance: balance,
+          balance_zwg: balance,
         })
         .eq("id", sending_wallet_id)
         .select()
@@ -583,14 +608,13 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      // console.log("New wallet:");
-      // console.log(updateData);
 
       return {
         statusCode: 200,
-        message: "Wallet updated successfully",
+        message: "ZWG sender wallet updated successfully",
         data: updateData as Wallet,
       };
+
     } catch (error) {
       this.logger.error(
         `Exception in updateSmileCashSenderBalance for id ${sending_wallet_id}`,
@@ -603,38 +627,48 @@ export class WalletsService {
   async updateSmileCashReceiverBalance(
     receiving_wallet_id: string,
     balance: number,
+    currency: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
       console.log("Updating SmileCash receiver balance");
-      /*
-      const { data: balanceData, error: balanceError } = await this.postgresrest
-        .from("wallets")
-        .select("balance")
-        .eq("id", receiving_wallet_id)
-        .single();
-      console.log(balanceData);
-      if (balanceError) {
-        this.logger.error(
-          `Error fetching balance ${receiving_wallet_id}`,
-          balanceError,
-        );
-        return new ErrorResponseDto(400, balanceError.message);
+      if (currency == 'USD') {
+        const { data: updateData, error: updateError } = await this.postgresrest
+          .from("wallets")
+          .update({
+            balance: balance,
+          })
+          .eq("id", receiving_wallet_id)
+          .select()
+          .single();
+        if (updateError) {
+          this.logger.error(
+            `Error fetching USD receiver balance ${receiving_wallet_id}`,
+            updateError,
+          );
+          return new ErrorResponseDto(400, updateError.message);
+        }
+        // console.log("New wallet:");
+        // console.log(updateData);
+
+        return {
+          statusCode: 200,
+          message: "USD receiver wallet updated successfully",
+          data: updateData as Wallet,
+        };
       }
-      const balance = parseFloat(balanceData["balance"]);
-      */
       const { data: updateData, error: updateError } = await this.postgresrest
         .from("wallets")
         .update({
-          balance: balance,
+          balance_zwg: balance,
         })
         .eq("id", receiving_wallet_id)
         .select()
         .single();
       if (updateError) {
         this.logger.error(
-          `Error fetching receiver balance ${receiving_wallet_id}`,
+          `Error fetching ZWG receiver balance ${receiving_wallet_id}`,
           updateError,
         );
         return new ErrorResponseDto(400, updateError.message);
@@ -644,9 +678,10 @@ export class WalletsService {
 
       return {
         statusCode: 200,
-        message: "Wallet updated successfully",
+        message: "ZWG receiver wallet updated successfully",
         data: updateData as Wallet,
       };
+
     } catch (error) {
       this.logger.error(
         `Exception in updateSmileCashReceiverBalance for id ${receiving_wallet_id}`,

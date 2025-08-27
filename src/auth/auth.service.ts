@@ -444,7 +444,6 @@ export class AuthService {
       // Create wallet
       // Check wallet SmileCash balance
 
-
       createWalletDto.profile_id = user_data.id;
       // createWalletDto.balance = 20;
       createWalletDto.default_currency = 'usd';
@@ -456,13 +455,19 @@ export class AuthService {
         transactorMobile: signupDto.phone,
         currency: createWalletDto.default_currency.toUpperCase(), // ZWG | USD
         channel: 'USSD',
-      } as BalanceEnquiryRequest
-      const scwBalanceResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+      } as BalanceEnquiryRequest;
+      const scwBalanceResponse =
+        await scwService.balanceEnquiry(balanceEnquiryParams);
       if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
         createWalletDto.balance = 0.0;
-        return new GeneralErrorResponseDto(HttpStatus.BAD_REQUEST, 'Failed to check balance', scwBalanceResponse);
+        return new GeneralErrorResponseDto(
+          HttpStatus.BAD_REQUEST,
+          'Failed to check balance',
+          scwBalanceResponse,
+        );
       }
-      createWalletDto.balance = scwBalanceResponse.data.data.billerResponse.balance;
+      createWalletDto.balance =
+        scwBalanceResponse.data.data.billerResponse.balance;
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       // Update wallet_id in profiles

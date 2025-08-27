@@ -82,6 +82,137 @@ export class TransactionsService {
         this.postgresrest,
         this.smileWalletService,
       );
+      /*
+      const request = {
+        receiverMobile: senderTransactionDto.receiving_phone,
+        senderPhone: senderTransactionDto.sending_phone,
+        amount: senderTransactionDto.amount,
+        currency: senderTransactionDto.currency,
+        channel: senderTransactionDto.transfer_mode,
+        narration: senderTransactionDto.transaction_type,
+      };
+      this.logger.warn('Initiating wallet to wallet transfer');
+      const w2wResponse = await scwService.walletToWallet(
+        request as WalletToWalletTransferRequest,
+      );
+      if (w2wResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
+        );
+        return w2wResponse;
+      }
+      this.logger.debug(
+        `Wallet to wallet transfer response: ${JSON.stringify(w2wResponse)}`,
+      );
+      */
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+      if (error) {
+        console.log(error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
+
+      /**
+       * "transactorMobile":"263777757603",
+    "currency":"USD", // ZWG | USD
+    "channel":"USSD", //USSD | APP | WEB
+    "transactionId":""
+       */
+
+      const scSenderParams = {
+        transactorMobile: senderTransactionDto.sending_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      // Update sender's SmileCash balance
+      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
+      this.logger.warn('Updating sender SmileCash balance');
+      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      if (scSenderResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
+        );
+        return scSenderResponse;
+      }
+      const senderResponse = await walletsService.updateSmileCashSenderBalance(
+        senderTransactionDto.sending_wallet,
+        scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
+      );
+
+      // Update receiver's SmileCash balance
+      const scReceiverParams = {
+        transactorMobile: senderTransactionDto.receiving_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      this.logger.warn(`Updating receiver SmileCash balance`);
+      const scReceiverResponse =
+        await scwService.balanceEnquiry(scReceiverParams);
+      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
+        );
+        return scReceiverResponse;
+      }
+      const receiverResponse =
+        await walletsService.updateSmileCashReceiverBalance(
+          senderTransactionDto.receiving_wallet,
+          scReceiverResponse.data.data.billerResponse.balance,
+          senderTransactionDto.currency!.toUpperCase(),
+        );
+
+      this.logger.debug(
+        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
+      );
+      return {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+        data: {
+          message: senderTransactionDto,
+          // transaction_id: data.id,
+          // date: data.created_date,
+          // new_balance: debitResponse['balance'] ?? 0.0,
+        },
+        // debitResponse,
+        // creditResponse
+      };
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async createP2PTransaction(
+    senderTransactionDto: CreateTransactionDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      /*When a transaction is initiated, 4 steps should take place:
+       1. the initiator's transaction is recorded in the transactions table
+       2. the initiator's wallet is debited
+       3. the receiver's wallet is credited
+       4 the receiver's credit is recorded in the transactions table
+
+       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
+       */
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        this.smileWalletService,
+      );
+
       const request = {
         receiverMobile: senderTransactionDto.receiving_phone,
         senderPhone: senderTransactionDto.sending_phone,
@@ -131,6 +262,7 @@ export class TransactionsService {
       } as BalanceEnquiryRequest;
 
       // Update sender's SmileCash balance
+      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
       this.logger.warn('Updating sender SmileCash balance');
       const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
       if (scSenderResponse instanceof GeneralErrorResponseDto) {
@@ -142,6 +274,7 @@ export class TransactionsService {
       const senderResponse = await walletsService.updateSmileCashSenderBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
       );
 
       this.logger.debug(
@@ -168,6 +301,7 @@ export class TransactionsService {
         await walletsService.updateSmileCashReceiverBalance(
           senderTransactionDto.receiving_wallet,
           scReceiverResponse.data.data.billerResponse.balance,
+          senderTransactionDto.currency!.toUpperCase(),
         );
 
       this.logger.debug(
@@ -246,6 +380,7 @@ export class TransactionsService {
       const senderResponse = await walletsService.updateSmileCashSenderBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
       );
 
       this.logger.debug(
@@ -272,6 +407,7 @@ export class TransactionsService {
         await walletsService.updateSmileCashReceiverBalance(
           senderTransactionDto.receiving_wallet,
           scReceiverResponse.data.data.billerResponse.balance,
+          senderTransactionDto.currency!.toUpperCase(),
         );
 
       this.logger.debug(

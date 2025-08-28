@@ -18,41 +18,90 @@ export class CooperativeMemberRequestsService {
   private readonly logger = initLogger(CooperativeMemberRequestsService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
+  async hasAlreadyJoinedCoop(
+    coop_id: string,
+    member_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select()
+        .eq('cooperative_id', coop_id)
+        .eq('member_id', member_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) {
+        this.logger.error('Error checking member who already joined', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (data) {
+        this.logger.log(`Member exists:\n${JSON.stringify(data)}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error('hasAlreadyJoinedCoop error', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async hasAlreadyRequestedCoop(
+    coop_id: string,
+    member_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select()
+        .eq('cooperative_id', coop_id)
+        .eq('member_id', member_id)
+        .eq('status', 'unresolved')
+        .maybeSingle();
+      if (error) {
+        this.logger.error('Error checking existing member request', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (data) {
+        this.logger.log(`Member request exists:\n${JSON.stringify(data)}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error('hasAlreadyRequestedCoop error', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async createCooperativeMemberRequest(
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      // Check if user with member_id already exists
-      const { data: existingRequest, error: checkError } =
-        await this.postgresrest
-          .from('cooperative_member_requests')
-          .select()
-          .match({
-            member_id: createCooperativeMemberRequestDto.member_id,
-            cooperative_id: createCooperativeMemberRequestDto.cooperative_id,
-          })
-          .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        // PGRST116 is the "not found" error code
-        this.logger.error('Error checking existing member request', checkError);
-        return new ErrorResponseDto(400, checkError.message);
-      }
-
-      if (existingRequest) {
+      // Check if user has already joined the cooperative
+      const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
+        createCooperativeMemberRequestDto.cooperative_id!,
+        createCooperativeMemberRequestDto.member_id!,
+      );
+      const hasAlreadyRequested = await this.hasAlreadyRequestedCoop(
+        createCooperativeMemberRequestDto.cooperative_id!,
+        createCooperativeMemberRequestDto.member_id!,
+      );
+      if (hasAlreadyJoined) {
         return new ErrorResponseDto(
-          400,
-          'A request for this member already exists',
+          409,
+          'You have already joined this cooperative',
         );
       }
-      console.log(
-        'createCooperativeMemberRequestDto',
-        createCooperativeMemberRequestDto,
-      );
+      if (hasAlreadyRequested) {
+        return new ErrorResponseDto(
+          409,
+          'You have already requsted to join this cooperative',
+        );
+      }
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .insert(createCooperativeMemberRequestDto)
+        .select()
         .single();
       if (error) {
         this.logger.error('Error creating cooperative member request', error);

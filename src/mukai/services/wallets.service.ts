@@ -11,8 +11,6 @@ import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
-import { BalanceEnquiryRequest } from "src/common/zb_smilecash_wallet/requests/transactions.requests";
-import { SmileCashWalletService } from "src/common/zb_smilecash_wallet/services/smilecash-wallet.service";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -132,6 +130,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.message);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
+      /*
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
         const scwService = new SmileCashWalletService(this.postgresrest);
@@ -167,6 +166,7 @@ export class WalletsService {
           data: data as Wallet[],
         });
       }
+      */
 
       return {
         statusCode: 200,
@@ -548,7 +548,6 @@ export class WalletsService {
     }
   }
 
-  /*
   async updateSmileCashSenderBalance(
     sending_wallet_id: string,
     balance: number,
@@ -611,7 +610,6 @@ export class WalletsService {
       return new ErrorResponseDto(500, error);
     }
   }
-  */
 
   /*
   async updateSmileCashReceiverBalance(

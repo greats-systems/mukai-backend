@@ -40,13 +40,13 @@ export class GroupService {
       const createGroupMemberDto = new CreateGroupMemberDto();
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
       const transactionsService = new TransactionsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
@@ -212,11 +212,11 @@ export class GroupService {
       const walletDetails: string[] = [];
       const walletService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const transactionsService = new TransactionsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest

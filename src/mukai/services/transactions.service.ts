@@ -9,9 +9,6 @@ import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
 
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-// import { Wallet } from '../entities/wallet.entity';
-// import { SmilePayGateway } from 'src/common/zb_payment_gateway/payments';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import {
   BalanceEnquiryRequest,
@@ -37,7 +34,7 @@ export class TransactionsService {
 
   constructor(
     private readonly postgresrest: PostgresRest,
-    private readonly smileWalletService: SmileWalletService,
+    // private readonly smileWalletService: SmileWalletService,
   ) {}
 
   async hasPaidSubscription(
@@ -80,32 +77,8 @@ export class TransactionsService {
        */
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
-      /*
-      const request = {
-        receiverMobile: senderTransactionDto.receiving_phone,
-        senderPhone: senderTransactionDto.sending_phone,
-        amount: senderTransactionDto.amount,
-        currency: senderTransactionDto.currency,
-        channel: senderTransactionDto.transfer_mode,
-        narration: senderTransactionDto.transaction_type,
-      };
-      this.logger.warn('Initiating wallet to wallet transfer');
-      const w2wResponse = await scwService.walletToWallet(
-        request as WalletToWalletTransferRequest,
-      );
-      if (w2wResponse instanceof GeneralErrorResponseDto) {
-        this.logger.error(
-          `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
-        );
-        return w2wResponse;
-      }
-      this.logger.debug(
-        `Wallet to wallet transfer response: ${JSON.stringify(w2wResponse)}`,
-      );
-      */
-
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
@@ -117,14 +90,6 @@ export class TransactionsService {
       }
 
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
-
-      /**
-       * "transactorMobile":"263777757603",
-    "currency":"USD", // ZWG | USD
-    "channel":"USSD", //USSD | APP | WEB
-    "transactionId":""
-       */
-
       const scSenderParams = {
         transactorMobile: senderTransactionDto.sending_phone,
         currency: senderTransactionDto.currency?.toUpperCase(),
@@ -142,7 +107,7 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashSenderBalance(
+      const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -168,12 +133,11 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
-      const receiverResponse =
-        await walletsService.updateSmileCashReceiverBalance(
-          senderTransactionDto.receiving_wallet,
-          scReceiverResponse.data.data.billerResponse.balance,
-          senderTransactionDto.currency!.toUpperCase(),
-        );
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
 
       this.logger.debug(
         `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
@@ -210,7 +174,7 @@ export class TransactionsService {
        */
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
 
       const request = {
@@ -271,7 +235,7 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashSenderBalance(
+      const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -297,12 +261,11 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
-      const receiverResponse =
-        await walletsService.updateSmileCashReceiverBalance(
-          senderTransactionDto.receiving_wallet,
-          scReceiverResponse.data.data.billerResponse.balance,
-          senderTransactionDto.currency!.toUpperCase(),
-        );
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
 
       this.logger.debug(
         `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
@@ -339,7 +302,7 @@ export class TransactionsService {
        */
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
 
       const { data, error } = await this.postgresrest
@@ -377,7 +340,7 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashSenderBalance(
+      const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -403,12 +366,11 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
-      const receiverResponse =
-        await walletsService.updateSmileCashReceiverBalance(
-          senderTransactionDto.receiving_wallet,
-          scReceiverResponse.data.data.billerResponse.balance,
-          senderTransactionDto.currency!.toUpperCase(),
-        );
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
 
       this.logger.debug(
         `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,

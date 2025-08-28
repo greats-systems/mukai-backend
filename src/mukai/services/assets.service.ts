@@ -11,10 +11,11 @@ import { Asset } from '../entities/asset.entity';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+// import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 // import { CooperativesService } from './cooperatives.service';
 import { GroupMemberService } from './group-members.service';
+import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -55,7 +56,7 @@ export class AssetsService {
   async createAsset(
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    const createCoopMemberApproval = new CooperativeMemberApprovals();
+    const createCoopMemberApproval = new CreateCooperativeMemberApprovalsDto();
     const gmService = new GroupMemberService(this.postgresrest);
     const coopMemberApprovalService = new CooperativeMemberApprovalsService(
       this.postgresrest,

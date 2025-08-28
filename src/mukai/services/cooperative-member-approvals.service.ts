@@ -23,6 +23,7 @@ import { GroupMemberService } from './group-members.service';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { UserService } from 'src/user/user.service';
+// import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -444,7 +445,7 @@ export class CooperativeMemberApprovalsService {
   ): Promise<boolean> {
     const walletService = new WalletsService(
       this.postgresrest,
-      new SmileWalletService(),
+      // new SmileWalletService(),
     );
     this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
     const receivingWallet = await walletService.viewProfileWalletID(
@@ -496,13 +497,13 @@ export class CooperativeMemberApprovalsService {
     transactionDto.amount =
       updateCooperativeMemberApprovalsDto.additional_info as number;
     transactionDto.narrative = 'credit';
-    transactionDto.currency = 'usd';
+    transactionDto.currency = updateCooperativeMemberApprovalsDto.currency;
     transactionDto.receiving_wallet = receivingWallet['data']['id'];
     transactionDto.sending_wallet = disbursingWallet['data']['id'];
 
     const transService = new TransactionsService(
       this.postgresrest,
-      new SmileWalletService(),
+      // new SmileWalletService(),
     );
     const transactionResponse =
       await transService.createTransaction(transactionDto);

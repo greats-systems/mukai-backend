@@ -54,7 +54,7 @@ export class CooperativesService {
       const createGroupMemberDto = new CreateGroupMemberDto();
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
 
       const createWalletDto = new CreateWalletDto();
@@ -319,11 +319,11 @@ export class CooperativesService {
       const walletDetails: string[] = [];
       const walletService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const transactionsService = new TransactionsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest

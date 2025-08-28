@@ -36,6 +36,7 @@ import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/
 import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -213,9 +214,50 @@ export class AuthService {
 
       if (profileError) {
         console.error('Profile fetch error:', profileError);
-        return;
+        return {
+          statusCode: 404,
+          message: 'Profile not found',
+        };
         // Continue without profile data
       }
+      this.logger.debug(
+        `Fetching SmileCash USD balance for ${profileData.phone}`,
+      );
+      const scwService = new SmileCashWalletService(this.postgresRest);
+      const walletDto = new CreateWalletDto();
+      const walletService = new WalletsService(this.postgresRest);
+      const walletPhone = profileData?.phone;
+      const balanceEnquiryParamsUSD = {
+        transactorMobile: walletPhone,
+        currency: 'USD',
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(
+        balanceEnquiryParamsUSD,
+      );
+      if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
+        profileData.balance =
+          balanceEnquiryResponseUSD.data.data.billerResponse.balance;
+      }
+
+      this.logger.debug(
+        `Fetching SmileCash ZWG balance for ${profileData.phone}`,
+      );
+      const balanceEnquiryParamsZWG = {
+        transactorMobile: walletPhone,
+        currency: 'ZWG',
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(
+        balanceEnquiryParamsZWG,
+      );
+      if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
+        profileData.balance_zwg =
+          balanceEnquiryResponseZWG.data.data.billerResponse.balance;
+      }
+
       const response = {
         status: 'account authenticated',
         statusCode: 200,
@@ -285,15 +327,12 @@ export class AuthService {
      * * When a user signs up, we will create a SmileCash wallet for them using their phone number
      * * If the phone number is already registered, we proceed to the next steps
      */
-    const walletsService = new WalletsService(
-      this.postgresRest,
-      this.smileWalletService,
-    );
+    const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
     const transactionsService = new TransactionsService(
       this.postgresRest,
-      this.smileWalletService,
+      // this.smileWalletService,
     );
     // let canProceed: boolean = true;
     // const createTransactionDto = new CreateTransactionDto();
@@ -678,7 +717,7 @@ export class AuthService {
           .eq('is_group_wallet', false)
           .single();
         console.log('wallet_id', walletData);
-        // data[0]['wallet_id'] = walletData!['id'];
+        // profileData['wallet_id'] = walletData!['id'];
       }
       */
       console.log('profile data load', data);

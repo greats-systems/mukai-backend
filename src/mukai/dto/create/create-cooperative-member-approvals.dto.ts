@@ -136,4 +136,12 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsAlphanumeric()
   @IsOptional()
   additional_info: any;
+
+  @ApiProperty({
+    example: 'USD',
+    description: 'Currency (useful when concluding a loan disbursement poll)',
+  })
+  @IsString()
+  @IsOptional()
+  currency: string;
 }

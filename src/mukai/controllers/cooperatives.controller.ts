@@ -93,6 +93,96 @@ export class CooperativesController {
     return response;
   }
 
+  @Get('initialize-data/:member_id')
+  @ApiOperation({ summary: 'eturn groups for a given member' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Cooperative],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async initializeMembers(@Param('member_id') member_id: string) {
+    const response =
+      await this.cooperativesService.initializeMembers(member_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('members/available')
+  @ApiOperation({ summary: 'List all members that do not have a cooperative' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of profiles',
+    type: [Profile],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewAvailableMembers() {
+    const response = await this.cooperativesService.viewAvailableMembers();
+    // console.log(`viewAvailableMembers response: ${JSON.stringify(response)}`);
+    // if (response['statusCode'] === 400) {
+    //   throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    // }
+    // if (response['statusCode'] === 500) {
+    //   throw new HttpException(
+    //     response['message'],
+    //     HttpStatus.INTERNAL_SERVER_ERROR,
+    //   );
+    // }
+    return response;
+  }
+
+  @Get('admin/:admin_id')
+  @ApiOperation({ summary: 'List all cooperatives for a specific admin' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Cooperative],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCooperativesForAdmin(@Param('admin_id') admin_id: string) {
+    const response =
+      await this.cooperativesService.viewCooperativesForAdmin(admin_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':cooperative_id/members')
   @ApiOperation({ summary: 'Get members for a specific cooperative' })
   @ApiParam({

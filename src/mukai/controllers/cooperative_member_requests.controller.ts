@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   Controller,
   Get,
@@ -94,6 +93,59 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
+  @Get('/invitations/:member_id')
+  async findCooperativeInvitations(@Param('member_id') member_id: string) {
+    const response =
+      await this.cooperativeMemberRequestsService.findCooperativeInvitations(
+        member_id,
+      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(
+        response.message || 'An error occurred',
+        response.statusCode,
+      );
+    }
+    return response;
+  }
+
+   @Get('/pending/:member_id')
+  @ApiOperation({
+    summary: 'Get pending request from user who wants to join group',
+  })
+  @ApiParam({
+    name: 'member_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Member ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending request details',
+    type: CooperativeMemberRequest,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No pending requests',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async getPendingRequestDetails(@Param('member_id') member_id: string) {
+    const response =
+      await this.cooperativeMemberRequestsService.getPendingRequestDetails(
+        member_id,
+      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(
+        response.message || 'An error occurred',
+        response.statusCode,
+      );
+    }
+    return response;
+  }
+
   @Get(':group_id/:status')
   async findMemberRequestStatus(
     @Param('group_id') group_id: string,
@@ -139,44 +191,6 @@ export class CooperativeMemberRequestsController {
     const response =
       await this.cooperativeMemberRequestsService.viewCooperativeMemberRequest(
         id,
-      );
-    if (response instanceof ErrorResponseDto) {
-      throw new HttpException(
-        response.message || 'An error occurred',
-        response.statusCode,
-      );
-    }
-    return response;
-  }
-
-  @Get('/pending/:member_id')
-  @ApiOperation({
-    summary: 'Get pending request from user who wants to join group',
-  })
-  @ApiParam({
-    name: 'member_id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Member ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Pending request details',
-    type: CooperativeMemberRequest,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'No pending requests',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-    type: ErrorResponseDto,
-  })
-  async getPendingRequestDetails(@Param('member_id') member_id: string) {
-    const response =
-      await this.cooperativeMemberRequestsService.getPendingRequestDetails(
-        member_id,
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(

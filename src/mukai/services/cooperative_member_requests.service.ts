@@ -8,6 +8,8 @@ import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperat
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
 import { UpdateCooperativeMemberRequestDto } from '../dto/update/update-cooperative-member-request.dto';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { UserService } from './user.service';
+import { SignupDto } from 'src/auth/dto/signup.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -100,12 +102,42 @@ export class CooperativeMemberRequestsService {
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
-        .insert(createCooperativeMemberRequestDto)
+        .insert({
+          cooperative_id: createCooperativeMemberRequestDto.cooperative_id,
+          member_id: createCooperativeMemberRequestDto.member_id,
+          request_type: createCooperativeMemberRequestDto.request_type,
+          status: createCooperativeMemberRequestDto.status,
+          resolved_by: createCooperativeMemberRequestDto.resolved_by,
+          message: createCooperativeMemberRequestDto.message,
+          city: createCooperativeMemberRequestDto.city,
+          country: createCooperativeMemberRequestDto.country,
+          province_state: createCooperativeMemberRequestDto.province_state,
+          category: createCooperativeMemberRequestDto.category,
+        })
         .select()
         .single();
       if (error) {
         this.logger.error('Error creating cooperative member request', error);
         return new ErrorResponseDto(400, error.message);
+      }
+      if (createCooperativeMemberRequestDto.is_invited) {
+        this.logger.debug(
+          `Updating is_invited for user ${createCooperativeMemberRequestDto.member_id}`,
+        );
+        const profileService = new UserService(this.postgresrest);
+        const updateDto = new SignupDto();
+        updateDto.is_invited = createCooperativeMemberRequestDto.is_invited;
+        const updateResponse = await profileService.updateUser(
+          createCooperativeMemberRequestDto.member_id!,
+          updateDto,
+        );
+        if (updateResponse instanceof ErrorResponseDto) {
+          return new ErrorResponseDto(
+            400,
+            'Failed to update user invitation status',
+            updateResponse.errorObject,
+          );
+        }
       }
       return {
         statusCode: 201,
@@ -155,7 +187,7 @@ export class CooperativeMemberRequestsService {
         .eq('status', status);
 
       if (error) {
-        this.logger.error('Error fetching CooperativeMemberRequests', error);
+        this.logger.error('Error fetching invitations', error);
         return new ErrorResponseDto(400, error.message);
       }
 
@@ -172,6 +204,41 @@ export class CooperativeMemberRequestsService {
       };
     } catch (error) {
       this.logger.error('Exception in findAllCooperativeMemberRequests', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async findCooperativeInvitations(
+    member_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    // console.log(`${group_id}/${status}`);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select(
+          'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
+        )
+        .eq('member_id', member_id)
+        .eq('status', 'invited');
+
+      if (error) {
+        this.logger.error('Error fetching coop invitations', error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      console.log({
+        statusCode: 200,
+        message: 'Cooperative invitations fetched successfully',
+        data: JSON.stringify(data),
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Cooperative invitations fetched successfully',
+        data: data,
+      };
+    } catch (error) {
+      this.logger.error('Exception in findCooperativeInvitations', error);
       return new ErrorResponseDto(500, error);
     }
   }

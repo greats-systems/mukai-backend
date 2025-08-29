@@ -197,4 +197,11 @@ export class SignupDto {
   })
   @IsString()
   date_of_birth: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Indicates if the user has been invited to join a coop',
+  })
+  @IsString()
+  is_invited: boolean;
 }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateCooperativeMemberRequestDto {
   @ApiProperty({
@@ -149,7 +149,6 @@ export class CreateCooperativeMemberRequestDto {
   @IsOptional()
   country?: string;
 
-
   @ApiProperty({
     example: '321e6543-e98b-12d3-b456-426614174000',
     description: 'province/state',
@@ -158,4 +157,13 @@ export class CreateCooperativeMemberRequestDto {
   @IsString()
   @IsOptional()
   province_state?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Flag to indicate if a member has been invited to join a coop',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_invited?: boolean;
 }

@@ -162,17 +162,35 @@ export class CooperativesService {
     }
   }
 
+  async initializeMembers(
+    member_id: string,
+  ): Promise<object[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select('member_id, cooperatives(*, cooperatives_admin_id_fkey(*))')
+        .eq('member_id', member_id)
+        .order('created_at', { ascending: false });
+      if (error) {
+        return new ErrorResponseDto(400, 'Error initializing members', error);
+      }
+      return data;
+    } catch (error) {
+      return new ErrorResponseDto(500, 'Error initializing members', error);
+    }
+  }
+
   async findAllCooperatives(): Promise<Cooperative[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
-        .select();
+        .select('*, cooperatives_profile_id_fkey(*)');
 
       if (error) {
         this.logger.error('Error fetching Cooperatives', error);
         return new ErrorResponseDto(400, error.message);
       }
-
+      this.logger.log(`Coop data: ${JSON.stringify(data)}`);
       return data as Cooperative[];
     } catch (error) {
       this.logger.error('Exception in findAllCooperatives', error);
@@ -184,7 +202,7 @@ export class CooperativesService {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
-        .select()
+        .select('*, cooperatives_profile_id_fkey(*)')
         .eq('id', id)
         .single();
 
@@ -202,10 +220,53 @@ export class CooperativesService {
       if (!data) {
         return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
       }
-
+      // this.logger.log(`Coop data: ${JSON.stringify(data)}`);
       return data as Cooperative;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async viewCooperativesForAdmin(
+    admin_id: string,
+  ): Promise<Cooperative[] | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .eq('admin_id', admin_id);
+
+      if (error) {
+        this.logger.error(
+          `Error fetching Cooperatives for admin ${admin_id}`,
+          error,
+        );
+        if (error.details == 'The result contains 0 rows') {
+          return new ErrorResponseDto(
+            404,
+            `Cooperative with admin_id ${admin_id} not found`,
+          );
+        }
+        return new ErrorResponseDto(400, error.message || 'Unknown error');
+      }
+
+      if (!data) {
+        return new ErrorResponseDto(
+          404,
+          `Cooperatives with admin_id ${admin_id} not found`,
+        );
+      }
+
+      return data as Cooperative[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativesForAdmin for admin_id ${admin_id}`,
+        error,
+      );
       return new ErrorResponseDto(
         500,
         error instanceof Error ? error.message : 'Internal server error',
@@ -253,6 +314,45 @@ export class CooperativesService {
         `Exception in viewCooperativeMembers for id ${cooperative_id}`,
         error,
       );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async viewAvailableMembers(): Promise<
+    Profile[] | Profile | ErrorResponseDto
+  > {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('profiles')
+        .select()
+        .ilike('account_type', '%member%')
+        .or('is_invited.is.null,is_invited.eq.false')
+        .is('cooperative_id', null);
+
+      if (error) {
+        this.logger.error(`Error fetching available members`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+
+      this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
+
+      if (!data || data.length === 0) {
+        return new ErrorResponseDto(404, `Members not found`);
+      }
+
+      // Extract profiles from the data
+      const profiles = data.flatMap((item) => item.profiles);
+
+      if (profiles.length === 0) {
+        return new ErrorResponseDto(404, `No member profiles found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error(`Exception in viewAvailableMembers`, error);
       return new ErrorResponseDto(
         500,
         error instanceof Error ? error.message : 'Internal server error',

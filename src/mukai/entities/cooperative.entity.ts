@@ -14,6 +14,12 @@ export class Cooperative {
   admin_id: string;
 
   @ApiProperty({
+    example: 'Instance of Profile',
+    description: 'Admin details',
+  })
+  admin: object;
+
+  @ApiProperty({
     example: 'Green Farmers Collective',
     description: 'Name of the cooperative',
   })

@@ -43,4 +43,10 @@ export class Group {
     description: 'List of group member IDs',
   })
   members?: string[];
+
+  @ApiPropertyOptional({
+    example: '263770000000',
+    description: 'SmileCash wallet number associated with the coop',
+  })
+  coop_phone?: string;
 }

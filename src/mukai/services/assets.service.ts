@@ -14,7 +14,6 @@ import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 // import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 // import { CooperativesService } from './cooperatives.service';
-import { GroupMemberService } from './group-members.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 
 function initLogger(funcname: Function): Logger {
@@ -57,7 +56,7 @@ export class AssetsService {
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     const createCoopMemberApproval = new CreateCooperativeMemberApprovalsDto();
-    const gmService = new GroupMemberService(this.postgresrest);
+    // const gmService = new GroupMemberService(this.postgresrest);
     const coopMemberApprovalService = new CooperativeMemberApprovalsService(
       this.postgresrest,
     );
@@ -76,19 +75,19 @@ export class AssetsService {
       }
 
       // Fetch number of members in group
-      const gmResponse = await gmService.findMembersInGroup(
-        createAssetDto.group_id!,
-      );
-      if (gmResponse instanceof ErrorResponseDto) {
-        console.warn('Something happened');
-        console.warn(gmResponse);
-        return gmResponse;
-      }
-      const groupSize = gmResponse.length;
+      // const gmResponse = await gmService.findMembersInGroup(
+      //   createAssetDto.group_id!,
+      // );
+      // if (gmResponse instanceof ErrorResponseDto) {
+      //   console.warn('Something happened');
+      //   console.warn(gmResponse);
+      //   return gmResponse;
+      // }
+      // const groupSize = gmResponse.length;
       createCoopMemberApproval.group_id = createAssetDto.group_id!;
       createCoopMemberApproval.poll_description =
         createAssetDto.asset_description!;
-      createCoopMemberApproval.number_of_members = groupSize;
+      // createCoopMemberApproval.number_of_members = groupSize;
       createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll

@@ -12,14 +12,12 @@ import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooper
 import { UUID } from 'crypto';
 import { CooperativesService } from './cooperatives.service';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { LoanService } from './loan.service';
 import { WalletsService } from './wallets.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { DateTime } from 'luxon';
-import { GroupMemberService } from './group-members.service';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { UserService } from 'src/user/user.service';
@@ -64,14 +62,14 @@ export class CooperativeMemberApprovalsService {
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       this.logger.debug(createCooperativeMemberApprovalsDto);
-      const gmService = new GroupMemberService(this.postgresrest);
-      const gmResponse = await gmService.findMembersInGroup(
-        createCooperativeMemberApprovalsDto.group_id!,
-      );
-      if (gmResponse instanceof ErrorResponseDto) {
-        return gmResponse;
-      }
-      const groupSize = gmResponse.length;
+      // const gmService = new GroupMemberService(this.postgresrest);
+      // const gmResponse = await gmService.findMembersInGroup(
+      //   createCooperativeMemberApprovalsDto.group_id!,
+      // );
+      // if (gmResponse instanceof ErrorResponseDto) {
+      //   return gmResponse;
+      // }
+      // const groupSize = gmResponse.length;
 
       // Check if there is an active poll
       /*
@@ -90,7 +88,7 @@ export class CooperativeMemberApprovalsService {
         .upsert(
           {
             group_id: createCooperativeMemberApprovalsDto.group_id,
-            number_of_members: groupSize,
+            // number_of_members: groupSize,
             profile_id: createCooperativeMemberApprovalsDto.profile_id,
             poll_description:
               createCooperativeMemberApprovalsDto.poll_description,
@@ -169,17 +167,35 @@ export class CooperativeMemberApprovalsService {
 
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
-    userJson: object,
+    // member_id: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
-      this.logger.warn(userJson);
+      // First update the group size
+      // const gmService = new GroupMemberService(this.postgresrest);
+      // const groupSize = await gmService.getNumberOfMembersInGroup(group_id);
+      // if (groupSize instanceof ErrorResponseDto) {
+      //   return groupSize;
+      // }
+      // const cmaDto = new UpdateCooperativeMemberApprovalsDto();
+      // cmaDto.id = group_id;
+      // cmaDto.number_of_members = groupSize;
+      // const updateResponse = await this.updateCooperativeMemberApprovals(
+      //   cmaDto.id,
+      //   cmaDto,
+      // );
+      // if (updateResponse instanceof ErrorResponseDto) {
+      //   return updateResponse;
+      // }
+      this.logger.log('Successfully updated group size');
+      // this.logger.warn(userJson);
       // Fetch data from PostgreSQL
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .select()
+        .select('*,cooperative_member_approvals_group_id_fkey(*)')
         // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
         .eq('group_id', group_id);
+      // .neq('profile_id', member_id);
 
       if (error) {
         this.logger.error(
@@ -188,8 +204,6 @@ export class CooperativeMemberApprovalsService {
         );
         return new ErrorResponseDto(400, error.message);
       }
-
-      console.log(data);
       if (!data || data.length === 0) {
         this.logger.log(`No approvals found for group ${group_id}`);
         return [];
@@ -254,8 +268,8 @@ export class CooperativeMemberApprovalsService {
         .from('cooperative_member_approvals')
         .update({
           group_id: updateCooperativeMemberApprovalsDto.group_id,
-          number_of_members:
-            updateCooperativeMemberApprovalsDto.number_of_members,
+          // number_of_members:
+          //   updateCooperativeMemberApprovalsDto.number_of_members,
           supporting_votes:
             updateCooperativeMemberApprovalsDto.supporting_votes,
           opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
@@ -418,10 +432,7 @@ export class CooperativeMemberApprovalsService {
   async setInterestRate(
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<boolean> {
-    const coopService = new CooperativesService(
-      this.postgresrest,
-      new SmileWalletService(),
-    );
+    const coopService = new CooperativesService(this.postgresrest);
     const updateCoopDto = new UpdateCooperativeDto();
     updateCoopDto.interest_rate =
       updateCooperativeMemberApprovalsDto.additional_info;

@@ -17,11 +17,8 @@ import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
-import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
-import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
@@ -34,7 +31,7 @@ export class CooperativesService {
   private readonly logger = initLogger(CooperativesService);
   constructor(
     private readonly postgresrest: PostgresRest,
-    private readonly smileWalletService: SmileWalletService,
+    // private readonly smileWalletService: SmileWalletService,
   ) {}
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
@@ -499,27 +496,54 @@ export class CooperativesService {
     }
   }
 
+  // async updateCooperative(
+  //   id: string,
+  //   updateCooperativeDto: UpdateCooperativeDto,
+  // ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
+  //   console.log(updateCooperativeDto);
+  //   /**
+  //    * Before updating the interest rate, the members should vote on it first
+  //    */
+  //   try {
+  //     const cmaDto = new CreateCooperativeMemberApprovalsDto();
+  //     const cmaService = new CooperativeMemberApprovalsService(
+  //       this.postgresrest,
+  //     );
+  //     cmaDto.group_id = id;
+  //     cmaDto.poll_description = 'set interest rate';
+  //     cmaDto.additional_info = updateCooperativeDto.additional_info;
+  //     console.log(cmaDto);
+  //     const cmaResponse =
+  //       await cmaService.createCooperativeMemberApprovals(cmaDto);
+  //     console.log(cmaResponse);
+  //     /*
+  //     const { data, error } = await this.postgresrest
+  //       .from('cooperatives')
+  //       .update(updateCooperativeDto)
+  //       .eq('id', id)
+  //       .select()
+  //       .single();
+  //     if (error) {
+  //       this.logger.error(`Error updating Cooperatives ${id}`, error);
+  //       return new ErrorResponseDto(400, error.message);
+  //     }
+  //     */
+  //     return cmaResponse as CooperativeMemberApprovals;
+  //   } catch (error) {
+  //     this.logger.error(`Exception in updateCooperative for id ${id}`, error);
+  //     return new ErrorResponseDto(500, error);
+  //   }
+  // }
+
   async updateCooperative(
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
-  ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
+  ): Promise<Cooperative | ErrorResponseDto> {
     console.log(updateCooperativeDto);
     /**
      * Before updating the interest rate, the members should vote on it first
      */
     try {
-      const cmaDto = new CreateCooperativeMemberApprovalsDto();
-      const cmaService = new CooperativeMemberApprovalsService(
-        this.postgresrest,
-      );
-      cmaDto.group_id = id;
-      cmaDto.poll_description = 'set interest rate';
-      cmaDto.additional_info = updateCooperativeDto.additional_info;
-      console.log(cmaDto);
-      const cmaResponse =
-        await cmaService.createCooperativeMemberApprovals(cmaDto);
-      console.log(cmaResponse);
-      /*
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .update(updateCooperativeDto)
@@ -530,8 +554,8 @@ export class CooperativesService {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.message);
       }
-      */
-      return cmaResponse as CooperativeMemberApprovals;
+
+      return data as Cooperative;
     } catch (error) {
       this.logger.error(`Exception in updateCooperative for id ${id}`, error);
       return new ErrorResponseDto(500, error);

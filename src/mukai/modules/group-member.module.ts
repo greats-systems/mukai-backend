@@ -3,6 +3,6 @@ import { Module } from '@nestjs/common';
 
 @Module({
   controllers: [],
-  providers: [ PostgresRest],
+  providers: [PostgresRest],
 })
 export class GroupMembersModule {}

@@ -147,4 +147,11 @@ export class CreateCooperativeDto {
   })
   @IsString()
   phone: string;
+
+  @ApiProperty({
+    example: 10,
+    description: 'Number of members in the coop',
+  })
+  @IsString()
+  no_of_members: number;
 }

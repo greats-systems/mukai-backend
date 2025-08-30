@@ -10,6 +10,8 @@ import { UpdateCooperativeMemberRequestDto } from '../dto/update/update-cooperat
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
+import { GroupMemberService } from './group-members.service';
+import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -319,6 +321,32 @@ export class CooperativeMemberRequestsService {
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error);
         return new ErrorResponseDto(400, error.message);
+      }
+
+      // If the user's status is active, update the coop size
+      if (updateCooperativeMemberRequestDto.status == 'active') {
+        // Add member and coop IDs to group_members
+        const gmService = new GroupMemberService(this.postgresrest);
+        const gmDto = new CreateGroupMemberDto();
+        gmDto.member_id = updateCooperativeMemberRequestDto.member_id!;
+        gmDto.cooperative_id =
+          updateCooperativeMemberRequestDto.cooperative_id!;
+        const gmResponse = await gmService.createGroupMember(gmDto);
+        if (gmResponse instanceof ErrorResponseDto) {
+          return gmResponse;
+        }
+
+        // Update the user profile
+        const userService = new UserService(this.postgresrest);
+        const userDto = new SignupDto();
+        userDto.id = updateCooperativeMemberRequestDto.member_id!;
+        userDto.cooperative_id =
+          updateCooperativeMemberRequestDto.cooperative_id!;
+        userDto.is_invited = false;
+        const userResponse = await userService.updateUser(userDto.id, userDto);
+        if (userResponse instanceof ErrorResponseDto) {
+          return userResponse;
+        }
       }
       return {
         statusCode: 200,

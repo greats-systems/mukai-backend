@@ -130,6 +130,13 @@ export class SignupDto {
   coop_account_id: string;
 
   @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Cooperative account ID associated with the user',
+  })
+  @IsString()
+  cooperative_id: string;
+
+  @ApiPropertyOptional({
     example: 'abc123',
     description: 'Push notification token for the user',
   })

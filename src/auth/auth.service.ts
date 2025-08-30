@@ -789,6 +789,7 @@ export class AuthService {
         avatar: profile.avatar,
         national_id_url: profile.national_id_url,
         passport_url: profile.passport_url,
+        is_invited: profile.is_invited,
         updated_at: now,
       })
       .eq('id', profile.id);

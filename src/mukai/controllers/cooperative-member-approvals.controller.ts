@@ -101,6 +101,49 @@ export class CooperativeMemberApprovalsController {
     return response;
   }
 
+  @Get('coop/:group_id')
+  @ApiOperation({ summary: 'Get specific poll details for a group' })
+  @ApiParam({
+    name: 'id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Poll details',
+    type: CooperativeMemberApprovals,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCooperativeMemberApprovalsByCoop(
+    @Param('group_id') group_id: string,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
+        group_id,
+      );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get specific poll details' })
   @ApiParam({
@@ -129,51 +172,6 @@ export class CooperativeMemberApprovalsController {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovals(
         id,
-      );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
-  }
-
-  @Get('coop/:group_id')
-  @ApiOperation({ summary: 'Get specific poll details for a group' })
-  @ApiParam({
-    name: 'id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Group ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Poll details',
-    type: CooperativeMemberApprovals,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid ID format',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Poll not found',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  async viewCooperativeMemberApprovalsByCoop(
-    @Param('group_id') group_id: string,
-    @Body() userJson: object,
-  ) {
-    const response =
-      await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
-        group_id,
-        userJson,
       );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
@@ -234,7 +232,7 @@ export class CooperativeMemberApprovalsController {
     return response;
   }
 
-  @Patch('/coop/:coop_id')
+  @Patch('coop/:coop_id')
   @ApiOperation({ summary: 'Update a poll by coop_id' })
   @ApiParam({
     name: 'id',

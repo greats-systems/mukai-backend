@@ -108,7 +108,7 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
-   @Get('/pending/:member_id')
+  @Get('/pending/:member_id')
   @ApiOperation({
     summary: 'Get pending request from user who wants to join group',
   })

@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
-  IsInt,
   IsArray,
   IsAlphanumeric,
   IsBoolean,
@@ -44,14 +43,14 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsOptional()
   profile_id?: string;
 
-  @ApiProperty({
-    example: 150,
-    description: 'Optional total member count',
-    required: false,
-  })
-  @IsInt()
-  @IsOptional()
-  number_of_members?: number;
+  // @ApiProperty({
+  //   example: 150,
+  //   description: 'Optional total member count',
+  //   required: false,
+  // })
+  // @IsInt()
+  // @IsOptional()
+  // number_of_members?: number;
 
   @ApiProperty({
     example: [

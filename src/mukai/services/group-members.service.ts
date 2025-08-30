@@ -8,6 +8,9 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
 import { GroupMembers } from '../entities/group-members.entity';
+import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
+import { CooperativesService } from './cooperatives.service';
+import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -49,6 +52,24 @@ export class GroupMemberService {
           };
         }
         return new ErrorResponseDto(400, error.message);
+      }
+      // Update number of members in cooperative
+      const groupSize = await this.getNumberOfMembersInGroup(
+        createGroupMemberDto.cooperative_id,
+      );
+      if (groupSize instanceof ErrorResponseDto) {
+        return groupSize;
+      }
+      const coopService = new CooperativesService(this.postgresrest);
+      const updateDto = new UpdateCooperativeDto();
+      updateDto.id = createGroupMemberDto.cooperative_id as UUID;
+      updateDto.no_of_members = groupSize;
+      const updateCoopResponse = await coopService.updateCooperative(
+        updateDto.id,
+        updateDto,
+      );
+      if (updateCoopResponse instanceof ErrorResponseDto) {
+        return updateCoopResponse;
       }
       return createGroupMemberResponse as GroupMembers;
     } catch (error) {
@@ -121,7 +142,31 @@ export class GroupMemberService {
     }
   }
 
-  async viewGroupMember(id: string): Promise<GroupMembers[] | ErrorResponseDto> {
+  async getNumberOfMembersInGroup(
+    coop_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .eq('cooperative_id', coop_id);
+      if (error) {
+        this.logger.error(`Error fetching group size ${coop_id}`, error);
+        return new ErrorResponseDto(400, error.message);
+      }
+      return data.length;
+    } catch (error) {
+      this.logger.error(
+        `Exception in getNumberOfMembersInGroup for id ${coop_id}`,
+        error,
+      );
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async viewGroupMember(
+    id: string,
+  ): Promise<GroupMembers[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')

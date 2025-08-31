@@ -324,7 +324,7 @@ export class CooperativeMemberRequestsService {
       }
 
       // If the user's status is active, update the coop size
-      if (updateCooperativeMemberRequestDto.status == 'active') {
+      if (updateCooperativeMemberRequestDto.status === 'active') {
         // Add member and coop IDs to group_members
         const gmService = new GroupMemberService(this.postgresrest);
         const gmDto = new CreateGroupMemberDto();

@@ -327,14 +327,15 @@ export class CooperativesService {
         .select()
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
-        .is('cooperative_id', null);
+        .is('cooperative_id', null)
+        .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error(`Error fetching available members`, error);
         return new ErrorResponseDto(400, error.message);
       }
 
-      this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
+      // this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
 
       if (!data || data.length === 0) {
         return new ErrorResponseDto(404, `Members not found`);

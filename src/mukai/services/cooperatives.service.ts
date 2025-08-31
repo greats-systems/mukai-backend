@@ -199,7 +199,7 @@ export class CooperativesService {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
-        .select('*, cooperatives_profile_id_fkey(*)')
+        .select('*, cooperatives_admin_id_fkey(*)')
         .eq('id', id)
         .single();
 

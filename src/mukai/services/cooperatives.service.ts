@@ -278,7 +278,8 @@ export class CooperativesService {
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('member_id, profiles(*)')
-        .eq('cooperative_id', cooperative_id);
+        .eq('cooperative_id', cooperative_id)
+        .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error(

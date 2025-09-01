@@ -26,6 +26,14 @@ export class CreateSavingsDto {
   purpose: string;
 
   @ApiProperty({
+    example: 'USD',
+    description: 'Savings currency',
+    required: true,
+  })
+  @IsString()
+  currency: string;
+
+  @ApiProperty({
     example: 1000.5,
     description: 'Current balance',
     required: true,

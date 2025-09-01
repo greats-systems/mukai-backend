@@ -82,7 +82,8 @@ export class AssetsController {
     description: 'Server error',
   })
   async createIndividual(@Body() createAssetDto: CreateAssetDto) {
-    const response = await this.assetsService.createIndividualAsset(createAssetDto);
+    const response =
+      await this.assetsService.createIndividualAsset(createAssetDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(
         response['message'] ?? 'Bad request',
@@ -97,7 +98,6 @@ export class AssetsController {
     }
     return response;
   }
-  
 
   @Get()
   @ApiOperation({ summary: 'Get all assets' })

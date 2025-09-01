@@ -29,7 +29,7 @@ export class AssetsService {
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      console.log(createAssetDto.group_id);
+      // console.log(createAssetDto.group_id);
 
       // Create the asset
       const { data, error } = await this.postgresrest
@@ -140,6 +140,7 @@ export class AssetsService {
     profile_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.debug(`Fetching assets for profile ${profile_id}`);
       const { data, error } = await this.postgresrest
         .from('assets')
         .select()
@@ -148,6 +149,7 @@ export class AssetsService {
         this.logger.error('Error fetching Group Assets', error);
         return new ErrorResponseDto(400, error.message);
       }
+      this.logger.log(JSON.stringify(data));
       return {
         statusCode: 200,
         message: 'Group assets fetched successfully',

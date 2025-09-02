@@ -37,6 +37,7 @@ import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/reg
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { AuthSuccess } from 'src/common/dto/auth-responses.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -578,9 +579,9 @@ export class AuthService {
           passport_url: signupDto.passport_url,
           role: newAuthUser.user.role,
         },
-        data: payload,
+        data: this.jwtService.sign(payload),
         error: null,
-      };
+      } as AuthSuccess;
     } catch (e) {
       console.error(e);
       return new ErrorResponseDto(500, e);

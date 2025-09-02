@@ -5,6 +5,7 @@ import {
   SwaggerModule,
   DocumentBuilder,
   SwaggerDocumentOptions,
+  SwaggerCustomOptions,
 } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -22,9 +23,23 @@ async function bootstrap() {
   const options: SwaggerDocumentOptions = {
     operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
   };
-  const documentFactory = () =>
-    SwaggerModule.createDocument(app, config, options);
-  SwaggerModule.setup('docs/api', app, documentFactory);
+
+  const document = SwaggerModule.createDocument(app, config, options);
+
+  // Custom Swagger UI configuration for alphabetical sorting
+  const customOptions: SwaggerCustomOptions = {
+    swaggerOptions: {
+      docExpansion: 'none',
+      filter: true,
+      showRequestDuration: true,
+      operationsSorter: 'alpha', // Sort operations alphabetically
+      tagsSorter: 'alpha', // Sort tags alphabetically
+    },
+    customSiteTitle: 'Mukai API Documentation',
+  };
+
+  SwaggerModule.setup('docs/api', app, document, customOptions);
+
   // app.useGlobalPipes(
   //   new ValidationPipe({
   //     whitelist: true, // remove non-whitelisted properties

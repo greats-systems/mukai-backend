@@ -16,7 +16,8 @@ import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { AuthSuccess } from 'src/common/dto/auth-responses.dto';
 
 /**
  * Controller for handling authentication-related operations.
@@ -71,6 +72,30 @@ export class AuthController {
    * @param signupDto - User signup data
    * @returns Promise<any> - Result of the signup operation
    */
+
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({ type: SignupDto })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'User created successfully',
+    type: AuthSuccess,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Phone number already exists',
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Email already exists',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+  })
   @Post('create-account')
   async signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
@@ -96,11 +121,29 @@ export class AuthController {
     return this.authService.updateFCM(profile);
   }
 
-  /**
-   * Authenticates a user and generates an access token.
-   * @param loginDto - User login credentials
-   * @returns Promise<any> - Authentication result with access token
-   */
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({ type: SignupDto })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'User created successfully',
+    type: AuthSuccess,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Phone number already exists',
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'Email already exists',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+  })
   @Post('login')
   @ApiResponse({
     status: 200,

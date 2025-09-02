@@ -8,6 +8,7 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
@@ -266,6 +267,30 @@ export class TransactionsController {
     const response =
       await this.transactionsService.getCoopTotalContributionsZWG(wallet_id);
     console.log('getCoopTotalContributionsZWG response');
+    console.log(response);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+  @Get('subscriptions/filter')
+  async getMemberTotalSubscriptions(
+    @Query('coop_wallet_id') coop_wallet_id: string,
+    @Query('member_wallet_id') member_wallet_id: string,
+    @Query('currency') currency: string,
+  ) {
+    const response = await this.transactionsService.getMemberTotalSubscriptions(
+      coop_wallet_id,
+      member_wallet_id,
+      currency,
+    );
+    console.log('getCoopTotalSubscriptions response');
     console.log(response);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

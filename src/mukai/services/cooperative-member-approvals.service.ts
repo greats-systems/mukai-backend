@@ -62,27 +62,6 @@ export class CooperativeMemberApprovalsService {
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       this.logger.debug(createCooperativeMemberApprovalsDto);
-      // const gmService = new GroupMemberService(this.postgresrest);
-      // const gmResponse = await gmService.findMembersInGroup(
-      //   createCooperativeMemberApprovalsDto.group_id!,
-      // );
-      // if (gmResponse instanceof ErrorResponseDto) {
-      //   return gmResponse;
-      // }
-      // const groupSize = gmResponse.length;
-
-      // Check if there is an active poll
-      /*
-      const activePolls = await this.checkActivePolls(
-        createCooperativeMemberApprovalsDto.group_id!,
-      );
-      if (activePolls) {
-        return new ErrorResponseDto(
-          409,
-          'There is already an active poll at the moment.',
-        );
-      }
-      */
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .upsert(
@@ -191,7 +170,9 @@ export class CooperativeMemberApprovalsService {
       // Fetch data from PostgreSQL
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .select('*,cooperative_member_approvals_group_id_fkey(*)')
+        .select(
+          '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*)',
+        )
         // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
         .eq('group_id', group_id);

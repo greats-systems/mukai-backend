@@ -562,6 +562,34 @@ export class TransactionsService {
     }
   }
 
+  async getMemberTotalSubscriptions(
+    coop_wallet_id: string,
+    member_wallet_id: string,
+    currency: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_member_total_subscriptions',
+        {
+          p_coop_wallet_id: coop_wallet_id,
+          p_member_wallet_id: member_wallet_id,
+          p_currency: currency,
+        },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.message);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total subs paid by ${member_wallet_id} ${data}`);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async getCoopTotalsByCategory(
     wallet_id: string,
     category: string,

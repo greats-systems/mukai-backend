@@ -14,10 +14,6 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { ExpressPaymentSmilePayResponse } from '../responses/smilepay.responses';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
-import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
-import { TransactionsService } from 'src/mukai/services/transactions.service';
-import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 

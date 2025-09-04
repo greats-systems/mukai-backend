@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Post,
@@ -17,7 +15,10 @@ import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { AuthSuccess } from 'src/common/dto/auth-responses.dto';
+import {
+  AuthErrorResponse,
+  AuthSuccessResponse,
+} from 'src/common/dto/auth-responses.dto';
 
 /**
  * Controller for handling authentication-related operations.
@@ -78,7 +79,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User created successfully',
-    type: AuthSuccess,
+    type: AuthSuccessResponse,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -121,57 +122,35 @@ export class AuthController {
     return this.authService.updateFCM(profile);
   }
 
-  @ApiOperation({ summary: 'Create a new user' })
+  @ApiOperation({ summary: 'Login' })
   @ApiBody({ type: SignupDto })
   @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'User created successfully',
-    type: AuthSuccess,
+    status: HttpStatus.OK,
+    description: 'Login successful',
+    type: AuthSuccessResponse,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid input data',
   })
   @ApiResponse({
-    status: 422,
-    description: 'Phone number already exists',
-  })
-  @ApiResponse({
-    status: 422,
-    description: 'Email already exists',
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid login credentials',
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Server error',
   })
   @Post('login')
-  @ApiResponse({
-    status: 200,
-    description: 'Login successful',
-    type: Object,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Invalid credentials',
-    type: Object,
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Server error',
-    type: Object,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad request',
-    type: Object,
-  })
   async login(@Body() loginDto: LoginDto) {
     const response = await this.authService.login(loginDto);
     if (response != null && response['error'] !== null) {
-      throw new HttpException(
-        response['error']['message'] ?? 'Bad request',
-        HttpStatus.BAD_REQUEST,
-      );
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
     if (response != null && response['statusCode'] === 500) {
       throw new HttpException(
@@ -180,10 +159,93 @@ export class AuthController {
       );
     }
     if (response != null && response['statusCode'] === 401) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Invalid credentials',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    }
+    return response;
+  }
+
+  @ApiOperation({ summary: 'Send OTP' })
+  @ApiBody({ type: SignupDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'OTP sent',
+    type: AuthSuccessResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+  })
+  @Post('otp/send')
+  async sendOtp(@Body() loginDto: LoginDto) {
+    const response = await this.authService.sendOtp(loginDto.phone!);
+    if (response != null && response['error'] !== null) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    if (response != null && response['statusCode'] === 500) {
       throw new HttpException(
-        response['error']?.message ?? 'Invalid credentials',
-        HttpStatus.UNAUTHORIZED,
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    if (response != null && response['statusCode'] === 401) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Invalid credentials',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    }
+    return response;
+  }
+
+  @ApiOperation({ summary: 'Send OTP' })
+  @ApiBody({ type: SignupDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'OTP sent',
+    type: AuthSuccessResponse,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Server error',
+  })
+  @Post('otp/verify')
+  async verifyOtp(@Body() loginDto: LoginDto) {
+    const response = await this.authService.verifyOtp(
+      loginDto.phone!,
+      loginDto.otp!,
+    );
+    if (response != null && response['error'] !== null) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    if (response != null && response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    if (response != null && response['statusCode'] === 401) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Invalid credentials',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
     }
     return response;
   }

@@ -18,18 +18,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
-import { v4 as uuidv4 } from 'uuid';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { createClient } from '@supabase/supabase-js';
-import { ConfigService } from '@nestjs/config';
-import { count, error, log } from 'console';
 import { WalletsService } from 'src/mukai/services/wallets.service';
-import { TransactionsService } from 'src/mukai/services/transactions.service';
 import { CreateWalletDto } from 'src/mukai/dto/create/create-wallet.dto';
-import { CreateTransactionDto } from 'src/mukai/dto/create/create-transaction.dto';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { ToroGateway } from 'src/common/toronet/auth_wallets';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
@@ -37,10 +31,21 @@ import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/reg
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { AuthSuccess } from 'src/common/dto/auth-responses.dto';
+import {
+  AuthErrorResponse,
+  AuthSuccessResponse,
+} from 'src/common/dto/auth-responses.dto';
+import  * as CryptoJS  from 'crypto-js';
+import { WhatsAppService } from 'src/common/whatsapp/whatsapp.service';
+import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.requests.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
+}
+
+function generateRandom6DigitNumber() {
+  // Generate a random number between 100,000 (inclusive) and 999,999 (inclusive)
+  return Math.floor(100000 + Math.random() * 900000);
 }
 
 @Injectable()
@@ -50,8 +55,6 @@ export class AuthService {
   constructor(
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    private readonly smileWalletService: SmileWalletService,
     private readonly toroGateway: ToroGateway,
   ) {
     this.supabaseAdmin = createClient(
@@ -62,6 +65,98 @@ export class AuthService {
         ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
         : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     );
+  }
+
+  async sendOtp(phone: string): Promise<boolean | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug('Sending OTP');
+      const now = new Date();
+      const futureDate = new Date(now);
+      futureDate.setMinutes(now.getMinutes() + 1); // Add 1 minute
+      const expiresIn = futureDate.toISOString();
+      const plainText = generateRandom6DigitNumber().toString();
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
+      const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+      this.logger.debug(`Plain text: ${plainText} Cipher text: ${cipherText}`);
+      /*
+      const { data: otpData, error: otpError } = await this.postgresRest
+        .from('otps')
+        .select()
+        .eq('phone', phone);
+      if (otpError) {
+        this.logger.error(
+          `Failed to check user OTP: ${JSON.stringify(otpError)}`,
+        );
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to check user OTP',
+          otpError,
+        );
+      }
+      if (otpData) {
+        await this.postgresRest.from('otps').delete().eq('phone', phone);
+      }
+      const { data, error } = await this.postgresRest.from('otps').insert({
+        phone: phone,
+        otp: cipherText,
+        expires_in: futureDate.toISOString(),
+      });
+      if (error) {
+        this.logger.error(`Failed to create OTP: ${JSON.stringify(error)}`);
+        return new GeneralErrorResponseDto(400, 'Failed to create OTP', error);
+      }
+      */
+      const waService = new WhatsAppService();
+      const waRequest = new WhatsAppRequestDto();
+      waRequest.messaging_product = 'whatsapp';
+      waRequest.recipient_type = 'individual';
+      waRequest.to = phone;
+      waRequest.type = 'text';
+      waRequest.text.preview_url = false;
+      waRequest.text.body = 'text-message-content';
+      const waResponse = await waService.sendMessage(waRequest);
+      if (waResponse instanceof GeneralErrorResponseDto) {
+        return waResponse;
+      }
+      if (waResponse == false) {
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to send WhatsApp message',
+        );
+      }
+      return true;
+    } catch (e) {
+      this.logger.error(`sendOtp error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'sendOtp error', e);
+    }
+  }
+
+  async verifyOtp(
+    phone: string,
+    otp: string,
+  ): Promise<boolean | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug('Verifying OTP');
+      const bytes = CryptoJS.AES.decrypt(otp, process.env.SECRET_KEY || 'No secret key');
+      const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
+      console.log(`Deciphered text: ${decipheredText}`);
+      const { data, error } = await this.postgresRest
+        .from('otps')
+        .select()
+        .eq(otp, decipheredText)
+        .eq(phone, phone);
+      if (error) {
+        this.logger.error(`Failed to verify OTP: ${JSON.stringify(error)}`);
+        return new GeneralErrorResponseDto(400, 'Failed to create OTP', error);
+      }
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      this.logger.error(`verifyOtp error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'verifyOtp error', e);
+    }
   }
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -203,7 +298,7 @@ export class AuthService {
           error: authError,
           user: null,
           statusCode: 401,
-        };
+        } as AuthErrorResponse;
       }
 
       // 2. Get additional user profile data if needed
@@ -225,8 +320,6 @@ export class AuthService {
         `Fetching SmileCash USD balance for ${profileData.phone}`,
       );
       const scwService = new SmileCashWalletService(this.postgresRest);
-      const walletDto = new CreateWalletDto();
-      const walletService = new WalletsService(this.postgresRest);
       const walletPhone = profileData?.phone;
       const balanceEnquiryParamsUSD = {
         transactorMobile: walletPhone,
@@ -331,10 +424,6 @@ export class AuthService {
     const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
-    const transactionsService = new TransactionsService(
-      this.postgresRest,
-      // this.smileWalletService,
-    );
     // let canProceed: boolean = true;
     // const createTransactionDto = new CreateTransactionDto();
     try {
@@ -360,7 +449,25 @@ export class AuthService {
         .maybeSingle();
 
       if (existingPhoneNumber) {
-        return new ErrorResponseDto(422, 'Phone number already in use');
+        this.logger.debug(
+          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber)}`,
+        );
+        return new ErrorResponseDto(422, 'Phone number or already in use');
+      }
+
+      // Finally, check if national ID already exists
+      const { data: existingNatID } = await this.postgresRest
+        .from('profiles')
+        .select('national_id_number')
+        .eq('national_id_number', signupDto.national_id_number)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingNatID) {
+        this.logger.debug(
+          `Duplicate national ID found: ${JSON.stringify(existingNatID)}`,
+        );
+        return new ErrorResponseDto(422, 'National ID already in use');
       }
 
       const scwParams = {
@@ -581,7 +688,7 @@ export class AuthService {
         },
         data: this.jwtService.sign(payload),
         error: null,
-      } as AuthSuccess;
+      } as AuthSuccessResponse;
     } catch (e) {
       console.error(e);
       return new ErrorResponseDto(500, e);

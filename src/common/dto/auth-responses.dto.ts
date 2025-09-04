@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class AuthSuccess {
+export class AuthSuccessResponse {
   @ApiProperty({
     description: 'status',
     example: 'Account created',
@@ -71,4 +71,37 @@ export class AuthSuccess {
   };
   data: string | undefined;
   error: null;
+}
+
+export class AuthErrorResponse {
+  @ApiProperty({
+    description: 'status',
+    example: 'failed',
+  })
+  status: string;
+  @ApiProperty({
+    description: 'message',
+    example: 'Login failed',
+  })
+  message: string;
+  @ApiProperty({
+    description: 'access_token (always null)',
+    example: null,
+  })
+  access_token: null;
+  @ApiProperty({
+    description: 'error',
+    example: 'Invalid login credentials',
+  })
+  error: object;
+  @ApiProperty({
+    description: 'user (always null)',
+    example: null,
+  })
+  user: null;
+  @ApiProperty({
+    description: 'statusCode',
+    example: 401,
+  })
+  statusCode: number;
 }

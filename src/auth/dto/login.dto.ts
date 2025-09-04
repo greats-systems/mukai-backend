@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 /**
  * Data Transfer Object (DTO) for user login.
@@ -15,6 +21,16 @@ export class LoginDto {
   @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
+
+  /** Password for the user account. Must be at least 8 characters long and cannot be empty. */
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  /** Password for the user account. Must be at least 8 characters long and cannot be empty. */
+  @IsString()
+  @IsOptional()
+  otp?: string;
 }
 
 /**

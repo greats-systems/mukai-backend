@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -33,7 +34,7 @@ import {
   LoginRequest,
   SetPasswordRequest,
 } from '../requests/registration_and_auth.requests';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { SuccessResponseDto } from '../../dto/success-response.dto';
 import {
   CreateWalletError,
@@ -44,11 +45,16 @@ import { plainToInstance } from 'class-transformer';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 
+function initLogger(funcname: Function): Logger {
+  return new Logger(funcname.name);
+}
+
 // Types
 @Injectable()
 export class SmileCashWalletService {
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly logger = initLogger(SmileCashWalletService);
 
   constructor(private readonly postgresrest: PostgresRest) {
     this.baseUrl = process.env.SMILECASH_WALLET_BASE_URL || '';
@@ -139,7 +145,7 @@ export class SmileCashWalletService {
     request: CreateWalletRequest,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
-      console.debug('Creating wallet', request);
+      this.logger.debug('Creating wallet', request);
 
       const response = await axios.post(
         `${this.baseUrl}/accounts/api/v1/subscribers/create`,

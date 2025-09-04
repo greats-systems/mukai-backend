@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import { Logger, Injectable, HttpStatus } from '@nestjs/common';
+import { Logger, Injectable } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
@@ -22,6 +22,7 @@ import { CooperativeMemberApprovals } from '../entities/cooperative-member-appro
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -45,6 +46,7 @@ export class CooperativesService {
     5. The coop's admin is updated in the profiles table
 
     - Each cooperative will be allocated a ZB merchant account
+    - Before creating a coop, make sure that no coop with the exact same parameters exists
      */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
@@ -60,14 +62,44 @@ export class CooperativesService {
 
       // Create cooperative
       this.logger.debug(createCooperativeDto);
+
+      const { data: existingCoop, error: existingCoopError } =
+        await this.postgresrest
+          .from('cooperatives')
+          .select()
+          .eq('name', createCooperativeDto.name)
+          .eq('coop_phone', createCooperativeDto.phone)
+          .eq('category', createCooperativeDto.category)
+          .eq('city', createCooperativeDto.city)
+          .maybeSingle();
+
+      if (existingCoopError) {
+        this.logger.error(
+          `Failed to check for existing coop :${JSON.stringify(existingCoopError)}`,
+        );
+        return new GeneralErrorResponseDto(
+          400,
+          existingCoopError.message,
+          existingCoopError,
+        );
+      }
+      if (existingCoop) {
+        this.logger.log(`Coop found: ${JSON.stringify(existingCoop)}`);
+        return new GeneralErrorResponseDto(
+          409,
+          'This coop is taken. Please edit your coop info',
+          existingCoop,
+        );
+      }
+
       const { data: createCooperativeResponse, error } = await this.postgresrest
         .from('cooperatives')
         .insert(createCooperativeDto)
         .select()
         .single();
       if (error) {
-        console.log(`Error creating coop: ${error.message}`);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.error(`Error creating coop: ${JSON.stringify(error)}`);
+        return new GeneralErrorResponseDto(400, error.message, error);
       }
       console.log('Response data');
       console.log(createCooperativeResponse['id']);
@@ -89,23 +121,68 @@ export class CooperativesService {
       createWalletDto.is_group_wallet = true;
       createWalletDto.group_id = createCooperativeResponse['id'];
       const scwService = new SmileCashWalletService(this.postgresrest);
+
+      // Do balance enquiry for both USD and ZWG
       const balanceEnquiryParams = {
         transactorMobile: createCooperativeDto.coop_phone,
-        currency: createWalletDto.default_currency.toUpperCase(), // ZWG | USD
+        currency: 'USD', // ZWG | USD
+        channel: 'USSD',
+      } as BalanceEnquiryRequest;
+
+      const balanceEnquiryParamsZWG = {
+        transactorMobile: createCooperativeDto.coop_phone,
+        currency: 'ZWG', // ZWG | USD
         channel: 'USSD',
       } as BalanceEnquiryRequest;
       const scwBalanceResponse =
         await scwService.balanceEnquiry(balanceEnquiryParams);
-      if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
+      const scwBalanceResponseZWG = await scwService.balanceEnquiry(
+        balanceEnquiryParamsZWG,
+      );
+      if (
+        scwBalanceResponse instanceof GeneralErrorResponseDto ||
+        scwBalanceResponseZWG instanceof GeneralErrorResponseDto
+      ) {
         createWalletDto.balance = 0.0;
+        createWalletDto.balance_zwg = 0.0;
+        const { data, error } = await this.postgresrest
+          .from('profiles')
+          .select()
+          .eq('id', createCooperativeDto.admin_id)
+          .maybeSingle();
+        if (error) {
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch admin',
+            error,
+          );
+        }
+        const user = data as SignupDto;
+        const scwRequest = {
+          firstName: user.first_name,
+          lastName: user.last_name,
+          mobile: user.phone,
+          dateOfBirth: user.date_of_birth,
+          idNumber: user.national_id_number,
+          gender: user.gender.toUpperCase(), //MALE|FEMALE
+          source: 'Smile SACCO',
+        } as CreateWalletRequest;
+        const scwResponse = await scwService.createWallet(scwRequest);
+        if (scwRequest instanceof GeneralErrorResponseDto) {
+          return scwResponse;
+        }
+        /*
         return new GeneralErrorResponseDto(
           HttpStatus.BAD_REQUEST,
           'Failed to check balance',
           scwBalanceResponse,
         );
+        */
       }
-      createWalletDto.balance =
-        scwBalanceResponse.data.data.billerResponse.balance;
+      if (scwBalanceResponse instanceof SuccessResponseDto) {
+        createWalletDto.balance =
+          scwBalanceResponse.data.data.billerResponse.balance;
+      }
       const walletResponse = await walletsService.createWallet(createWalletDto);
       console.log('Wallet response');
       console.log(walletResponse);
@@ -164,13 +241,14 @@ export class CooperativesService {
   ): Promise<object[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('group_members')
-        .select('member_id, cooperatives(*, cooperatives_admin_id_fkey(*))')
-        .eq('member_id', member_id)
+        .from('cooperatives')
+        .select()
+        .eq('admin_id', member_id)
         .order('created_at', { ascending: false });
       if (error) {
         return new ErrorResponseDto(400, 'Error initializing members', error);
       }
+      this.logger.log(`initializeMembers data: ${JSON.stringify(data)}`);
       return data;
     } catch (error) {
       return new ErrorResponseDto(500, 'Error initializing members', error);

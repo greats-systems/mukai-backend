@@ -35,7 +35,7 @@ import {
   AuthErrorResponse,
   AuthSuccessResponse,
 } from 'src/common/dto/auth-responses.dto';
-import  * as CryptoJS  from 'crypto-js';
+import * as CryptoJS from 'crypto-js';
 import { WhatsAppService } from 'src/common/whatsapp/whatsapp.service';
 import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.requests.dto';
 
@@ -137,7 +137,10 @@ export class AuthService {
   ): Promise<boolean | GeneralErrorResponseDto> {
     try {
       this.logger.debug('Verifying OTP');
-      const bytes = CryptoJS.AES.decrypt(otp, process.env.SECRET_KEY || 'No secret key');
+      const bytes = CryptoJS.AES.decrypt(
+        otp,
+        process.env.SECRET_KEY || 'No secret key',
+      );
       const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
       console.log(`Deciphered text: ${decipheredText}`);
       const { data, error } = await this.postgresRest
@@ -607,14 +610,27 @@ export class AuthService {
         await scwService.balanceEnquiry(balanceEnquiryParams);
       if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
         createWalletDto.balance = 0.0;
-        return new GeneralErrorResponseDto(
-          HttpStatus.BAD_REQUEST,
-          'Failed to check balance',
-          scwBalanceResponse,
-        );
+        // Register the subscriber
+        const scwRequest = {
+          firstName: signupDto.first_name,
+          lastName: signupDto.last_name,
+          mobile: signupDto.phone,
+          dateOfBirth: signupDto.date_of_birth,
+          idNumber: signupDto.national_id_number,
+          gender: signupDto.gender, //MALE|FEMALE
+          source: 'Smile SACCO',
+        } as CreateWalletRequest;
+        const scwRegResponse = await scwService.createWallet(scwRequest);
+        if (scwRegResponse instanceof GeneralErrorResponseDto) {
+          return scwRegResponse;
+        }
       }
-      createWalletDto.balance =
-        scwBalanceResponse.data.data.billerResponse.balance;
+      if (scwBalanceResponse instanceof SuccessResponseDto) {
+        createWalletDto.balance =
+          scwBalanceResponse.data.data.billerResponse.balance;
+      } else {
+        createWalletDto.balance = 0.0;
+      }
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       // Update wallet_id in profiles

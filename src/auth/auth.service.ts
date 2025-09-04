@@ -592,7 +592,7 @@ export class AuthService {
       }
 
       // Create wallet
-      // Check wallet SmileCash balance
+      // Check wallet SmileCash balance (USD and ZWG)
 
       createWalletDto.profile_id = user_data.id;
       // createWalletDto.balance = 20;
@@ -603,13 +603,24 @@ export class AuthService {
       createWalletDto.phone = signupDto.phone;
       const balanceEnquiryParams = {
         transactorMobile: signupDto.phone,
-        currency: createWalletDto.default_currency.toUpperCase(), // ZWG | USD
+        currency: 'USD', // ZWG | USD
+        channel: 'USSD',
+      } as BalanceEnquiryRequest;
+      const balanceEnquiryParamsZWG = {
+        transactorMobile: signupDto.phone,
+        currency: 'ZWG', // ZWG | USD
         channel: 'USSD',
       } as BalanceEnquiryRequest;
       const scwBalanceResponse =
         await scwService.balanceEnquiry(balanceEnquiryParams);
-      if (scwBalanceResponse instanceof GeneralErrorResponseDto) {
+      const scwBalanceResponseZWG =
+        await scwService.balanceEnquiry(balanceEnquiryParams);
+      if (
+        scwBalanceResponse instanceof GeneralErrorResponseDto ||
+        scwBalanceResponseZWG instanceof GeneralErrorResponseDto
+      ) {
         createWalletDto.balance = 0.0;
+        createWalletDto.balance_zwg = 0.0;
         // Register the subscriber
         const scwRequest = {
           firstName: signupDto.first_name,
@@ -625,11 +636,14 @@ export class AuthService {
           return scwRegResponse;
         }
       }
-      if (scwBalanceResponse instanceof SuccessResponseDto) {
+      if (
+        scwBalanceResponse instanceof SuccessResponseDto &&
+        scwBalanceResponseZWG instanceof SuccessResponseDto
+      ) {
         createWalletDto.balance =
           scwBalanceResponse.data.data.billerResponse.balance;
-      } else {
-        createWalletDto.balance = 0.0;
+        createWalletDto.balance_zwg =
+          scwBalanceResponseZWG.data.data.billerResponse.balance;
       }
       const walletResponse = await walletsService.createWallet(createWalletDto);
 

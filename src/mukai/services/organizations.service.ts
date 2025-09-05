@@ -58,7 +58,7 @@ export class OrganizationsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Organization;
     } catch (error) {
@@ -74,7 +74,7 @@ export class OrganizationsService {
 
       if (error) {
         this.logger.error('Error fetching Organizations', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Organization[];
@@ -94,7 +94,7 @@ export class OrganizationsService {
 
       if (error) {
         this.logger.error(`Error fetching Organization ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Organization;
@@ -117,7 +117,7 @@ export class OrganizationsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Organizations ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Organization;
     } catch (error) {
@@ -136,7 +136,7 @@ export class OrganizationsService {
 
       if (error) {
         this.logger.error(`Error deleting Organization ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

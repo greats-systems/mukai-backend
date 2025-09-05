@@ -25,7 +25,7 @@ export class UserService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as object;
     } catch (error) {
@@ -42,7 +42,7 @@ export class UserService {
 
       if (error) {
         this.logger.error('Error fetching profiles', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object[];
@@ -62,7 +62,7 @@ export class UserService {
 
       if (error) {
         this.logger.error(`Error fetching group ${profile_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object[];
@@ -85,7 +85,7 @@ export class UserService {
         .single();
       if (error) {
         this.logger.error(`Error updating profiles ${profile_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as object;
     } catch (error) {
@@ -104,7 +104,7 @@ export class UserService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

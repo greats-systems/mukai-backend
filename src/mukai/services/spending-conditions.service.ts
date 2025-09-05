@@ -27,7 +27,7 @@ export class SpendingConditionsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as SpendingConditions;
     } catch (error) {
@@ -46,7 +46,7 @@ export class SpendingConditionsService {
 
       if (error) {
         this.logger.error('Error fetching spending_conditions', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as SpendingConditions[];
@@ -68,7 +68,7 @@ export class SpendingConditionsService {
 
       if (error) {
         this.logger.error(`Error fetching group ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as SpendingConditions[];
@@ -97,7 +97,7 @@ export class SpendingConditionsService {
           `Error updating spending_conditions ${wallet_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as SpendingConditions;
     } catch (error) {
@@ -121,7 +121,7 @@ export class SpendingConditionsService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

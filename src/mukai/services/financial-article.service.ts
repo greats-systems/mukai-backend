@@ -28,7 +28,7 @@ export class FinancialArticleService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 201,
@@ -52,7 +52,7 @@ export class FinancialArticleService {
 
       if (error) {
         this.logger.error('Error fetching escrow', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -80,7 +80,7 @@ export class FinancialArticleService {
 
       if (error) {
         this.logger.error(`Error fetching article ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -110,7 +110,7 @@ export class FinancialArticleService {
         .single();
       if (error) {
         this.logger.error(`Error updating escrow ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -138,7 +138,7 @@ export class FinancialArticleService {
 
       if (error) {
         this.logger.error(`Error deleting article ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

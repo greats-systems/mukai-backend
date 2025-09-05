@@ -227,7 +227,7 @@ export class CooperativesController {
     return response;
   }
 
-  @Get(':member_id/cooperatives')
+  @Get(':member_id/active')
   @ApiOperation({ summary: 'Get cooperatives for a specific member' })
   @ApiParam({
     name: 'member_id',

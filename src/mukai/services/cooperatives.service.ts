@@ -263,7 +263,7 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error('Error fetching Cooperatives', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
       return data as Cooperative[];
@@ -364,7 +364,7 @@ export class CooperativesService {
           `Error fetching members for cooperative ${cooperative_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       if (!data || data.length === 0) {
@@ -407,11 +407,12 @@ export class CooperativesService {
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
         .is('cooperative_id', null)
+        .order('first_name', { ascending: true })
         .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error(`Error fetching available members`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       // this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
@@ -443,14 +444,15 @@ export class CooperativesService {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
-        .select()
+        .select('*,coop_members_cooperative_id_fkey(*)')
         .eq('member_id', member_id)
         .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error('Error fetching cooperative', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
+      // this.logger.debug(`Coops for ${member_id}: ${JSON.stringify(data)}`);
       return {
         statusCode: 200,
         message: 'Cooperatives fetched successfully',
@@ -474,7 +476,7 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error(`Error fetching group ${cooperative_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Cooperative[];
@@ -566,7 +568,7 @@ export class CooperativesService {
         .single();
       if (error) {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Cooperative;
@@ -605,7 +607,7 @@ export class CooperativesService {
   //       .single();
   //     if (error) {
   //       this.logger.error(`Error updating Cooperatives ${id}`, error);
-  //       return new ErrorResponseDto(400, error.message);
+  //       return new ErrorResponseDto(400, error.details);
   //     }
   //     */
   //     return cmaResponse as CooperativeMemberApprovals;
@@ -632,7 +634,7 @@ export class CooperativesService {
         .single();
       if (error) {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Cooperative;
@@ -659,7 +661,7 @@ export class CooperativesService {
         .single();
       if (error) {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       console.log('Coop data after voting');
       console.log(data);
@@ -680,7 +682,7 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error(`Error deleting Cooperative ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

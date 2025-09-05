@@ -38,7 +38,7 @@ export class SubscriberService {
 
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return new ErrorResponseDto(400, 'No data returned from database');
@@ -70,7 +70,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error('Error fetching subscribers', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Subscriber[];
@@ -90,7 +90,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Subscriber[];
@@ -113,7 +113,7 @@ export class SubscriberService {
         .single();
       if (error) {
         this.logger.error(`Error updating subscribers ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Subscriber;
     } catch (error) {
@@ -132,7 +132,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

@@ -28,7 +28,7 @@ export class WalletTransactionService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as WalletTransaction;
     } catch (error) {
@@ -47,7 +47,7 @@ export class WalletTransactionService {
 
       if (error) {
         this.logger.error('Error fetching subscribers', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as WalletTransaction[];
@@ -69,7 +69,7 @@ export class WalletTransactionService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as WalletTransaction[];

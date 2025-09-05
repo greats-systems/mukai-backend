@@ -58,7 +58,7 @@ export class MessagesService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Message;
     } catch (error) {
@@ -72,7 +72,7 @@ export class MessagesService {
 
       if (error) {
         this.logger.error('Error fetching Messages', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Message[];
@@ -92,7 +92,7 @@ export class MessagesService {
 
       if (error) {
         this.logger.error(`Error fetching Message ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Message;
@@ -115,7 +115,7 @@ export class MessagesService {
         .single();
       if (error) {
         this.logger.error(`Error updating Messages ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Message;
     } catch (error) {
@@ -134,7 +134,7 @@ export class MessagesService {
 
       if (error) {
         this.logger.error(`Error deleting Message ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

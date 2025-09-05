@@ -67,7 +67,7 @@ export class LoanService {
           .single();
         if (error) {
           console.log(error);
-          return new ErrorResponseDto(400, error.message);
+          return new ErrorResponseDto(400, error.details);
         }
         // maDto.group_id = createLoanDto.cooperative_id;
         // maDto.poll_description = 'loan application';
@@ -96,7 +96,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error('Error fetching loan', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -116,7 +116,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error(`Error fetching loan ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -143,7 +143,7 @@ export class LoanService {
         if (error.details == 'The result contains 0 rows') {
           return false; // No active loan found
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (data) {
         return true;
@@ -170,7 +170,7 @@ export class LoanService {
           `Error fetching loan for profile ${profile_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -198,7 +198,7 @@ export class LoanService {
           `Error fetching loan for coop ${cooperative_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.debug(`viewCoopLoans data: ${JSON.stringify(data)}`);
       return data as Loan[];
@@ -228,7 +228,7 @@ export class LoanService {
           `Error fetching loan for coop ${cooperative_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -254,7 +254,7 @@ export class LoanService {
         .single();
       if (error) {
         this.logger.error(`Error updating loan ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Loan;
     } catch (error) {
@@ -278,7 +278,7 @@ export class LoanService {
       // .single();
       if (error) {
         this.logger.error(`Error updating coop loan ${cooperative_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Loan[];
     } catch (error) {
@@ -300,7 +300,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

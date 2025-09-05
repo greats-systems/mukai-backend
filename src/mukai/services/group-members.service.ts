@@ -51,7 +51,7 @@ export class GroupMemberService {
             data: `User ${createGroupMemberDto.member_id} is already in this group`,
           };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // Update number of members in cooperative
       const groupSize = await this.getNumberOfMembersInGroup(
@@ -86,7 +86,7 @@ export class GroupMemberService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as GroupMembers[];
@@ -108,7 +108,7 @@ export class GroupMemberService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as GroupMembers[];
@@ -132,7 +132,7 @@ export class GroupMemberService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as GroupMembers[];
@@ -152,7 +152,7 @@ export class GroupMemberService {
         .eq('cooperative_id', coop_id);
       if (error) {
         this.logger.error(`Error fetching group size ${coop_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data.length;
     } catch (error) {
@@ -176,7 +176,7 @@ export class GroupMemberService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as GroupMembers[];
@@ -199,7 +199,7 @@ export class GroupMemberService {
         .single();
       if (error) {
         this.logger.error(`Error updating group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as GroupMembers;
     } catch (error) {
@@ -218,7 +218,7 @@ export class GroupMemberService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

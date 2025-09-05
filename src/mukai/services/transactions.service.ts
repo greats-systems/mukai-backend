@@ -49,7 +49,7 @@ export class TransactionsService {
       );
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`hasPaidSubscription: ${data}`);
       if (data) {
@@ -86,7 +86,7 @@ export class TransactionsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
@@ -206,7 +206,7 @@ export class TransactionsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
@@ -312,7 +312,7 @@ export class TransactionsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
@@ -485,7 +485,7 @@ export class TransactionsService {
       { wallet_id },
     );
     if (error) {
-      return new ErrorResponseDto(400, error.message);
+      return new ErrorResponseDto(400, error.details);
     }
     if (!data) {
       return 0;
@@ -502,7 +502,7 @@ export class TransactionsService {
         { wallet_id },
       );
       if (error) {
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return 0;
@@ -525,7 +525,7 @@ export class TransactionsService {
         { wallet_id },
       );
       if (error) {
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return 0;
@@ -548,7 +548,7 @@ export class TransactionsService {
         { wallet_id },
       );
       if (error) {
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return 0;
@@ -577,7 +577,7 @@ export class TransactionsService {
         },
       );
       if (error) {
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return 0;
@@ -599,7 +599,7 @@ export class TransactionsService {
       { wallet_id: wallet_id, category: category },
     );
     if (error) {
-      return new ErrorResponseDto(400, error.message);
+      return new ErrorResponseDto(400, error.details);
     }
     if (!data) {
       return 0;
@@ -615,13 +615,35 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error('Error fetching Transactions', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Transaction[];
     } catch (error) {
       this.logger.error('Exception in findAllTransactions', error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async filterTransactions(
+    transaction_type: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select()
+        .eq('transaction_type', transaction_type);
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data as Transaction[],
+      );
+    } catch (e) {
+      this.logger.log(`filterTransactions error: ${e}`);
+      return new ErrorResponseDto(500, e);
     }
   }
 
@@ -635,7 +657,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching Transaction ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Transaction;
@@ -661,7 +683,7 @@ export class TransactionsService {
           `Error fetching contribution for ${wallet_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;
@@ -709,7 +731,7 @@ export class TransactionsService {
           `Error checking subscription payment for ${month}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return !!data; // Returns true if data exists, false otherwise
@@ -739,7 +761,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       console.log(data.length);
       return data as object;
@@ -754,7 +776,7 @@ export class TransactionsService {
   ): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.rpc(
-        'get_comprehensive_individual_transaction_report',
+        'get_transaction_reports',
         {
           p_wallet_id: wallet_id,
           // p_period: 'January',
@@ -763,7 +785,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching user financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;
@@ -787,7 +809,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error creating coop financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;

@@ -42,7 +42,7 @@ export class SavingsService {
               `User ${createSavingsDto.wallet_id} cannot create a wallet of the same type`,
           };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -61,7 +61,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -84,7 +84,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -119,7 +119,7 @@ export class SavingsService {
         if (error.details == "The result contains 0 rows") {
           return { data: "No wallet found" };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -154,7 +154,7 @@ export class SavingsService {
           `Error fetching profile savings portfolios ${profile_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -189,7 +189,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -241,7 +241,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // get profile
       const { data: profileData, error: profileError } = await this.postgresrest
@@ -278,7 +278,7 @@ export class SavingsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Wallets ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -405,7 +405,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error deleting Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {

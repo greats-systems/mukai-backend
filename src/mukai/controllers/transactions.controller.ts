@@ -14,6 +14,7 @@ import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -121,6 +122,16 @@ export class TransactionsController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Get('filter')
+  async filterTransaction(@Query('transaction_type') transaction_type: string) {
+    const response =
+      await this.transactionsService.filterTransactions(transaction_type);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
     }
     return response;
   }

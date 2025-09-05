@@ -72,7 +72,7 @@ export class ProduceService {
 
       if (error) {
         this.logger.error('Error fetching produce', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Produce[];
@@ -94,7 +94,7 @@ export class ProduceService {
 
       if (error) {
         this.logger.error(`Error fetching produce ${produceID}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Produce;

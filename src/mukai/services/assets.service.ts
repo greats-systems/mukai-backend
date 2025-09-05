@@ -39,7 +39,7 @@ export class AssetsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -71,7 +71,7 @@ export class AssetsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       // Fetch number of members in group
@@ -123,7 +123,7 @@ export class AssetsService {
         .eq('group_id', group_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -147,7 +147,7 @@ export class AssetsService {
         .eq('profile_id', profile_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(JSON.stringify(data));
       return {
@@ -166,7 +166,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error('Error fetching Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Asset[];
@@ -186,7 +186,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error(`Error fetching Asset ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Asset;
@@ -209,7 +209,7 @@ export class AssetsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Assets ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -234,7 +234,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error(`Error deleting Asset ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,

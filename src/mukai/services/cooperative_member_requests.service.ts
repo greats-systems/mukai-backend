@@ -36,7 +36,7 @@ export class CooperativeMemberRequestsService {
         .maybeSingle();
       if (error) {
         this.logger.error('Error checking member who already joined', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (data) {
         this.logger.log(`Member exists:\n${JSON.stringify(data)}`);
@@ -59,11 +59,12 @@ export class CooperativeMemberRequestsService {
         .select()
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
-        .eq('status', 'unresolved')
+        // .eq('status', 'unresolved')
+        .or('status.eq.invited,status.eq.unresolved,status.eq.active')
         .maybeSingle();
       if (error) {
         this.logger.error('Error checking existing member request', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (data) {
         this.logger.log(`Member request exists:\n${JSON.stringify(data)}`);
@@ -81,20 +82,22 @@ export class CooperativeMemberRequestsService {
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       // Check if user has already joined the cooperative
-      const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
-        createCooperativeMemberRequestDto.cooperative_id!,
-        createCooperativeMemberRequestDto.member_id!,
-      );
+      this.logger.log('Checking if they have joined the coop');
+      // const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
+      //   createCooperativeMemberRequestDto.cooperative_id!,
+      //   createCooperativeMemberRequestDto.member_id!,
+      // );
+      this.logger.log('Checking if they have requested to join the coop');
       const hasAlreadyRequested = await this.hasAlreadyRequestedCoop(
         createCooperativeMemberRequestDto.cooperative_id!,
         createCooperativeMemberRequestDto.member_id!,
       );
-      if (hasAlreadyJoined) {
-        return new ErrorResponseDto(
-          409,
-          'You have already joined this cooperative',
-        );
-      }
+      // if (hasAlreadyJoined) {
+      //   return new ErrorResponseDto(
+      //     409,
+      //     'You have already joined this cooperative',
+      //   );
+      // }
       if (hasAlreadyRequested) {
         return new ErrorResponseDto(
           409,
@@ -120,7 +123,7 @@ export class CooperativeMemberRequestsService {
         .single();
       if (error) {
         this.logger.error('Error creating cooperative member request', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (createCooperativeMemberRequestDto.is_invited) {
         this.logger.debug(
@@ -129,6 +132,9 @@ export class CooperativeMemberRequestsService {
         const profileService = new UserService(this.postgresrest);
         const updateDto = new SignupDto();
         updateDto.is_invited = createCooperativeMemberRequestDto.is_invited;
+        this.logger.log(
+          `Updating invitation status for ${createCooperativeMemberRequestDto.member_id!}`,
+        );
         const updateResponse = await profileService.updateUser(
           createCooperativeMemberRequestDto.member_id!,
           updateDto,
@@ -162,7 +168,7 @@ export class CooperativeMemberRequestsService {
 
       if (error) {
         this.logger.error('Error fetching CooperativeMemberRequests', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -190,7 +196,7 @@ export class CooperativeMemberRequestsService {
 
       if (error) {
         this.logger.error('Error fetching invitations', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -225,7 +231,7 @@ export class CooperativeMemberRequestsService {
 
       if (error) {
         this.logger.error('Error fetching coop invitations', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -260,7 +266,7 @@ export class CooperativeMemberRequestsService {
           `Error fetching CooperativeMemberRequest ${id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -292,7 +298,7 @@ export class CooperativeMemberRequestsService {
           `Error fetching CooperativeMemberRequest ${member_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -320,7 +326,7 @@ export class CooperativeMemberRequestsService {
         .select();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       // If the user's status is active, update the coop size
@@ -378,7 +384,7 @@ export class CooperativeMemberRequestsService {
           `Error updating CooperativeMemberRequests ${id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -409,7 +415,7 @@ export class CooperativeMemberRequestsService {
           `Error deleting CooperativeMemberRequest ${id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {

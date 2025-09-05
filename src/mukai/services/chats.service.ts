@@ -38,7 +38,7 @@ export class ChatsService {
       if (error) {
         console.log('createChat error:');
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 201,
@@ -56,7 +56,7 @@ export class ChatsService {
 
       if (error) {
         this.logger.error('Error fetching Chats', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -80,7 +80,7 @@ export class ChatsService {
 
       if (error) {
         this.logger.error(`Error fetching Chat ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -107,7 +107,7 @@ export class ChatsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Chats ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -130,7 +130,7 @@ export class ChatsService {
 
       if (error) {
         this.logger.error(`Error deleting Chat ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {

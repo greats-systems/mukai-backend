@@ -51,7 +51,7 @@ export class EmployeesService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Employee;
     } catch (error) {
@@ -67,7 +67,7 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error('Error fetching employees', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Employee[];
@@ -88,7 +88,7 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error(`Error fetching employee ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       console.log('viewEmployee');
       console.log(data);
@@ -115,7 +115,7 @@ export class EmployeesService {
         .single();
       if (error) {
         this.logger.error(`Error updating employees ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Employee;
     } catch (error) {
@@ -134,7 +134,7 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error(`Error deleting employee ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

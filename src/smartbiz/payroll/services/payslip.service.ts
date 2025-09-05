@@ -110,7 +110,7 @@ export class PayslipsService {
             .single();
           if (error) {
             console.log(error);
-            return new ErrorResponseDto(400, error.message);
+            return new ErrorResponseDto(400, error.details);
           }
           return data as Payslip;
         } else {
@@ -168,7 +168,7 @@ export class PayslipsService {
 
       if (error) {
         this.logger.error('Error fetching payslips', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Payslip[];
@@ -188,7 +188,7 @@ export class PayslipsService {
 
       if (error) {
         this.logger.error(`Error fetching employee_id ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Payslip[];
@@ -220,7 +220,7 @@ export class PayslipsService {
         if (error.details == 'The result contains 0 rows') {
           return null;
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       const payslip = new Payslip();
       Object.assign(payslip, data);

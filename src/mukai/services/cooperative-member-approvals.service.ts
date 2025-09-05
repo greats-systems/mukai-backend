@@ -45,7 +45,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(`Error checking for active polls: ${error.message}`);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (data) {
         return true;
@@ -87,7 +87,7 @@ export class CooperativeMemberApprovalsService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as CooperativeMemberApprovals;
     } catch (error) {
@@ -106,7 +106,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error('Error fetching cooperative_member_approvals', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as CooperativeMemberApprovals[];
@@ -131,7 +131,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as CooperativeMemberApprovals[];
@@ -183,7 +183,7 @@ export class CooperativeMemberApprovalsService {
           `Error fetching approvals for group ${group_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data || data.length === 0) {
         this.logger.log(`No approvals found for group ${group_id}`);
@@ -269,7 +269,7 @@ export class CooperativeMemberApprovalsService {
           `Error updating cooperative_member_approvals ${id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.debug(updateCooperativeMemberApprovalsDto.consensus_reached);
       this.logger.debug(updateCooperativeMemberApprovalsDto.poll_description);
@@ -617,7 +617,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

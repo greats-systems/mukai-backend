@@ -89,7 +89,7 @@ export class UserService {
 
       if (error) {
         this.logger.error(`Error updating user ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as User;

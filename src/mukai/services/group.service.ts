@@ -59,7 +59,7 @@ export class GroupService {
         .single();
       if (error) {
         console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       for (const member of createGroupDto.members) {
@@ -133,7 +133,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Group[];
@@ -153,7 +153,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object[];
@@ -173,7 +173,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Group[];
@@ -193,7 +193,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error fetching group wallet ${group_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Wallet;
@@ -272,7 +272,7 @@ export class GroupService {
         .single();
       if (error) {
         this.logger.error(`Error updating group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Group;
     } catch (error) {
@@ -291,7 +291,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

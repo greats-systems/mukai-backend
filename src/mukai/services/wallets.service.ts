@@ -45,7 +45,7 @@ export class WalletsService {
           //     `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
           // };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // get wallet profile
 
@@ -102,7 +102,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -127,7 +127,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
       /*
@@ -190,7 +190,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
       /*
@@ -257,7 +257,7 @@ export class WalletsService {
         if (error.details == "The result contains 0 rows") {
           return { data: "No wallet found" };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
       /*
@@ -307,7 +307,7 @@ export class WalletsService {
           `Error fetching individual wallet ${profile_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       console.log({
@@ -339,7 +339,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -367,7 +367,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${cooperative_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -396,7 +396,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${profile_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -449,7 +449,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // get profile
       const profile_id = data["profile_id"];
@@ -487,7 +487,7 @@ export class WalletsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Wallets ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -813,7 +813,7 @@ export class WalletsService {
 
       if (error) {
         this.logger.error(`Error deleting Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {

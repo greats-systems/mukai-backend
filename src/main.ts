@@ -10,6 +10,7 @@ import {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   const config = new DocumentBuilder()
     .addBasicAuth()
     .setTitle('Mukai API Docs')

@@ -11,6 +11,8 @@ import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
+import { BalanceEnquiryRequest } from "src/common/zb_smilecash_wallet/requests/transactions.requests";
+import { SmileCashWalletService } from "src/common/zb_smilecash_wallet/services/smilecash-wallet.service";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -260,27 +262,33 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      /*
-      this.logger.debug('Fetching SmileCash Coop Wallet balance');
+      this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
       const walletPhone = data?.coop_phone;
       const balanceEnquiryParams = {
         transactorMobile: walletPhone,
-        currency: data?.default_currency.toUpperCase(),
+        currency: 'USD',
         channel: 'USSD',
         transactionId: ''
       } as BalanceEnquiryRequest;
       const scwService = new SmileCashWalletService(this.postgresrest);
       const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
-      if (balanceEnquiryResponse instanceof SuccessResponseDto) {
+      
+      const balanceEnquiryParamsZWG = {
+        transactorMobile: walletPhone,
+        currency: 'ZWG',
+        channel: 'USSD',
+        transactionId: ''
+      } as BalanceEnquiryRequest;
+      const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+      
+      if (balanceEnquiryResponse instanceof SuccessResponseDto && balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
         data.balance = balanceEnquiryResponse.data.data.billerResponse.balance;
+        data.balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
         const updateWalletDto = new UpdateWalletDto();
         updateWalletDto.id = data.id;
         updateWalletDto.balance = data.balance;
         await this.updateWallet(updateWalletDto.id!, updateWalletDto);
       }
-      */
-
-
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",

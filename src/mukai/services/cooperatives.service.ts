@@ -375,6 +375,7 @@ export class CooperativesService {
 
       // FIX: Check if the array has any elements, not just if data exists
       if (data && data.length > 0) {
+        this.logger.log(data && data.length > 0);
         return true;
       }
 

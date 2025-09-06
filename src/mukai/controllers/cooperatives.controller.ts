@@ -10,6 +10,7 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
@@ -223,6 +224,41 @@ export class CooperativesController {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
+    }
+    return response;
+  }
+
+  @Get('filter')
+  @ApiOperation({ summary: 'Check if user is admin for a given coop' })
+  @ApiResponse({
+    status: 200,
+    description: 'true',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async checkIfMemberIsCoopAdmin(
+    @Query('admin_id') admin_id: string,
+    @Query('coop_id') coop_id: string,
+  ) {
+    const response = await this.cooperativesService.checkIfMemberIsCoopAdmin(
+      admin_id,
+      coop_id,
+    );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
     return response;
   }

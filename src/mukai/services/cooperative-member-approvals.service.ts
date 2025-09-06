@@ -274,6 +274,7 @@ export class CooperativeMemberApprovalsService {
       this.logger.debug(updateCooperativeMemberApprovalsDto.consensus_reached);
       this.logger.debug(updateCooperativeMemberApprovalsDto.poll_description);
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
+        updateCooperativeMemberApprovalsDto.consensus_reached = true;
         if (
           updateCooperativeMemberApprovalsDto.poll_description ==
           'set interest rate'

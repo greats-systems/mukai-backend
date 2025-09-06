@@ -308,7 +308,7 @@ export class CooperativesService {
 
   async viewCooperativesForAdmin(
     admin_id: string,
-  ): Promise<Cooperative[] | ErrorResponseDto> {
+  ): Promise<Cooperative[] | boolean | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -330,13 +330,55 @@ export class CooperativesService {
       }
 
       if (!data) {
-        return new ErrorResponseDto(
-          404,
-          `Cooperatives with admin_id ${admin_id} not found`,
-        );
+        return false;
       }
 
       return data as Cooperative[];
+    } catch (error) {
+      this.logger.error(
+        `Exception in viewCooperativesForAdmin for admin_id ${admin_id}`,
+        error,
+      );
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async checkIfMemberIsCoopAdmin(
+    admin_id: string,
+    coop_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .eq('id', coop_id)
+        .eq('admin_id', admin_id);
+
+      if (error) {
+        this.logger.error(
+          `Error fetching Cooperatives for admin ${admin_id}`,
+          error,
+        );
+        if (error.details == 'The result contains 0 rows') {
+          return new ErrorResponseDto(
+            404,
+            `Cooperative with admin_id ${admin_id} not found`,
+          );
+        }
+        return new ErrorResponseDto(400, error.message || 'Unknown error');
+      }
+
+      this.logger.log(`admin coop: ${JSON.stringify(data)} ${!data}`);
+
+      // FIX: Check if the array has any elements, not just if data exists
+      if (data && data.length > 0) {
+        return true;
+      }
+
+      return false;
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativesForAdmin for admin_id ${admin_id}`,

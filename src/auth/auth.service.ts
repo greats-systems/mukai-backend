@@ -274,9 +274,9 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    console.log('Logging in');
+    this.logger.log('Logging in');
     try {
-      // 1. First authenticate the user with email/password
+      // 1. Authenticate user
       const {
         data: { user, session },
         error: authError,
@@ -286,75 +286,65 @@ export class AuthService {
       });
 
       if (authError || !user) {
-        console.log({
-          status: 'failed',
-          message: 'Invalid credentials',
-          access_token: null,
-          error: authError,
-          user: null,
-          statusCode: 401,
-        });
         return {
           status: 'failed',
           message: 'Invalid credentials',
-          access_token: null,
-          error: authError,
-          user: null,
           statusCode: 401,
         } as AuthErrorResponse;
       }
 
-      // 2. Get additional user profile data if needed
+      // 2. Get essential profile data only
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles')
-        .select('*')
+        .select('id, phone, first_name, last_name, account_type')
         .eq('id', user.id)
         .single();
 
       if (profileError) {
         console.error('Profile fetch error:', profileError);
-        return {
-          statusCode: 404,
-          message: 'Profile not found',
-        };
-        // Continue without profile data
       }
-      this.logger.debug(
-        `Fetching SmileCash USD balance for ${profileData.phone}`,
-      );
+
+      // 3. Parallel balance enquiries with timeout
       const scwService = new SmileCashWalletService(this.postgresRest);
       const walletPhone = profileData?.phone;
-      const balanceEnquiryParamsUSD = {
-        transactorMobile: walletPhone,
-        currency: 'USD',
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-      const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(
-        balanceEnquiryParamsUSD,
-      );
-      if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
-        profileData.balance =
-          balanceEnquiryResponseUSD.data.data.billerResponse.balance;
+
+      const balancePromises: Promise<SuccessResponseDto | null>[] = [];
+      if (walletPhone) {
+        const balanceParamsUSD: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'USD',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        const balanceParamsZWG: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'ZWG',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        // Execute balance enquiries in parallel with timeout
+        balancePromises.push(
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsUSD),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsZWG),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+        );
       }
 
-      this.logger.debug(
-        `Fetching SmileCash ZWG balance for ${profileData.phone}`,
-      );
-      const balanceEnquiryParamsZWG = {
-        transactorMobile: walletPhone,
-        currency: 'ZWG',
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-      const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(
-        balanceEnquiryParamsZWG,
-      );
-      if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
-        profileData.balance_zwg =
-          balanceEnquiryResponseZWG.data.data.billerResponse.balance;
-      }
+      const [balanceUSD, balanceZWG] =
+        await Promise.allSettled(balancePromises);
 
+      // 4. Build minimal response
       const response = {
         status: 'account authenticated',
         statusCode: 200,
@@ -370,148 +360,93 @@ export class AuthService {
           id: user.id,
           email: user.email,
           phone: profileData?.phone || null,
-          first_name:
-            profileData?.first_name || user.user_metadata?.first_name || '',
-          last_name:
-            profileData?.last_name || user.user_metadata?.last_name || '',
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
           account_type: profileData?.account_type || 'authenticated',
-          created_at: profileData?.created_at || new Date().toISOString(),
-          dob: profileData?.dob || null,
-          gender: profileData?.gender || null,
-          wallet_id: profileData?.wallet_id || null,
-          cooperative_id: profileData?.cooperative_id || null,
-          business_id: profileData?.business_id || null,
-          updated_at: profileData?.updated_at || new Date().toISOString(),
-          affliations: profileData?.affliations || null,
-          coop_account_id: profileData?.coop_account_id || null,
-          push_token: profileData?.push_token || '',
-          avatar: profileData?.avatar || null,
-          national_id_url: profileData?.national_id_url || null,
-          passport_url: profileData?.passport_url || null,
+          balance:
+            balanceUSD.status === 'fulfilled' &&
+            balanceUSD.value instanceof SuccessResponseDto
+              ? balanceUSD.value.data.data.billerResponse.balance
+              : 0,
+          balance_zwg:
+            balanceZWG.status === 'fulfilled' &&
+            balanceZWG.value instanceof SuccessResponseDto
+              ? balanceZWG.value.data.data.billerResponse.balance
+              : 0,
           role: user.role || 'authenticated',
         },
-        error: null,
       };
 
       return response;
     } catch (error) {
       console.error('Login error:', error);
-      if (error instanceof UnauthorizedException) {
-        return {
-          status: 'failed',
-          data: null,
-          error: {
-            message: 'Invalid credentials',
-            status: 401,
-          },
-        };
-      }
       return {
         status: 'failed',
-        data: null,
-        error: {
-          message: 'Login failed',
-          status: 500,
-        },
+        message: 'Login failed. Please try again.',
+        statusCode: 500,
       };
     }
   }
 
   async signup(signupDto: SignupDto): Promise<object | undefined> {
-    /**
-     * * Sign up a new user and create their profile and wallet.
-     * * This method handles user creation, profile setup, and initial wallet creation.
-     * * When a user signs up, we will create a SmileCash wallet for them using their phone number
-     * * If the phone number is already registered, we proceed to the next steps
-     */
     const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
-    // let canProceed: boolean = true;
-    // const createTransactionDto = new CreateTransactionDto();
+
     try {
       console.log('Creating transaction...', signupDto);
-      const { data: existingUser } = await this.supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('email', signupDto.email)
-        .limit(1)
-        .maybeSingle();
 
-      if (existingUser) {
-        // throw new UnauthorizedException('Email already in use');
+      // 1. Check for existing users in parallel
+      const [existingUser, existingPhoneNumber, existingNatID] =
+        await Promise.all([
+          this.supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('email', signupDto.email)
+            .limit(1)
+            .maybeSingle(),
+          this.postgresRest
+            .from('profiles')
+            .select('phone')
+            .eq('phone', signupDto.phone)
+            .limit(1)
+            .maybeSingle(),
+          this.postgresRest
+            .from('profiles')
+            .select('national_id_number')
+            .eq('national_id_number', signupDto.national_id_number)
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+      if (existingUser.data) {
         return new ErrorResponseDto(422, 'Email already in use');
       }
 
-      // Also check if phone number already exists
-      const { data: existingPhoneNumber } = await this.postgresRest
-        .from('profiles')
-        .select('phone')
-        .eq('phone', signupDto.phone)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingPhoneNumber) {
+      if (existingPhoneNumber.data) {
         this.logger.debug(
-          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber)}`,
+          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
-        return new ErrorResponseDto(422, 'Phone number or already in use');
+        return new ErrorResponseDto(422, 'Phone number already in use');
       }
 
-      // Finally, check if national ID already exists
-      const { data: existingNatID } = await this.postgresRest
-        .from('profiles')
-        .select('national_id_number')
-        .eq('national_id_number', signupDto.national_id_number)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingNatID) {
+      if (existingNatID.data) {
         this.logger.debug(
-          `Duplicate national ID found: ${JSON.stringify(existingNatID)}`,
+          `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
         return new ErrorResponseDto(422, 'National ID already in use');
       }
 
-      const scwParams = {
-        firstName: signupDto.first_name,
-        lastName: signupDto.last_name,
-        mobile: signupDto.phone,
-        dateOfBirth: signupDto.date_of_birth,
-        idNumber: signupDto.national_id_number,
-        gender: signupDto.gender.toUpperCase(),
-        source: 'Smile SACCO',
-      } as CreateWalletRequest;
-
-      this.logger.debug('Creating SmileCash wallet with params:', scwParams);
-
-      const scwResponse = await scwService.createWallet(scwParams);
-      /*
-      if (scwResponse instanceof GeneralErrorResponseDto) {
-        if (scwResponse.statusCode != 409) {
-          // If the phone number is already registered, we proceed to the next steps
-          canProceed = false;
-          // return scwResponse;
-        }
-      }
-      */
-      this.logger.debug(scwResponse);
-      // If the error is not related to an existing phone number, we leave the signup process
-      // if (!canProceed) {
-      //   return scwResponse;
-      // }
-
-      // Hash password and generate UUID
-
+      // 2. Hash password and prepare data
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);
-      // const userId = uuidv4();
+      const now = new Date().toISOString();
 
-      // Create auth user in auth.users
+      // 3. Create auth user
       const { data: newAuthUser, error: authError } =
         await this.supabaseAdmin.auth.admin.createUser({
           email: signupDto.email,
           password: signupDto.password,
-          email_confirm: true, // This skips the verification email
+          email_confirm: true,
           user_metadata: {
             first_name: signupDto.first_name,
             last_name: signupDto.last_name,
@@ -521,41 +456,22 @@ export class AuthService {
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        // throw new Error(`User creation failed: ${authError.message}`);
         return new ErrorResponseDto(400, 'User creation failed', authError);
       }
 
-      // Verify we got a valid user ID
       if (!newAuthUser?.user?.id) {
-        // throw new Error('Invalid user ID received from auth provider');
         return new ErrorResponseDto(
           400,
           'Invalid user ID received from auth provider',
         );
       }
 
-      const now = new Date().toISOString();
-      const user_data = {
-        id: newAuthUser.user.id,
-        id_text: newAuthUser.user.id,
-        email: signupDto.email,
-        encrypted_password: hashedPassword,
-        role: 'authenticated',
-        raw_user_meta_data: {
-          first_name: signupDto.first_name,
-          account_type: signupDto.account_type,
-        },
-        created_at: now,
-        updated_at: now,
-      };
-      console.log('user_data:');
-      console.log(user_data);
+      const userId = newAuthUser.user.id;
 
-      // console.log(newAuthUser.user.id);
-
+      // 4. Prepare profile data
       const profileData = {
-        id: newAuthUser.user.id,
-        id_text: newAuthUser.user.id,
+        id: userId,
+        id_text: userId,
         email: signupDto.email,
         phone: signupDto.phone,
         first_name: signupDto.first_name,
@@ -564,7 +480,6 @@ export class AuthService {
         dob: signupDto.dob,
         gender: signupDto.gender,
         wallet_id: signupDto.wallet_id,
-        // cooperative_id: signupDto.cooperative_id,
         business_id: signupDto.business_id,
         affiliations: signupDto.affiliations,
         coop_account_id: signupDto.coop_account_id,
@@ -576,121 +491,92 @@ export class AuthService {
         city: signupDto.city,
         national_id_number: signupDto.national_id_number,
         date_of_birth: signupDto.date_of_birth,
+        created_at: now,
+        updated_at: now,
       };
 
-      // Create profile in public.profiles
-      const { error: profileError } = await this.postgresRest
-        .from('profiles')
-        .insert(profileData);
-      if (profileError) {
-        // Rollback auth user creation if profile fails
-        await this.postgresRest
-          .from('users')
-          .delete()
-          .eq('id', newAuthUser.user.id);
-        return new Error(`Profile creation failed: ${profileError.message}`);
+      // 5. Create profile and check balances in parallel
+      const [profileResult, balanceUSD, balanceZWG] = await Promise.allSettled([
+        this.postgresRest.from('profiles').insert(profileData),
+        scwService.balanceEnquiry({
+          transactorMobile: signupDto.phone,
+          currency: 'USD',
+          channel: 'USSD',
+        } as BalanceEnquiryRequest),
+        scwService.balanceEnquiry({
+          transactorMobile: signupDto.phone,
+          currency: 'ZWG',
+          channel: 'USSD',
+        } as BalanceEnquiryRequest),
+      ]);
+
+      // Check if profile creation failed
+      if (profileResult.status === 'rejected' || profileResult.value.error) {
+        await this.supabaseAdmin.auth.admin.deleteUser(userId);
+        return new ErrorResponseDto(
+          500,
+          'Profile creation failed',
+          profileResult.status === 'rejected'
+            ? profileResult.reason
+            : profileResult.value.error,
+        );
       }
 
-      // Create wallet
-      // Check wallet SmileCash balance (USD and ZWG)
-
-      createWalletDto.profile_id = user_data.id;
-      // createWalletDto.balance = 20;
+      // 6. Setup wallet with balance data
+      createWalletDto.profile_id = userId;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = false;
       createWalletDto.is_active = true;
       createWalletDto.status = 'active';
       createWalletDto.phone = signupDto.phone;
-      const balanceEnquiryParams = {
-        transactorMobile: signupDto.phone,
-        currency: 'USD', // ZWG | USD
-        channel: 'USSD',
-      } as BalanceEnquiryRequest;
-      const balanceEnquiryParamsZWG = {
-        transactorMobile: signupDto.phone,
-        currency: 'ZWG', // ZWG | USD
-        channel: 'USSD',
-      } as BalanceEnquiryRequest;
-      const scwBalanceResponse =
-        await scwService.balanceEnquiry(balanceEnquiryParams);
-      const scwBalanceResponseZWG =
-        await scwService.balanceEnquiry(balanceEnquiryParams);
+
+      // Handle balance responses
       if (
-        scwBalanceResponse instanceof GeneralErrorResponseDto ||
-        scwBalanceResponseZWG instanceof GeneralErrorResponseDto
-      ) {
-        createWalletDto.balance = 0.0;
-        createWalletDto.balance_zwg = 0.0;
-        // Register the subscriber
-        const scwRequest = {
-          firstName: signupDto.first_name,
-          lastName: signupDto.last_name,
-          mobile: signupDto.phone,
-          dateOfBirth: signupDto.date_of_birth,
-          idNumber: signupDto.national_id_number,
-          gender: signupDto.gender, //MALE|FEMALE
-          source: 'Smile SACCO',
-        } as CreateWalletRequest;
-        const scwRegResponse = await scwService.createWallet(scwRequest);
-        if (scwRegResponse instanceof GeneralErrorResponseDto) {
-          return scwRegResponse;
-        }
-      }
-      if (
-        scwBalanceResponse instanceof SuccessResponseDto &&
-        scwBalanceResponseZWG instanceof SuccessResponseDto
+        balanceUSD.status === 'fulfilled' &&
+        balanceUSD.value instanceof SuccessResponseDto
       ) {
         createWalletDto.balance =
-          scwBalanceResponse.data.data.billerResponse.balance;
-        createWalletDto.balance_zwg =
-          scwBalanceResponseZWG.data.data.billerResponse.balance;
+          balanceUSD.value.data.data.billerResponse.balance;
+      } else {
+        createWalletDto.balance = 0.0;
       }
+
+      if (
+        balanceZWG.status === 'fulfilled' &&
+        balanceZWG.value instanceof SuccessResponseDto
+      ) {
+        createWalletDto.balance_zwg =
+          balanceZWG.value.data.data.billerResponse.balance;
+      } else {
+        createWalletDto.balance_zwg = 0.0;
+      }
+
+      // 7. Create wallet
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
-      // Update wallet_id in profiles
-      const updateProfileResponse = await this.postgresRest
+      // 8. Update profile with wallet ID (non-blocking)
+      this.postgresRest
         .from('profiles')
         .update({
           wallet_id: walletResponse['data']['id'],
           wallet_id_text: walletResponse['data']['id'],
         })
-        .eq('id', newAuthUser.user.id)
-        .select();
-      try {
-        const toronetResponse = await this.toroGateway.createKey(
-          newAuthUser.user.id,
-        );
-        this.logger.log('toronetResponse');
-        this.logger.log(toronetResponse['message']);
-        if (toronetResponse['result'] === true) {
-          this.logger.log('ToroNet key created successfully');
-          await this.postgresRest
-            .from('wallets')
-            .update({
-              toro_wallet_address: toronetResponse['address'],
-              toro_wallet_token_balance: 0.0,
-            })
-            .eq('profile_id', newAuthUser.user.id)
-            .select();
-        }
-      } catch (error) {
-        this.logger.error(error.toString());
-      }
+        .eq('id', userId);
+      // .catch((error) =>
+      //   this.logger.error('Failed to update profile wallet:', error),
+      // );
 
-      // Verify if everything succeeded
-      console.log('updateProfileResponse');
-      console.log(updateProfileResponse);
-      // console.log('createTransactionResponse');
-      // console.log(createTransactionResponse);
+      // 9. Create ToroNet key in background (non-blocking)
+      this._createToroNetKeyInBackground(userId).catch((error) =>
+        this.logger.error('ToroNet key creation failed:', error),
+      );
 
-      // Generate JWT
+      // 10. Generate JWT and return response
       const payload = {
         email: newAuthUser.user.email,
-        sub: newAuthUser.user.id,
+        sub: userId,
         role: newAuthUser.user.role,
       };
-
-      console.log(payload);
 
       return {
         status: 'account created',
@@ -698,15 +584,14 @@ export class AuthService {
         message: 'account created successfully',
         access_token: this.jwtService.sign(payload),
         user: {
-          id: newAuthUser.user.id,
+          id: userId,
           email: newAuthUser.user.email,
           first_name: signupDto.first_name,
           last_name: signupDto.last_name,
           account_type: signupDto.account_type,
           dob: signupDto.dob,
           gender: signupDto.gender,
-          wallet_id: signupDto.wallet_id,
-          // cooperative_id: signupDto.cooperative_id,
+          wallet_id: walletResponse['data']['id'],
           business_id: signupDto.business_id,
           affiliations: signupDto.affiliations,
           coop_account_id: signupDto.coop_account_id,
@@ -721,10 +606,35 @@ export class AuthService {
       } as AuthSuccessResponse;
     } catch (e) {
       console.error(e);
-      return new ErrorResponseDto(500, e);
+      return new ErrorResponseDto(
+        500,
+        'Internal server error during signup',
+        e,
+      );
     }
   }
 
+  // Helper method for background ToroNet key creation
+  private async _createToroNetKeyInBackground(userId: string): Promise<void> {
+    try {
+      const toronetResponse = await this.toroGateway.createKey(userId);
+      this.logger.log('toronetResponse:', toronetResponse['message']);
+
+      if (toronetResponse['result'] === true) {
+        await this.postgresRest
+          .from('wallets')
+          .update({
+            toro_wallet_address: toronetResponse['address'],
+            toro_wallet_token_balance: 0.0,
+          })
+          .eq('profile_id', userId);
+        this.logger.log('ToroNet key created successfully');
+      }
+    } catch (error) {
+      this.logger.error('ToroNet key creation failed:', error.toString());
+      throw error; // Re-throw for proper error handling if needed
+    }
+  }
   async refreshToken(@Body() body: { refreshToken: string }) {
     try {
       const { data, error } = await this.supabaseAdmin.auth.refreshSession({

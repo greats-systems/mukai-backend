@@ -21,6 +21,8 @@ import { DateTime } from 'luxon';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { UserService } from 'src/user/user.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
@@ -441,6 +443,45 @@ export class CooperativeMemberApprovalsService {
       // new SmileWalletService(),
     );
     this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
+
+    // Create SmileCash transaction
+    const smileCashService = new SmileCashWalletService(this.postgresrest);
+    /**
+     * export interface WalletToWalletTransferRequest {
+  receiverMobile: string; //DESTINATION WALLET
+  senderPhone: string; //SOURCE WALLET
+  amount: number;
+  currency: string;
+  channel: string;
+  narration: string;
+  transactionId: string | undefined;
+}
+     */
+    const sender = await this.postgresrest
+      .from('cooperatives')
+      .select()
+      .eq('id', updateCooperativeMemberApprovalsDto.group_id)
+      .maybeSingle();
+    const receiver = await this.postgresrest
+      .from('profiles')
+      .select()
+      .eq('id', updateCooperativeMemberApprovalsDto.profile_id)
+      .maybeSingle();
+    const senderPhone = sender['coop_phone'];
+    const receiverPhone = receiver['phone'];
+    const w2wRequest = {
+      receiverMobile: receiverPhone,
+      senderPhone: senderPhone,
+      amount: updateCooperativeMemberApprovalsDto.additional_info as number,
+      currency: updateCooperativeMemberApprovalsDto.currency as string,
+      channel: 'USSD',
+      narration: 'loan disbursement',
+    } as WalletToWalletTransferRequest;
+    const smileCashTransaction =
+      await smileCashService.walletToWallet(w2wRequest);
+    this.logger.debug('smileCashTransaction');
+    this.logger.debug(smileCashTransaction);
+
     const receivingWallet = await walletService.viewProfileWalletID(
       updateCooperativeMemberApprovalsDto.profile_id!,
     );
@@ -463,13 +504,11 @@ export class CooperativeMemberApprovalsService {
     updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
     updateLoanDto.status = 'disbursed';
     updateLoanDto.updated_at = DateTime.now().toISO();
-    // updateLoanDto.remaining_balance = parseFloat(
-    //   updateCooperativeMemberApprovalsDto.additional_info,
-    // );
-    // updateLoanDto.profile_id =
-    //   updateCooperativeMemberApprovalsDto.profile_id;
-    // updateLoanDto.cooperative_id =
-    //   updateCooperativeMemberApprovalsDto.group_id;
+    updateLoanDto.remaining_balance = parseFloat(
+      updateCooperativeMemberApprovalsDto.additional_info,
+    );
+    updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
+    updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
     this.logger.debug('updateLoanDto');
     this.logger.debug(updateLoanDto);
     const loanResponse = await loanService.updateLoan(
@@ -489,7 +528,7 @@ export class CooperativeMemberApprovalsService {
     transactionDto.category = 'transfer';
     transactionDto.amount =
       updateCooperativeMemberApprovalsDto.additional_info as number;
-    transactionDto.narrative = 'credit';
+    transactionDto.narrative = 'debit';
     transactionDto.currency = updateCooperativeMemberApprovalsDto.currency;
     transactionDto.receiving_wallet = receivingWallet['data']['id'];
     transactionDto.sending_wallet = disbursingWallet['data']['id'];

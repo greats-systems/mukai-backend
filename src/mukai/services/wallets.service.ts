@@ -29,11 +29,11 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        // .insert(createWalletDto)
-        .upsert(createWalletDto, {
-          onConflict: "group_id,default_currency",
-          ignoreDuplicates: true,
-        })
+        .insert(createWalletDto)
+        // .upsert(createWalletDto, {
+        //   onConflict: "group_id,default_currency",
+        //   ignoreDuplicates: true,
+        // })
         .select()
         .single();
       if (error) {
@@ -49,6 +49,8 @@ export class WalletsService {
       }
       // get wallet profile
 
+      this.logger.log(`Wallet creation data: ${JSON.stringify(data)}`);
+
       // Create profile in public.profiles
       const { error: profileError, data: profileData } = await this.postgresrest
         .from('profiles')
@@ -57,33 +59,6 @@ export class WalletsService {
         this.logger.error(`Error fetching profile ${createWalletDto.profile_id}`, profileError);
       }
       this.logger.log(`Profile creation profileData: ${JSON.stringify(profileData)}`);
-      // Call SmileWalletService to create a wallet in the digital wallet system
-      /*
-      const smileWalletResponse = await this.smileWalletService.createSubscriber({
-        firstName: profileData.first_name,
-        lastName: profileData.last_name,
-        mobile: profileData.phone,
-        dateOfBirth: profileData.date_of_birth,
-        idNumber: profileData.national_id_number,
-        gender: profileData.gender.toUpperCase() ?? 'MALE',
-        source: 'MkandoWallet',
-      });
-      
-
-      if (smileWalletResponse != null) {
-        this.logger.log(`Native Wallet data: ${JSON.stringify(data)}`);
-        await this.postgresrest
-          .from("wallets")
-          .update({
-            is_smile_cash_activated: true,
-          })
-          .eq("id", data.id);
-        this.logger.log('Smile Wallet Activated');
-
-      } else {
-        this.logger.error('Smile Wallet Not Activated');
-      }
-      */
 
       return {
         statusCode: 201,

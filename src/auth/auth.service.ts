@@ -38,6 +38,8 @@ import {
 import * as CryptoJS from 'crypto-js';
 import { WhatsAppService } from 'src/common/whatsapp/whatsapp.service';
 import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.requests.dto';
+import { first } from 'rxjs';
+// import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -532,36 +534,69 @@ export class AuthService {
 
       // Handle balance responses
       if (
-        balanceUSD.status === 'fulfilled' &&
-        balanceUSD.value instanceof SuccessResponseDto
+        balanceUSD instanceof SuccessResponseDto &&
+        balanceZWG instanceof SuccessResponseDto
       ) {
-        createWalletDto.balance =
-          balanceUSD.value.data.data.billerResponse.balance;
-      } else {
-        createWalletDto.balance = 0.0;
-      }
-
-      if (
-        balanceZWG.status === 'fulfilled' &&
-        balanceZWG.value instanceof SuccessResponseDto
-      ) {
+        createWalletDto.balance = balanceUSD.data.data.billerResponse.balance;
         createWalletDto.balance_zwg =
-          balanceZWG.value.data.data.billerResponse.balance;
+          balanceZWG.data.data.billerResponse.balance;
       } else {
-        createWalletDto.balance_zwg = 0.0;
+        /**
+         * export interface CreateWalletRequest {
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  dateOfBirth: string;
+  idNumber: string;
+  gender: string; //MALE|FEMALE
+  source: string;
+}
+         */
+        createWalletDto.balance = 0.0;
+        const scwRegParams = {
+          firstName: signupDto.first_name,
+          lastName: signupDto.last_name,
+          mobile: signupDto.phone,
+          dateOfBirth: signupDto.date_of_birth,
+          idNumber: signupDto.national_id_number,
+          gender: signupDto.gender,
+          source: 'SmileSACCO',
+        } as CreateWalletRequest;
+        this.logger.log(
+          `Registering new SmileCash wallet: ${JSON.stringify(scwRegParams)}`,
+        );
+        const scwRegResponse = await scwService.createWallet(scwRegParams);
+        if (scwRegResponse instanceof GeneralErrorResponseDto) {
+          if (scwRegResponse.statusCode !== 409) {
+            this.logger.error(
+              `SmileCash wallet registration failed: ${JSON.stringify(
+                scwRegResponse,
+              )}`,
+            );
+            return scwRegResponse;
+          }
+        }
+        this.logger.log(
+          `SmileCash wallet registered: ${JSON.stringify(scwRegResponse)}`,
+        );
       }
 
       // 7. Create wallet
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
       // 8. Update profile with wallet ID (non-blocking)
-      this.postgresRest
+      this.logger.log(
+        `Updating profile with wallet ID...${JSON.stringify(walletResponse['data']['id'])}`,
+      );
+      this.logger.log('Wallet was created successfully. Updating account...');
+      await this.postgresRest
         .from('profiles')
         .update({
           wallet_id: walletResponse['data']['id'],
           wallet_id_text: walletResponse['data']['id'],
         })
         .eq('id', userId);
+
       // .catch((error) =>
       //   this.logger.error('Failed to update profile wallet:', error),
       // );

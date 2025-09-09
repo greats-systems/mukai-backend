@@ -204,6 +204,9 @@ importers:
       typescript-eslint:
         specifier: ^8.20.0
         version: 8.34.1(eslint@9.29.0)(typescript@5.8.3)
+      webpack-node-externals:
+        specifier: ^3.0.0
+        version: 3.0.0
 
 packages:
 

@@ -69,7 +69,7 @@ export class CooperativeMemberApprovalsService {
         .upsert(
           {
             group_id: createCooperativeMemberApprovalsDto.group_id,
-            // number_of_members: groupSize,
+            // no_of_members: groupSize,
             profile_id: createCooperativeMemberApprovalsDto.profile_id,
             poll_description:
               createCooperativeMemberApprovalsDto.poll_description,
@@ -159,7 +159,7 @@ export class CooperativeMemberApprovalsService {
       // }
       // const cmaDto = new UpdateCooperativeMemberApprovalsDto();
       // cmaDto.id = group_id;
-      // cmaDto.number_of_members = groupSize;
+      // cmaDto.no_of_members = groupSize;
       // const updateResponse = await this.updateCooperativeMemberApprovals(
       //   cmaDto.id,
       //   cmaDto,
@@ -173,7 +173,7 @@ export class CooperativeMemberApprovalsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select(
-          '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*)',
+          '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*),cooperative_member_approvals_loan_id_fkey(*)',
         )
         // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
@@ -195,15 +195,21 @@ export class CooperativeMemberApprovalsService {
       // Type assertion
       const approvals = data as CooperativeMemberApprovals[];
 
+      // const grou
+
       // Process each approval record
       approvals.forEach((record) => {
+        this.logger.log(
+          `record: ${JSON.stringify(record.cooperative_member_approvals_group_id_fkey.no_of_members)}`,
+        );
         // Safely get vote counts (default to 0 if null/undefined)
         const supportingCount = record.supporting_votes?.length || 0;
         const opposingCount = record.opposing_votes?.length || 0;
 
         // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
         const totalMembersExcludingAdmin = Math.max(
-          (record.number_of_members || 1) - 1,
+          (record.cooperative_member_approvals_group_id_fkey.no_of_members ||
+            1) - 1,
           1,
         );
 
@@ -251,8 +257,8 @@ export class CooperativeMemberApprovalsService {
         .from('cooperative_member_approvals')
         .update({
           group_id: updateCooperativeMemberApprovalsDto.group_id,
-          // number_of_members:
-          //   updateCooperativeMemberApprovalsDto.number_of_members,
+          // no_of_members:
+          //   updateCooperativeMemberApprovalsDto.no_of_members,
           supporting_votes:
             updateCooperativeMemberApprovalsDto.supporting_votes,
           opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
@@ -273,8 +279,12 @@ export class CooperativeMemberApprovalsService {
         );
         return new ErrorResponseDto(400, error.details);
       }
-      this.logger.debug(updateCooperativeMemberApprovalsDto.consensus_reached);
-      this.logger.debug(updateCooperativeMemberApprovalsDto.poll_description);
+      this.logger.debug(
+        `Poll description: ${updateCooperativeMemberApprovalsDto.poll_description}`,
+      );
+      this.logger.debug(
+        `Consensus reached? ${updateCooperativeMemberApprovalsDto.consensus_reached}`,
+      );
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
         updateCooperativeMemberApprovalsDto.consensus_reached = true;
         if (
@@ -307,8 +317,9 @@ export class CooperativeMemberApprovalsService {
           console.log(updateCoopResponse);
           */
         } else if (
-          updateCooperativeMemberApprovalsDto.poll_description ==
-          'loan application'
+          updateCooperativeMemberApprovalsDto.poll_description?.includes(
+            'loan application',
+          )
         ) {
           const loanResponse = await this.disburseLoan(
             updateCooperativeMemberApprovalsDto,
@@ -442,7 +453,7 @@ export class CooperativeMemberApprovalsService {
       this.postgresrest,
       // new SmileWalletService(),
     );
-    this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
+    this.logger.warn(`Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`);
 
     // Create SmileCash transaction
     const smileCashService = new SmileCashWalletService(this.postgresrest);
@@ -457,18 +468,29 @@ export class CooperativeMemberApprovalsService {
   transactionId: string | undefined;
 }
      */
-    const sender = await this.postgresrest
+    const { data: sender, error: senderError } = await this.postgresrest
       .from('cooperatives')
       .select()
       .eq('id', updateCooperativeMemberApprovalsDto.group_id)
-      .maybeSingle();
-    const receiver = await this.postgresrest
+      .single();
+    const { data: receiver, error: receiverError } = await this.postgresrest
       .from('profiles')
       .select()
       .eq('id', updateCooperativeMemberApprovalsDto.profile_id)
-      .maybeSingle();
+      .single();
     const senderPhone = sender['coop_phone'];
     const receiverPhone = receiver['phone'];
+    const { data: currency, error: currencyError } = await this.postgresrest
+      .from('loans')
+      .select('currency')
+      .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
+      .maybeSingle();
+    this.logger.log(`currency: ${JSON.stringify(currency)}`);
+    const { data: loanTerm, error: loanTermError } = await this.postgresrest
+      .from('cooperatives')
+      .select('loan_term')
+      .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
+      .maybeSingle();
     const w2wRequest = {
       receiverMobile: receiverPhone,
       senderPhone: senderPhone,
@@ -509,6 +531,11 @@ export class CooperativeMemberApprovalsService {
     );
     updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
     updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
+    // Calculate due date based on cooperative's loan term
+    const currentDate = new Date();
+    const dueDate = new Date(currentDate.getTime()); // Create copy using timestamp
+    dueDate.setMonth(dueDate.getMonth() + 1);
+    // updateLoanDto.due_date =
     this.logger.debug('updateLoanDto');
     this.logger.debug(updateLoanDto);
     const loanResponse = await loanService.updateLoan(

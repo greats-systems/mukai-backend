@@ -50,7 +50,7 @@ export class CreateCooperativeMemberApprovalsDto {
   // })
   // @IsInt()
   // @IsOptional()
-  // number_of_members?: number;
+  // no_of_members?: number;
 
   @ApiProperty({
     example: [

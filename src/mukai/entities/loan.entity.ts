@@ -115,4 +115,10 @@ export class Loan {
     description: 'Indicates if members have voted for/against the loan',
   })
   has_received_vote?: boolean;
+
+  @ApiProperty({
+    example: 'USD',
+    description: 'Indicates the currency of the loan',
+  })
+  currency?: string;
 }

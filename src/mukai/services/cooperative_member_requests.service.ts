@@ -33,7 +33,7 @@ export class CooperativeMemberRequestsService {
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
         .eq('status', 'active')
-        .maybeSingle();
+        .single();
       if (error) {
         this.logger.error('Error checking member who already joined', error);
         return new ErrorResponseDto(400, error.details);
@@ -61,7 +61,7 @@ export class CooperativeMemberRequestsService {
         .eq('member_id', member_id)
         // .eq('status', 'unresolved')
         .or('status.eq.invited,status.eq.unresolved,status.eq.active')
-        .maybeSingle();
+        .single();
       if (error) {
         this.logger.error('Error checking existing member request', error);
         return new ErrorResponseDto(400, error.details);

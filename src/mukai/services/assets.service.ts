@@ -87,7 +87,7 @@ export class AssetsService {
       createCoopMemberApproval.group_id = createAssetDto.group_id!;
       createCoopMemberApproval.poll_description =
         createAssetDto.asset_description!;
-      // createCoopMemberApproval.number_of_members = groupSize;
+      // createCoopMemberApproval.no_of_members = groupSize;
       createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll

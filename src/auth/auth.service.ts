@@ -39,6 +39,7 @@ import * as CryptoJS from 'crypto-js';
 import { WhatsAppService } from 'src/common/whatsapp/whatsapp.service';
 import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.requests.dto';
 import { first } from 'rxjs';
+import { UpdateWalletDto } from 'src/mukai/dto/update/update-wallet.dto';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -174,7 +175,7 @@ export class AuthService {
       .select('*')
       .eq('email', email)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error(`Auth user lookup failed: ${error.message}`);
     if (!user) return null;
@@ -201,7 +202,7 @@ export class AuthService {
         .auth_client('users')
         .select('id, email, role')
         .eq('id', decoded.sub)
-        .single();
+        .maybeSingle();
 
       if (userError || !user) {
         return {
@@ -223,7 +224,7 @@ export class AuthService {
       `,
         )
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         return {
@@ -298,9 +299,9 @@ export class AuthService {
       // 2. Get essential profile data only
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles')
-        .select('id, phone, first_name, last_name, account_type')
+        .select('id, wallet_id, phone, first_name, last_name, account_type')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Profile fetch error:', profileError);
@@ -345,6 +346,28 @@ export class AuthService {
 
       const [balanceUSD, balanceZWG] =
         await Promise.allSettled(balancePromises);
+
+      if (
+        balanceUSD.status === 'fulfilled' &&
+        balanceUSD.value instanceof SuccessResponseDto &&
+        balanceZWG.status === 'fulfilled' &&
+        balanceZWG.value instanceof SuccessResponseDto
+      ) {
+        this.logger.log(
+          `balanceUSD: ${JSON.stringify(balanceUSD.value.data.data.billerResponse.balance)}`,
+        );
+        const updateDto = new UpdateWalletDto();
+        updateDto.id = profileData!.wallet_id;
+        updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
+        updateDto.balance_zwg =
+          balanceZWG.value.data.data.billerResponse.balance;
+        const walletService = new WalletsService(this.postgresRest);
+        const walletResponse = await walletService.updateWallet(
+          updateDto.id!,
+          updateDto,
+        );
+        this.logger.log(`walletResponse: ${JSON.stringify(walletResponse)}`);
+      }
 
       // 4. Build minimal response
       const response = {
@@ -425,12 +448,12 @@ export class AuthService {
         return new ErrorResponseDto(422, 'Email already in use');
       }
 
-      if (existingPhoneNumber.data) {
-        this.logger.debug(
-          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
-        );
-        return new ErrorResponseDto(422, 'Phone number already in use');
-      }
+      // if (existingPhoneNumber.data) {
+      //   this.logger.debug(
+      //     `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
+      //   );
+      //   return new ErrorResponseDto(422, 'Phone number already in use');
+      // }
 
       if (existingNatID.data) {
         this.logger.debug(
@@ -567,7 +590,7 @@ export class AuthService {
         );
         const scwRegResponse = await scwService.createWallet(scwRegParams);
         if (scwRegResponse instanceof GeneralErrorResponseDto) {
-          if (scwRegResponse.statusCode !== 409) {
+          if (scwRegResponse.statusCode != 409) {
             this.logger.error(
               `SmileCash wallet registration failed: ${JSON.stringify(
                 scwRegResponse,
@@ -753,7 +776,7 @@ export class AuthService {
         .from('profiles')
         .select('*')
         .eq('id', profile_id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
@@ -798,7 +821,7 @@ export class AuthService {
           // Cast UUID to text for pattern matching
           .eq('profile_id', id)
           .eq('is_group_wallet', false)
-          .single();
+          .maybeSingle();
         console.log('wallet_id', walletData);
         // profileData['wallet_id'] = walletData!['id'];
       }

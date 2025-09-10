@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Cooperative } from './cooperative.entity';
+import { Loan } from './loan.entity';
 
 export class CooperativeMemberApprovals {
   @ApiProperty({
@@ -29,7 +31,7 @@ export class CooperativeMemberApprovals {
     example: 150,
     description: 'Total number of members in a cooperative',
   })
-  number_of_members: number;
+  no_of_members: number;
 
   @ApiProperty({
     example: [
@@ -87,4 +89,17 @@ export class CooperativeMemberApprovals {
       'Loan ID from loans table (useful when voting for loan application)',
   })
   additional_info: any;
+
+  @ApiProperty({
+    example: Cooperative,
+    description:
+      'Cooperative details for the cooperative associated with this approval',
+  })
+  cooperative_member_approvals_group_id_fkey: Cooperative;
+
+  @ApiProperty({
+    example: Loan,
+    description: 'Loan details for the loan associated with this approval',
+  })
+  cooperative_member_approvals_loan_id_fkey: Loan;
 }

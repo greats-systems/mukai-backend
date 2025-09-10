@@ -95,7 +95,7 @@ export class LoanService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        this.logger.error('Error fetching loan', error);
+        this.logger.error('Error fetching loans', error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -136,16 +136,17 @@ export class LoanService {
         .eq('profile_id', loanDto.profile_id)
         .eq('cooperative_id', loanDto.cooperative_id)
         .eq('status', 'disbursed')
-        .single();
+        .maybeSingle();
 
       if (error) {
-        this.logger.error(`Error fetching loan ${loanDto.id}`, error);
+        this.logger.error(`Error checking active loan ${loanDto.id}`, error);
         if (error.details == 'The result contains 0 rows') {
           return false; // No active loan found
         }
         return new ErrorResponseDto(400, error.details);
       }
-      if (data) {
+      this.logger.log(`active loan data: ${JSON.stringify(data)}`);
+      if (data != null) {
         return true;
       }
       return false;

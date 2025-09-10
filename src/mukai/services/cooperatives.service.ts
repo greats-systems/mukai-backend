@@ -37,119 +37,135 @@ export class CooperativesService {
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
-    /* When a cooperative is created, the following steps should be taken:
-    1. The new coop is created in the cooperatives table
-    2. The coop is also create in the group_members table. Coop ID will act as a foreign key that links the coop and its members
-    3. A wallet, with an initial deposit of $100, for said coop is created. The coop ID will act as a foreign key 
-       to the cooperatives table
-    4. The deposit is recorded in the transactions table
-    5. The coop's admin is updated in the profiles table
-
-    - Each cooperative will be allocated a ZB merchant account
-    - Before creating a coop, make sure that no coop with the exact same parameters exists
-     */
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
-      const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      const walletsService = new WalletsService(this.postgresrest);
+      const scwService = new SmileCashWalletService(this.postgresrest);
 
-      const createWalletDto = new CreateWalletDto();
-      const updateUserDto = new SignupDto();
-      console.log(createCooperativeDto);
-
-      // Create cooperative
       this.logger.debug(createCooperativeDto);
 
-      const { data: existingCoop, error: existingCoopError } =
-        await this.postgresrest
+      // 1. Check for existing coop and user in parallel
+      const [existingCoopResult, existingUserResult] = await Promise.all([
+        this.postgresrest
           .from('cooperatives')
           .select()
           .eq('name', createCooperativeDto.name)
           .eq('coop_phone', createCooperativeDto.phone)
           .eq('category', createCooperativeDto.category)
           .eq('city', createCooperativeDto.city)
-          .maybeSingle();
+          .single(),
+        this.postgresrest
+          .from('profiles')
+          .select()
+          .eq('phone', createCooperativeDto.coop_phone)
+          .single(),
+      ]);
 
-      if (existingCoopError) {
+      // Handle existing coop check
+      if (existingCoopResult.error) {
         this.logger.error(
-          `Failed to check for existing coop :${JSON.stringify(existingCoopError)}`,
+          `Failed to check for existing coop: ${JSON.stringify(existingCoopResult.error)}`,
         );
         return new GeneralErrorResponseDto(
           400,
-          existingCoopError.message,
-          existingCoopError,
+          existingCoopResult.error.message,
+          existingCoopResult.error,
         );
       }
-      if (existingCoop) {
-        this.logger.log(`Coop found: ${JSON.stringify(existingCoop)}`);
+      if (existingCoopResult.data) {
+        this.logger.log(
+          `Coop found: ${JSON.stringify(existingCoopResult.data)}`,
+        );
         return new GeneralErrorResponseDto(
           409,
           'This coop is taken. Please edit your coop info',
-          existingCoop,
+          existingCoopResult.data,
         );
       }
 
-      const { data: createCooperativeResponse, error } = await this.postgresrest
-        .from('cooperatives')
-        .insert(createCooperativeDto)
-        .select()
-        .single();
-      if (error) {
-        this.logger.error(`Error creating coop: ${JSON.stringify(error)}`);
-        return new GeneralErrorResponseDto(400, error.message, error);
+      // Handle existing user check
+      if (existingUserResult.error) {
+        this.logger.error(
+          `Failed to check for existing user: ${JSON.stringify(existingUserResult.error)}`,
+        );
+        return new GeneralErrorResponseDto(
+          400,
+          existingUserResult.error.message,
+          existingUserResult.error,
+        );
       }
-      console.log('Response data');
-      console.log(createCooperativeResponse['id']);
+      if (existingUserResult.data) {
+        this.logger.log(
+          `User found: ${JSON.stringify(existingUserResult.data)}`,
+        );
+        return new GeneralErrorResponseDto(
+          409,
+          'This phone number is taken by another user. Please edit your coop info',
+          existingUserResult.data,
+        );
+      }
 
-      createGroupMemberDto.cooperative_id = createCooperativeResponse['id'];
+      // 2. Create cooperative
+      const { data: createCooperativeResponse, error: coopError } =
+        await this.postgresrest
+          .from('cooperatives')
+          .insert(createCooperativeDto)
+          .select()
+          .single();
+
+      if (coopError) {
+        this.logger.error(`Error creating coop: ${JSON.stringify(coopError)}`);
+        return new GeneralErrorResponseDto(400, coopError.message, coopError);
+      }
+
+      const coopId = createCooperativeResponse.id;
+
+      // 3. Create group member
+      const createGroupMemberDto = new CreateGroupMemberDto();
+      createGroupMemberDto.cooperative_id = coopId;
       createGroupMemberDto.member_id = createCooperativeDto.admin_id!;
-      const response =
-        await groupMembersService.createGroupMember(createGroupMemberDto);
-      if (response instanceof ErrorResponseDto) {
-        return response;
-      }
-      console.log('group_member response');
-      console.log(response);
 
+      const groupMemberResponse =
+        await groupMembersService.createGroupMember(createGroupMemberDto);
+      if (groupMemberResponse instanceof ErrorResponseDto) {
+        return groupMemberResponse;
+      }
+
+      // 4. Check balances in parallel
+      const [scwBalanceResponse, scwBalanceResponseZWG] = await Promise.all([
+        scwService.balanceEnquiry({
+          transactorMobile: createCooperativeDto.coop_phone,
+          currency: 'USD',
+          channel: 'USSD',
+        } as BalanceEnquiryRequest),
+        scwService.balanceEnquiry({
+          transactorMobile: createCooperativeDto.coop_phone,
+          currency: 'ZWG',
+          channel: 'USSD',
+        } as BalanceEnquiryRequest),
+      ]);
+
+      // 5. Create wallet
+      const createWalletDto = new CreateWalletDto();
       createWalletDto.profile_id = createCooperativeDto.admin_id;
-      // createWalletDto.balance = 100;
       createWalletDto.coop_phone = createCooperativeDto.coop_phone;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
-      createWalletDto.group_id = createCooperativeResponse['id'];
-      const scwService = new SmileCashWalletService(this.postgresrest);
+      createWalletDto.group_id = coopId;
 
-      // Do balance enquiry for both USD and ZWG
-      const balanceEnquiryParams = {
-        transactorMobile: createCooperativeDto.coop_phone,
-        currency: 'USD', // ZWG | USD
-        channel: 'USSD',
-      } as BalanceEnquiryRequest;
-
-      const balanceEnquiryParamsZWG = {
-        transactorMobile: createCooperativeDto.coop_phone,
-        currency: 'ZWG', // ZWG | USD
-        channel: 'USSD',
-      } as BalanceEnquiryRequest;
-      const scwBalanceResponse =
-        await scwService.balanceEnquiry(balanceEnquiryParams);
-      const scwBalanceResponseZWG = await scwService.balanceEnquiry(
-        balanceEnquiryParamsZWG,
-      );
       if (
         scwBalanceResponse instanceof GeneralErrorResponseDto ||
         scwBalanceResponseZWG instanceof GeneralErrorResponseDto
       ) {
         createWalletDto.balance = 0.0;
         createWalletDto.balance_zwg = 0.0;
+
         const { data, error } = await this.postgresrest
           .from('profiles')
           .select()
           .eq('id', createCooperativeDto.admin_id)
-          .maybeSingle();
+          .single();
+
         if (error) {
           return new GeneralErrorResponseDto(
             400,
@@ -157,6 +173,7 @@ export class CooperativesService {
             error,
           );
         }
+
         const user = data as SignupDto;
         const scwRequest = {
           firstName: user.first_name,
@@ -164,60 +181,43 @@ export class CooperativesService {
           mobile: user.phone,
           dateOfBirth: user.date_of_birth,
           idNumber: user.national_id_number,
-          gender: user.gender.toUpperCase(), //MALE|FEMALE
+          gender: user.gender.toUpperCase(),
           source: 'Smile SACCO',
         } as CreateWalletRequest;
+
         const scwResponse = await scwService.createWallet(scwRequest);
-        if (scwRequest instanceof GeneralErrorResponseDto) {
+        if (scwResponse instanceof GeneralErrorResponseDto) {
           return scwResponse;
         }
-        /*
-        return new GeneralErrorResponseDto(
-          HttpStatus.BAD_REQUEST,
-          'Failed to check balance',
-          scwBalanceResponse,
-        );
-        */
       }
+
       if (scwBalanceResponse instanceof SuccessResponseDto) {
         createWalletDto.balance =
           scwBalanceResponse.data.data.billerResponse.balance;
       }
+
       const walletResponse = await walletsService.createWallet(createWalletDto);
-      console.log('Wallet response');
-      console.log(walletResponse);
       if (walletResponse instanceof ErrorResponseDto) {
         return walletResponse;
       }
 
+      // 6. Update cooperative wallet
       const updateCoopDto = new UpdateCooperativeDto();
       updateCoopDto.wallet_id = walletResponse['data']['id'];
-      updateCoopDto.id = createCooperativeResponse['id'];
+      updateCoopDto.id = coopId;
+
       const updateCoopResponse = await this.updateCooperativeWallet(
         updateCoopDto.id!.toString(),
         updateCoopDto,
       );
+
       this.logger.debug('updateCoopResponse');
       this.logger.debug(updateCoopResponse);
 
-      /*
-      createTransactionDto.receiving_wallet = walletResponse['data']['id'];
-      // createTransactionDto.amount = createWalletDto.balance;
-      createTransactionDto.transaction_type = 'initial deposit';
-      createTransactionDto.narrative = 'credit';
-      createTransactionDto.currency = createWalletDto.default_currency;
-      const transactionResponse =
-        await transactionsService.createTransaction(createTransactionDto);
-
-      console.log(transactionResponse);
-      if (transactionResponse instanceof ErrorResponseDto) {
-        return transactionResponse;
-      }
-      */
-
+      // 7. Update admin profile
+      const updateUserDto = new SignupDto();
       updateUserDto.id = createCooperativeDto.admin_id!;
       updateUserDto.coop_phone = createCooperativeDto.coop_phone!;
-      // updateUserDto.cooperative_id = createCooperativeResponse['id'];
 
       const { data: updateResponse, error: updateError } =
         await this.postgresrest
@@ -225,11 +225,12 @@ export class CooperativesService {
           .update(updateUserDto)
           .eq('id', updateUserDto.id)
           .select()
-          .maybeSingle();
+          .single();
+
       if (updateError) {
         return new ErrorResponseDto(400, JSON.stringify(updateError));
       }
-      console.log(updateResponse);
+
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);

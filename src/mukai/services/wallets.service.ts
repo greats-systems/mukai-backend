@@ -11,6 +11,8 @@ import { UpdateWalletDto } from "../dto/update/update-wallet.dto";
 import { Wallet } from "../entities/wallet.entity";
 import { SuccessResponseDto } from "src/common/dto/success-response.dto";
 import { Profile } from "src/user/entities/user.entity";
+import { BalanceEnquiryRequest } from "src/common/zb_smilecash_wallet/requests/transactions.requests";
+import { SmileCashWalletService } from "src/common/zb_smilecash_wallet/services/smilecash-wallet.service";
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -225,7 +227,7 @@ export class WalletsService {
         .from("wallets")
         .select()
         .eq("group_id", coop_id)
-        .maybeSingle();
+        .single();
 
       if (error) {
         this.logger.error(`Error fetching coop Wallet ${coop_id}`, error);
@@ -235,7 +237,6 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      /*
       this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
       const walletPhone = data?.coop_phone;
       const balanceEnquiryParams = {
@@ -261,9 +262,10 @@ export class WalletsService {
         const updateWalletDto = new UpdateWalletDto();
         updateWalletDto.id = data.id;
         updateWalletDto.balance = data.balance;
+        updateWalletDto.balance_zwg = data.balance_zwg;
         await this.updateWallet(updateWalletDto.id!, updateWalletDto);
       }
-      */
+      
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
@@ -403,7 +405,7 @@ export class WalletsService {
         .select("*, wallets_profile_id_fkey(*)")
         // Cast UUID to text for pattern matching
         .ilike("id_text", `%${searchTerm}%`)
-        .maybeSingle();
+        .single();
 
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
@@ -482,7 +484,8 @@ export class WalletsService {
       return new ErrorResponseDto(500, error);
     }
   }
-
+  
+  /*
   async updateReceiverBalance(
     receiving_wallet_id: string,
     amount: number,
@@ -500,6 +503,7 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, balanceError.message);
       }
+      if(balanceData == null)
       const balance = parseFloat(balanceData["balance"]);
       const { data: updateData, error: updateError } = await this.postgresrest
         .from("wallets")
@@ -530,6 +534,7 @@ export class WalletsService {
       return new ErrorResponseDto(500, error);
     }
   }
+  */
 
   async updateSmileCashSenderBalance(
     sending_wallet_id: string,
@@ -730,6 +735,7 @@ export class WalletsService {
     }
   }
 
+  /*
   async updateSenderBalance(
     sending_wallet_id: string,
     amount: number,
@@ -783,6 +789,7 @@ export class WalletsService {
       return new ErrorResponseDto(500, error);
     }
   }
+  */
 
   async deleteWallet(
     id: string,

@@ -153,8 +153,12 @@ export class SmileCashWalletService {
         // { headers: this.getHeaders() },
       );
       if (response.data) {
-        const error = plainToInstance(CreateWalletError, response.data);
-        console.error(`Wallet creation failed: ${JSON.stringify(error)}`);
+        this.logger.debug(
+          'Create wallet response:',
+          JSON.stringify(response.status),
+        );
+        const error = plainToInstance(CreateWalletError, response.data.data);
+        this.logger.error(`Wallet creation failed: ${JSON.stringify(error)}`);
         if (error.message == 'Mobile already taken') {
           return new GeneralErrorResponseDto(
             HttpStatus.CONFLICT,
@@ -176,7 +180,14 @@ export class SmileCashWalletService {
         request,
       );
     } catch (error) {
-      console.error('createWallet error:', error);
+      this.logger.error('createWallet error:', error.status);
+      if (error.status == 409) {
+        return new GeneralErrorResponseDto(
+          HttpStatus.CONFLICT,
+          'Mobile number already taken',
+          error,
+        );
+      }
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'createWallet error',
@@ -189,7 +200,7 @@ export class SmileCashWalletService {
     request: LoginRequest,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
-      console.log('Logging in');
+      this.logger.log('Logging in');
       console.debug(request);
 
       const response = await axios.post(
@@ -198,7 +209,7 @@ export class SmileCashWalletService {
         { headers: this.getHeaders() },
       );
       if (this.isLoginError(response.data)) {
-        console.error(`Login failed: ${JSON.stringify(response.data)}`);
+        this.logger.error(`Login failed: ${JSON.stringify(response.data)}`);
         return new GeneralErrorResponseDto(
           HttpStatus.UNAUTHORIZED,
           'Login failed',
@@ -208,7 +219,7 @@ export class SmileCashWalletService {
       const success = plainToInstance(LoginResponse, response.data);
       return new SuccessResponseDto(HttpStatus.OK, 'Login successful', success);
     } catch (error) {
-      console.error(`Login error: ${error}`);
+      this.logger.error(`Login error: ${error}`);
       return {
         statusCode: 500,
         message: error.toString(),
@@ -233,7 +244,7 @@ export class SmileCashWalletService {
         response.data as SetPasswordResponse,
       );
     } catch (error) {
-      console.error(`setPassword error: ${error.toString()}`);
+      this.logger.error(`setPassword error: ${error.toString()}`);
       return {
         statusCode: 500,
         message: error,
@@ -250,7 +261,9 @@ export class SmileCashWalletService {
   async balanceEnquiry(
     request: BalanceEnquiryRequest,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
-    console.log(`Initiating balance enquiry for ${request.transactorMobile}`);
+    this.logger.log(
+      `Initiating balance enquiry for ${request.transactorMobile}`,
+    );
     try {
       // Auth request
       const authResponse = await axios.post(
@@ -339,7 +352,7 @@ export class SmileCashWalletService {
         formattedResponse,
       );
     } catch (error) {
-      console.error(`Balance enquiry error:`, error);
+      this.logger.error(`Balance enquiry error:`, error);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'Balance enquiry failed',
@@ -416,7 +429,7 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      console.error(`bankToWallet error: ${error}`);
+      this.logger.error(`bankToWallet error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'bankToWallet error',
@@ -571,7 +584,7 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      console.error(`walletToWallet error: ${error.toString()}`);
+      this.logger.error(`walletToWallet error: ${error.toString()}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',
@@ -647,7 +660,7 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      console.error(`walletToOwnBank error: ${error}`);
+      this.logger.error(`walletToOwnBank error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToOwnBank error',
@@ -724,7 +737,7 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      console.error(`walletToOtherBank error: ${error}`);
+      this.logger.error(`walletToOtherBank error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToOtherBank error',
@@ -784,7 +797,7 @@ export class SmileCashWalletService {
         payResponse.data as TransactionResponsePayment,
       );
     } catch (error) {
-      console.error(`payMerchant error: ${error}`);
+      this.logger.error(`payMerchant error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'payMerchant error',
@@ -844,7 +857,7 @@ export class SmileCashWalletService {
         payResponse.data as TransactionResponsePayment,
       );
     } catch (error) {
-      console.error(`cashOut error: ${error}`);
+      this.logger.error(`cashOut error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'cashOut error',
@@ -904,7 +917,7 @@ export class SmileCashWalletService {
         payResponse.data as TransactionResponsePayment,
       );
     } catch (error) {
-      console.error(`bankToOtherWallet error: ${error}`);
+      this.logger.error(`bankToOtherWallet error: ${error}`);
       return {
         statusCode: 500,
         message: error,

@@ -17,6 +17,7 @@ async function bootstrap() {
     .setDescription(
       'Mukai Savings and Credit Co-operatives Management API Documentation',
     )
+    .setExternalDoc('Postman Collection', '/json')
     .setVersion('1.0')
     .addTag('Controllers REST API v2')
     .build();

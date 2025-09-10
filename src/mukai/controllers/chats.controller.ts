@@ -25,8 +25,8 @@ import { Chat } from '../entities/chat.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Chats')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}

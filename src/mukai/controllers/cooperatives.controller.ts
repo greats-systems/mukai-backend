@@ -28,8 +28,8 @@ import { Profile } from 'src/user/entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperatives')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('cooperatives')
 export class CooperativesController {
   constructor(private readonly cooperativesService: CooperativesService) {}

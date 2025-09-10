@@ -26,8 +26,8 @@ import { Asset } from '../entities/asset.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Assets')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}

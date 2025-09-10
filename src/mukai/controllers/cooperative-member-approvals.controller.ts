@@ -24,8 +24,8 @@ import {
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('cooperative_member_approvals')
 export class CooperativeMemberApprovalsController {
   constructor(

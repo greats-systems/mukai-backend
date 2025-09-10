@@ -27,8 +27,8 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 // import { Cooperative } from '../entities/cooperative.entity';
 
 @ApiTags('GroupMembers')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('group_members')
 export class GroupMemberController {
   constructor(private readonly groupMemberService: GroupMemberService) {}

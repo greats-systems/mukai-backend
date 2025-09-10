@@ -26,8 +26,8 @@ import { SpendingConditions } from '../entities/spending-conditions.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Spending Conditions')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('spending-conditions')
 export class SpendingConditionsController {
   constructor(

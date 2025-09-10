@@ -14,7 +14,7 @@ export class AppController {
   }
 
   @Get('/users')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   protected(@Req() req) {
     return {
       message: 'AuthGuard works 🎉',

@@ -26,8 +26,8 @@ import { CooperativeMemberRequest } from '../entities/cooperative-member-request
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperative Member Requests')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('cooperative_member_requests')
 export class CooperativeMemberRequestsController {
   constructor(

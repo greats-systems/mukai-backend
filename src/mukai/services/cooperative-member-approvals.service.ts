@@ -530,11 +530,11 @@ export class CooperativeMemberApprovalsService {
     updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
     // Calculate due date based on cooperative's loan term
     const currentDate = new Date();
-    const nextDate = new Date(currentDate.getTime()); // Create copy using timestamp
-    const dueDate = nextDate.setMonth(
-      nextDate.getMonth() + loanTerm!['loan_term_months'],
-    );
-    updateLoanDto.due_date = new Date(dueDate);
+    // const nextDate = new Date(currentDate.getTime()); 
+    // const dueDate = nextDate.setMonth(
+    //   nextDate.getMonth() + loanTerm!['loan_term_months'],
+    // );
+    // updateLoanDto.due_date = new Date(dueDate);
     // updateLoanDto.due_date =
     this.logger.debug('updateLoanDto');
     this.logger.debug(updateLoanDto);

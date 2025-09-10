@@ -27,8 +27,8 @@ import { FinancialArticleService } from '../services/financial-article.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('FinancialArticles')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('financial_articles')
 export class FinancialArticleController {
   constructor(

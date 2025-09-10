@@ -53,12 +53,12 @@ export class CooperativesService {
           .eq('coop_phone', createCooperativeDto.phone)
           .eq('category', createCooperativeDto.category)
           .eq('city', createCooperativeDto.city)
-          .single(),
+          .maybeSingle(),
         this.postgresrest
           .from('profiles')
           .select()
           .eq('phone', createCooperativeDto.coop_phone)
-          .single(),
+          .maybeSingle(),
       ]);
 
       // Handle existing coop check
@@ -164,7 +164,7 @@ export class CooperativesService {
           .from('profiles')
           .select()
           .eq('id', createCooperativeDto.admin_id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           return new GeneralErrorResponseDto(
@@ -225,7 +225,7 @@ export class CooperativesService {
           .update(updateUserDto)
           .eq('id', updateUserDto.id)
           .select()
-          .single();
+          .maybeSingle();
 
       if (updateError) {
         return new ErrorResponseDto(400, JSON.stringify(updateError));
@@ -280,7 +280,7 @@ export class CooperativesService {
         .from('cooperatives')
         .select('*, cooperatives_admin_id_fkey(*)')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         this.logger.error(`Error fetching Cooperative ${id}`, error);
@@ -516,7 +516,7 @@ export class CooperativesService {
         .from('wallets')
         .select()
         .eq('group_id', cooperative_id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         this.logger.error(`Error fetching group ${cooperative_id}`, error);
@@ -609,7 +609,7 @@ export class CooperativesService {
         .update(updateCooperativeDto)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
       if (error) {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.details);

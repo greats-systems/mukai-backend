@@ -584,7 +584,7 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      this.logger.error(`walletToWallet error: ${error.toString()}`);
+      this.logger.error(`walletToWallet error: ${JSON.stringify(error)}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',

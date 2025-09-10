@@ -488,14 +488,14 @@ export class CooperativeMemberApprovalsService {
     this.logger.log(`currency: ${JSON.stringify(currency)}`);
     const { data: loanTerm, error: loanTermError } = await this.postgresrest
       .from('cooperatives')
-      .select('loan_term')
+      .select('loan_term_months')
       .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
       .maybeSingle();
     const w2wRequest = {
       receiverMobile: receiverPhone,
       senderPhone: senderPhone,
-      amount: updateCooperativeMemberApprovalsDto.additional_info as number,
-      currency: updateCooperativeMemberApprovalsDto.currency as string,
+      amount: Number(updateCooperativeMemberApprovalsDto.additional_info),
+      currency: currency!['currency'] as string,
       channel: 'USSD',
       narration: 'loan disbursement',
     } as WalletToWalletTransferRequest;
@@ -503,6 +503,10 @@ export class CooperativeMemberApprovalsService {
       await smileCashService.walletToWallet(w2wRequest);
     this.logger.debug('smileCashTransaction');
     this.logger.debug(smileCashTransaction);
+    if (smileCashTransaction instanceof ErrorResponseDto) {
+      this.logger.error(smileCashTransaction);
+      return false;
+    }
 
     const receivingWallet = await walletService.viewProfileWalletID(
       updateCooperativeMemberApprovalsDto.profile_id!,
@@ -516,13 +520,6 @@ export class CooperativeMemberApprovalsService {
     this.logger.debug(disbursingWallet['data']['id']);
     const updateLoanDto = new CreateLoanDto();
     const loanService = new LoanService(this.postgresrest);
-    // updateLoanDto.cooperative_id =
-    //   updateCooperativeMemberApprovalsDto.group_id;
-    // updateLoanDto.borrower_wallet_id = receivingWallet['data']['id'];
-    // updateLoanDto.lender_wallet_id = disbursingWallet['data']['id'];
-    // updateLoanDto.principal_amount = parseFloat(
-    //   updateCooperativeMemberApprovalsDto.additional_info,
-    // );
     updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
     updateLoanDto.status = 'disbursed';
     updateLoanDto.updated_at = DateTime.now().toISO();
@@ -533,8 +530,11 @@ export class CooperativeMemberApprovalsService {
     updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
     // Calculate due date based on cooperative's loan term
     const currentDate = new Date();
-    const dueDate = new Date(currentDate.getTime()); // Create copy using timestamp
-    dueDate.setMonth(dueDate.getMonth() + 1);
+    const nextDate = new Date(currentDate.getTime()); // Create copy using timestamp
+    const dueDate = nextDate.setMonth(
+      nextDate.getMonth() + loanTerm!['loan_term_months'],
+    );
+    updateLoanDto.due_date = new Date(dueDate);
     // updateLoanDto.due_date =
     this.logger.debug('updateLoanDto');
     this.logger.debug(updateLoanDto);

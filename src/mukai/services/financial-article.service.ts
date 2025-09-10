@@ -27,7 +27,7 @@ export class FinancialArticleService {
         .insert(createFinancialArticleDto)
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return {

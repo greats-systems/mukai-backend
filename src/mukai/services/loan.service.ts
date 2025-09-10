@@ -66,7 +66,7 @@ export class LoanService {
           .select()
           .single();
         if (error) {
-          console.log(error);
+          this.logger.log(error);
           return new ErrorResponseDto(400, error.details);
         }
         // maDto.group_id = createLoanDto.cooperative_id;
@@ -74,7 +74,7 @@ export class LoanService {
         // // maDto.loan_id = createLoanDto.id;
         // const maResponse =
         //   await maService.createCooperativeMemberApprovals(maDto);
-        // console.log(maResponse);
+        // this.logger.log(maResponse);
         return loanResponse as Loan;
       } else {
         return new ErrorResponseDto(

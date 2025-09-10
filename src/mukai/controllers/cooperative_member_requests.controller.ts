@@ -134,7 +134,7 @@ export class CooperativeMemberRequestsController {
   })
   async getPendingRequestDetails(@Param('member_id') member_id: string) {
     const response =
-      await this.cooperativeMemberRequestsService.getPendingRequestDetails(
+      await this.cooperativeMemberRequestsService.findCooperativeRequests(
         member_id,
       );
     if (response instanceof ErrorResponseDto) {

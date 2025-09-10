@@ -29,7 +29,7 @@ export class AssetsService {
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      // console.log(createAssetDto.group_id);
+      // this.logger.log(createAssetDto.group_id);
 
       // Create the asset
       const { data, error } = await this.postgresrest
@@ -38,7 +38,7 @@ export class AssetsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -61,7 +61,7 @@ export class AssetsService {
       this.postgresrest,
     );
     try {
-      console.log(createAssetDto.group_id);
+      this.logger.log(createAssetDto.group_id);
 
       // Create the asset
       const { data, error } = await this.postgresrest
@@ -70,7 +70,7 @@ export class AssetsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -98,8 +98,8 @@ export class AssetsService {
 
       console.info(pollResponse);
       if (pollResponse instanceof ErrorResponseDto) {
-        console.log('Poll response error');
-        console.log(pollResponse);
+        this.logger.log('Poll response error');
+        this.logger.log(pollResponse);
         return pollResponse;
       }
 

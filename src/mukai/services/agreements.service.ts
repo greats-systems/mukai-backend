@@ -26,7 +26,7 @@ export class AgreementsService {
         .insert(createAgreementDto)
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return data as Agreement;

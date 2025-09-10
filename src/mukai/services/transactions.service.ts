@@ -48,7 +48,7 @@ export class TransactionsService {
         { check_month, check_year, sending_wallet_uuid },
       );
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`hasPaidSubscription: ${data}`);
@@ -57,7 +57,7 @@ export class TransactionsService {
       }
       return false;
     } catch (error) {
-      console.log(error);
+      this.logger.log(error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -85,7 +85,7 @@ export class TransactionsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -205,7 +205,7 @@ export class TransactionsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -311,7 +311,7 @@ export class TransactionsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -383,13 +383,13 @@ export class TransactionsService {
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,
       );
-      console.log(debitResponse);
+      this.logger.log(debitResponse);
       this.logger.warn('Updating receiver wallet');
       const creditResponse = await walletsService.updateReceiverBalance(
         senderTransactionDto.receiving_wallet,
         senderTransactionDto.amount,
       );
-      console.log(creditResponse);
+      this.logger.log(creditResponse);
 
       receiverTransactionDto.sending_wallet =
         senderTransactionDto.sending_wallet;
@@ -409,10 +409,10 @@ export class TransactionsService {
         .select()
         .single();
       if (receiverError) {
-        console.log(receiverError);
+        this.logger.log(receiverError);
         return new ErrorResponseDto(400, receiverError.message);
       }
-      console.log(receiver);
+      this.logger.log(receiver);
 
       if (senderTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
@@ -454,11 +454,11 @@ export class TransactionsService {
         // Initiate payment
         const paymentResponse =
           await paymentGateway.initiateExpressPayment(paymentRequest);
-        console.log(paymentResponse);
+        this.logger.log(paymentResponse);
       }
       /*
-      // console.log(debitResponse);
-      // console.log(creditResponse);
+      // this.logger.log(debitResponse);
+      // this.logger.log(creditResponse);
       // send notification to the user
       */ return {
         statusCode: 201,
@@ -763,7 +763,7 @@ export class TransactionsService {
         this.logger.error(`Error fetching financial report`, error);
         return new ErrorResponseDto(400, error.details);
       }
-      console.log(data.length);
+      this.logger.log(data.length);
       return data as object;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id`, error);

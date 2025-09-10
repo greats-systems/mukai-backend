@@ -88,7 +88,7 @@ export class CooperativeMemberApprovalsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return data as CooperativeMemberApprovals;
@@ -231,7 +231,7 @@ export class CooperativeMemberApprovalsService {
         record.consensus_reached = has75PercentApproval;
       });
 
-      // console.log(approvals);
+      // this.logger.log(approvals);
       return {
         statusCode: 200,
         message: 'Approvals fetched successfully',
@@ -251,7 +251,7 @@ export class CooperativeMemberApprovalsService {
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
-      console.log(updateCooperativeMemberApprovalsDto);
+      this.logger.log(updateCooperativeMemberApprovalsDto);
       // const approval = await this.viewCooperativeMemberApprovals(u)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -286,7 +286,7 @@ export class CooperativeMemberApprovalsService {
         `Consensus reached? ${updateCooperativeMemberApprovalsDto.consensus_reached}`,
       );
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
-        updateCooperativeMemberApprovalsDto.consensus_reached = true;
+        // updateCooperativeMemberApprovalsDto.consensus_reached = true;
         if (
           updateCooperativeMemberApprovalsDto.poll_description ==
           'set interest rate'
@@ -314,7 +314,7 @@ export class CooperativeMemberApprovalsService {
               updateCoopDto.id.toString(),
               updateCoopDto,
             );
-          console.log(updateCoopResponse);
+          this.logger.log(updateCoopResponse);
           */
         } else if (
           updateCooperativeMemberApprovalsDto.poll_description?.includes(
@@ -437,7 +437,7 @@ export class CooperativeMemberApprovalsService {
       updateCoopDto.id.toString(),
       updateCoopDto,
     );
-    console.log(updateCoopResponse);
+    this.logger.log(updateCoopResponse);
     if (updateCoopResponse instanceof ErrorResponseDto) {
       this.logger.error(`Failed to update coop: ${updateCoopResponse.message}`);
       // return new ErrorResponseDto(400, updateCoopDto);
@@ -454,20 +454,11 @@ export class CooperativeMemberApprovalsService {
       // new SmileWalletService(),
     );
     this.logger.warn(`Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`);
+    // updateCooperativeMemberApprovalsDto.is_approved = true;
 
     // Create SmileCash transaction
     const smileCashService = new SmileCashWalletService(this.postgresrest);
-    /**
-     * export interface WalletToWalletTransferRequest {
-  receiverMobile: string; //DESTINATION WALLET
-  senderPhone: string; //SOURCE WALLET
-  amount: number;
-  currency: string;
-  channel: string;
-  narration: string;
-  transactionId: string | undefined;
-}
-     */
+
     const { data: sender, error: senderError } = await this.postgresrest
       .from('cooperatives')
       .select()
@@ -487,10 +478,12 @@ export class CooperativeMemberApprovalsService {
       .maybeSingle();
     this.logger.log(`currency: ${JSON.stringify(currency)}`);
     const { data: loanTerm, error: loanTermError } = await this.postgresrest
-      .from('cooperatives')
+      .from('loans')
       .select('loan_term_months')
       .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
       .maybeSingle();
+    this.logger.log(`Loan term: ${JSON.stringify(loanTerm)}`);
+
     const w2wRequest = {
       receiverMobile: receiverPhone,
       senderPhone: senderPhone,
@@ -522,6 +515,7 @@ export class CooperativeMemberApprovalsService {
     const loanService = new LoanService(this.postgresrest);
     updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
     updateLoanDto.status = 'disbursed';
+    updateLoanDto.is_approved = true;
     updateLoanDto.updated_at = DateTime.now().toISO();
     updateLoanDto.remaining_balance = parseFloat(
       updateCooperativeMemberApprovalsDto.additional_info,
@@ -530,7 +524,7 @@ export class CooperativeMemberApprovalsService {
     updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
     // Calculate due date based on cooperative's loan term
     const currentDate = new Date();
-    // const nextDate = new Date(currentDate.getTime()); 
+    // const nextDate = new Date(currentDate.getTime());
     // const dueDate = nextDate.setMonth(
     //   nextDate.getMonth() + loanTerm!['loan_term_months'],
     // );
@@ -555,6 +549,7 @@ export class CooperativeMemberApprovalsService {
     transactionDto.category = 'transfer';
     transactionDto.amount =
       updateCooperativeMemberApprovalsDto.additional_info as number;
+    transactionDto.currency = currency!['currency'] as string;
     transactionDto.narrative = 'debit';
     transactionDto.currency = updateCooperativeMemberApprovalsDto.currency;
     transactionDto.receiving_wallet = receivingWallet['data']['id'];

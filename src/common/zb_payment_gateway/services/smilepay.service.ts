@@ -48,6 +48,7 @@ export class SmilePayService {
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug(`Initiating SmilePay payment using ${this.baseUrl}`);
+      this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
       authRequest.orderReference = v4();
       const requestOptions = {
         method: 'POST',

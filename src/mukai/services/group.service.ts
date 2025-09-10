@@ -58,7 +58,7 @@ export class GroupService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -67,7 +67,7 @@ export class GroupService {
         createGroupMemberDto.member_id = member;
         const response =
           await groupMembersService.createGroupMember(createGroupMemberDto);
-        console.log(response);
+        this.logger.log(response);
       }
 
       const walletIDs: string[] = [];
@@ -94,7 +94,7 @@ export class GroupService {
       createTransactionDto.narrative = 'credit';
       const transactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
-      console.log(transactionResponse);
+      this.logger.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
         cooperativeMemberRequestDto.status = 'in a group';
@@ -105,8 +105,8 @@ export class GroupService {
             member,
             cooperativeMemberRequestDto,
           );
-        console.log(updateMemberResponse);
-        console.log('\n');
+        this.logger.log(updateMemberResponse);
+        this.logger.log('\n');
         /*
         const updateMemberResponse = await this.postgresrest
           .from('cooperative_member_requests')
@@ -116,7 +116,7 @@ export class GroupService {
           .single();
           */
       }
-      console.log(walletResponse);
+      this.logger.log(walletResponse);
 
       return createGroupResponse as Group;
     } catch (error) {
@@ -232,14 +232,14 @@ export class GroupService {
       const groupWalletJson =
         await walletService.viewCooperativeWallet(group_id);
       const receivingWallet = groupWalletJson['id'];
-      // console.log(receivingWallet);
+      // this.logger.log(receivingWallet);
 
       for (const member of membersJson['member_id'] || []) {
         const walletJson = await walletService.viewProfileWalletID(member);
-        // console.log(walletJson);
+        // this.logger.log(walletJson);
         walletDetails.push(walletJson['id']);
       }
-      // console.log(walletDetails);
+      // this.logger.log(walletDetails);
 
       for (const id of walletDetails) {
         const hasPaid = await transactionsService.checkIfSubsPaid(
@@ -250,7 +250,7 @@ export class GroupService {
         subsDict.push({ member_id: id, has_paid: hasPaid });
       }
 
-      // console.log(subsDict);
+      // this.logger.log(subsDict);
 
       return subsDict;
     } catch (error) {

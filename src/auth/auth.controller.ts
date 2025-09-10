@@ -253,7 +253,8 @@ export class AuthController {
   @Post('refresh')
   async refreshToken(@Body() body: { refreshToken: string }) {
     const response = await this.authService.refreshToken(body);
-    console.log(response);
+    return response;
+    // this.logger.log(response);
   }
 
   /**

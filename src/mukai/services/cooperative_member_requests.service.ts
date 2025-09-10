@@ -60,8 +60,8 @@ export class CooperativeMemberRequestsService {
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
         // .eq('status', 'unresolved')
-        .or('status.eq.invited,status.eq.unresolved,status.eq.active')
-        .single();
+        // .or('status.eq.invited,status.eq.unresolved,status.eq.active')
+        .maybeSingle();
       if (error) {
         this.logger.error('Error checking existing member request', error);
         return new ErrorResponseDto(400, error.details);
@@ -186,7 +186,7 @@ export class CooperativeMemberRequestsService {
     group_id: string,
     status: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    console.log(`${group_id}/${status}`);
+    this.logger.log(`${group_id}/${status}`);
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -199,7 +199,7 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: 'Cooperative member requests fetched successfully',
         data: data,
@@ -219,7 +219,7 @@ export class CooperativeMemberRequestsService {
   async findCooperativeInvitations(
     member_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    // console.log(`${group_id}/${status}`);
+    // this.logger.log(`${group_id}/${status}`);
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -234,7 +234,7 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: 'Cooperative invitations fetched successfully',
         data: JSON.stringify(data),
@@ -247,6 +247,41 @@ export class CooperativeMemberRequestsService {
       };
     } catch (error) {
       this.logger.error('Exception in findCooperativeInvitations', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async findCooperativeRequests(
+    member_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    // this.logger.log(`${group_id}/${status}`);
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select(
+          'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
+        )
+        .eq('member_id', member_id)
+        .eq('status', 'unresolved');
+
+      if (error) {
+        this.logger.error('Error fetching coop invitations', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.log({
+        statusCode: 200,
+        message: 'Cooperative requests fetched successfully',
+        data: JSON.stringify(data),
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Cooperative requests fetched successfully',
+        data: data,
+      };
+    } catch (error) {
+      this.logger.error('Exception in findCooperativeRequests', error);
       return new ErrorResponseDto(500, error);
     }
   }

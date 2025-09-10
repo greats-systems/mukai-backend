@@ -145,7 +145,7 @@ export class AuthService {
         process.env.SECRET_KEY || 'No secret key',
       );
       const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
-      console.log(`Deciphered text: ${decipheredText}`);
+      this.logger.log(`Deciphered text: ${decipheredText}`);
       const { data, error } = await this.postgresRest
         .from('otps')
         .select()
@@ -167,8 +167,8 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema
-    console.log('email', email);
-    console.log('password', password);
+    this.logger.log('email', email);
+    this.logger.log('password', password);
 
     const { data: user, error } = await this.postgresRest
       .auth_client('users')
@@ -191,7 +191,7 @@ export class AuthService {
 
   async validate_profile(accessAccountDto: AccessAccountDto) {
     try {
-      console.log(' validate_profile user.id', accessAccountDto);
+      this.logger.log(' validate_profile user.id', accessAccountDto);
       const decoded = this.jwtService.verify(accessAccountDto.accessToken);
       if (!decoded?.sub) {
         throw new UnauthorizedException('Invalid token');
@@ -213,7 +213,7 @@ export class AuthService {
           user: null,
         };
       }
-      console.log(' validate_profile user.id', user.id);
+      this.logger.log(' validate_profile user.id', user.id);
       // 3. Get profile with store information
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles') // Explicit schema
@@ -419,7 +419,7 @@ export class AuthService {
     const createWalletDto = new CreateWalletDto();
 
     try {
-      console.log('Creating transaction...', signupDto);
+      this.logger.log('Creating transaction...', signupDto);
 
       // 1. Check for existing users in parallel
       const [existingUser, existingPhoneNumber, existingNatID] =
@@ -797,7 +797,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('getProfilesLike searchTerm', searchTerm);
+      this.logger.log('getProfilesLike searchTerm', searchTerm);
 
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -812,8 +812,8 @@ export class AuthService {
       }
       /*
       if (data && data.length > 0) {
-        console.log('profile data', data);
-        // console.log('profile data id', data['id']);
+        this.logger.log('profile data', data);
+        // this.logger.log('profile data id', data['id']);
         const id = data['id'];
         const { data: walletData, error: WalletError } = await this.postgresRest
           .from('wallets')
@@ -822,11 +822,11 @@ export class AuthService {
           .eq('profile_id', id)
           .eq('is_group_wallet', false)
           .maybeSingle();
-        console.log('wallet_id', walletData);
+        this.logger.log('wallet_id', walletData);
         // profileData['wallet_id'] = walletData!['id'];
       }
       */
-      console.log('profile data load', data);
+      this.logger.log('profile data load', data);
 
       // return data?.length ? (data as Profile[]) : [];
       return data as Profile[];
@@ -849,7 +849,7 @@ export class AuthService {
     try {
       // Convert to lowercase for case-insensitive searc
       const searchTerm = id.toLowerCase();
-      console.log('searchTerm', searchTerm);
+      this.logger.log('searchTerm', searchTerm);
       const { data, error } = await this.postgresRest
         .from('wallets')
         .select('*')
@@ -860,7 +860,7 @@ export class AuthService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${error.message}`);
       }
-      console.log('data', data);
+      this.logger.log('data', data);
       return data?.length ? (data as Profile[]) : [];
     } catch (error) {
       // this.logger.error(`Error in getProfilesLike: ${error}`);
@@ -917,7 +917,7 @@ export class AuthService {
   }
 
   async updateFCM(profile: Profile) {
-    console.log('updateFCM', profile);
+    this.logger.log('updateFCM', profile);
 
     const now = new Date().toISOString();
     const { error: profileError, data: profileData } = await this.postgresRest
@@ -929,7 +929,7 @@ export class AuthService {
       .eq('id', profile.id);
 
     if (profileError) {
-      console.log('updateFCM profileError', profileError);
+      this.logger.log('updateFCM profileError', profileError);
 
       return {
         status: 'account not updated',
@@ -938,7 +938,7 @@ export class AuthService {
         data: null,
       };
     }
-    console.log('updateFCM profileData', profileData);
+    this.logger.log('updateFCM profileData', profileData);
 
     return {
       status: 'account updated',

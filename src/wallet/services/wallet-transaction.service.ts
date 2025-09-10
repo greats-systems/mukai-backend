@@ -27,7 +27,7 @@ export class WalletTransactionService {
         .insert(createWalletTransactionDto)
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return data as WalletTransaction;

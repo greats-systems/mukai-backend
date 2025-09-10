@@ -170,4 +170,12 @@ export class CreateLoanDto {
   @IsString()
   @IsOptional()
   has_received_vote?: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the loan was approved',
+  })
+  @IsString()
+  @IsOptional()
+  is_approved?: boolean;
 }

@@ -565,14 +565,14 @@ export class CooperativesService {
       const cooperativeWalletJson =
         await walletService.viewCooperativeWallet(cooperative_id);
       const receivingWallet = cooperativeWalletJson['id'];
-      // console.log(receivingWallet);
+      // this.logger.log(receivingWallet);
 
       for (const member of membersJson['member_id'] || []) {
         const walletJson = await walletService.viewProfileWalletID(member);
-        // console.log(walletJson);
+        // this.logger.log(walletJson);
         walletDetails.push(walletJson['id']);
       }
-      // console.log(walletDetails);
+      // this.logger.log(walletDetails);
 
       for (const id of walletDetails) {
         const hasPaid = await transactionsService.checkIfSubsPaid(
@@ -583,7 +583,7 @@ export class CooperativesService {
         subsDict.push({ member_id: id, has_paid: hasPaid });
       }
 
-      // console.log(subsDict);
+      // this.logger.log(subsDict);
 
       return subsDict;
     } catch (error) {
@@ -599,7 +599,7 @@ export class CooperativesService {
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
-    console.log(updateCooperativeDto);
+    this.logger.log(updateCooperativeDto);
     /**
      * Before updating the interest rate, the members should vote on it first
      */
@@ -626,7 +626,7 @@ export class CooperativesService {
   //   id: string,
   //   updateCooperativeDto: UpdateCooperativeDto,
   // ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
-  //   console.log(updateCooperativeDto);
+  //   this.logger.log(updateCooperativeDto);
   //   /**
   //    * Before updating the interest rate, the members should vote on it first
   //    */
@@ -638,10 +638,10 @@ export class CooperativesService {
   //     cmaDto.group_id = id;
   //     cmaDto.poll_description = 'set interest rate';
   //     cmaDto.additional_info = updateCooperativeDto.additional_info;
-  //     console.log(cmaDto);
+  //     this.logger.log(cmaDto);
   //     const cmaResponse =
   //       await cmaService.createCooperativeMemberApprovals(cmaDto);
-  //     console.log(cmaResponse);
+  //     this.logger.log(cmaResponse);
   //     /*
   //     const { data, error } = await this.postgresrest
   //       .from('cooperatives')
@@ -665,7 +665,7 @@ export class CooperativesService {
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
   ): Promise<Cooperative | ErrorResponseDto> {
-    console.log(updateCooperativeDto);
+    this.logger.log(updateCooperativeDto);
     /**
      * Before updating the interest rate, the members should vote on it first
      */
@@ -692,7 +692,7 @@ export class CooperativesService {
     id: string,
     updateCooperativeDto: UpdateCooperativeDto,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
-    console.log(updateCooperativeDto);
+    this.logger.log(updateCooperativeDto);
     /**
      * Before updating the interest rate, the members should vote on it first
      */
@@ -707,8 +707,8 @@ export class CooperativesService {
         this.logger.error(`Error updating Cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
-      console.log('Coop data after voting');
-      console.log(data);
+      this.logger.log('Coop data after voting');
+      this.logger.log(data);
       return data as CooperativeMemberApprovals;
     } catch (error) {
       this.logger.error(`Exception in updateCooperative for id ${id}`, error);

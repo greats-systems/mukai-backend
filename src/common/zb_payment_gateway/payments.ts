@@ -91,9 +91,9 @@ export class SmilePayGateway {
         cancelUrl: request.callbackUrl,
         failureUrl: request.callbackUrl,
         paymentMethod: request.paymentMethod.toUpperCase(),
-        ecocashMobile: request.customerPhone ?? '0777757603',
-        omariMobile: request.customerPhone ?? '0777757603',
-        zbWalletMobile: request.customerPhone ?? '0711111111',
+        ecocashMobile: request.customerPhone,
+        omariMobile: request.customerPhone,
+        zbWalletMobile: request.customerPhone,
       });
       console.log('initiateExpressPayment ra', req_data);
       const requestOptions = {

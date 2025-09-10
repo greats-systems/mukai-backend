@@ -24,7 +24,7 @@ export class UserService {
         .insert(createUserDto)
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return data as object;

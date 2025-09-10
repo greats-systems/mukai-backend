@@ -36,8 +36,8 @@ export class ChatsService {
         .insert(processedDto)
         .single();
       if (error) {
-        console.log('createChat error:');
-        console.log(error);
+        this.logger.log('createChat error:');
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       return {

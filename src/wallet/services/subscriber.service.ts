@@ -37,7 +37,7 @@ export class SubscriberService {
         .single();
 
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
       if (!data) {

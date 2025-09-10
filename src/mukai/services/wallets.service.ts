@@ -39,7 +39,7 @@ export class WalletsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         if (error.details == "The result contains 0 rows") {
           return new ErrorResponseDto(403, `User ${createWalletDto.profile_id} cannot create a wallet of the same type`)
           // return {
@@ -137,7 +137,7 @@ export class WalletsService {
           data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
         }
 
-        console.log({
+        this.logger.log({
           statusCode: 200,
           message: "Wallet fetched successfully",
           data: data as Wallet[],
@@ -199,7 +199,7 @@ export class WalletsService {
         }
         
 
-        console.log({
+        this.logger.log({
           statusCode: 200,
           message: "Wallet fetched successfully",
           data: data as Wallet[],
@@ -295,7 +295,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: "Wallet fetched successfully",
         data: data as Wallet[],
@@ -447,7 +447,7 @@ export class WalletsService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${profileError?.message}`);
       }
-      console.log("profileData", profileData);
+      this.logger.log("profileData", profileData);
       return {
         statusCode: 200,
         message: "Wallet Profile fetched successfully",
@@ -544,7 +544,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log("Updating SmileCash sender balance");
+      this.logger.log("Updating SmileCash sender balance");
       if (currency == 'USD') {
         const { data: updateData, error: updateError } = await this.postgresrest
           .from("wallets")
@@ -608,7 +608,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log("Updating SmileCash receiver balance");
+      this.logger.log("Updating SmileCash receiver balance");
       if (currency == 'USD') {
         const { data: updateData, error: updateError } = await this.postgresrest
           .from("wallets")
@@ -625,8 +625,8 @@ export class WalletsService {
           );
           return new ErrorResponseDto(400, updateError.message);
         }
-        // console.log("New wallet:");
-        // console.log(updateData);
+        // this.logger.log("New wallet:");
+        // this.logger.log(updateData);
 
         return {
           statusCode: 200,
@@ -649,8 +649,8 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      // console.log("New wallet:");
-      // console.log(updateData);
+      // this.logger.log("New wallet:");
+      // this.logger.log(updateData);
 
       return {
         statusCode: 200,
@@ -676,7 +676,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log("Updating SmileCash balance");
+      this.logger.log("Updating SmileCash balance");
       if (currency == 'USD') {
         const { data: updateData, error: updateError } = await this.postgresrest
           .from("wallets")
@@ -693,8 +693,8 @@ export class WalletsService {
           );
           return new ErrorResponseDto(400, updateError.message);
         }
-        // console.log("New wallet:");
-        // console.log(updateData);
+        // this.logger.log("New wallet:");
+        // this.logger.log(updateData);
 
         return {
           statusCode: 200,
@@ -717,8 +717,8 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      // console.log("New wallet:");
-      // console.log(updateData);
+      // this.logger.log("New wallet:");
+      // this.logger.log(updateData);
 
       return {
         statusCode: 200,
@@ -743,13 +743,13 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log("Updating sender balance");
+      this.logger.log("Updating sender balance");
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
         .select("balance")
         .eq("id", sending_wallet_id)
         .single();
-      console.log(balanceData);
+      this.logger.log(balanceData);
       if (balanceError) {
         this.logger.error(
           `Error fetching balance ${sending_wallet_id}`,
@@ -773,8 +773,8 @@ export class WalletsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      console.log("New wallet:");
-      console.log(updateData);
+      this.logger.log("New wallet:");
+      this.logger.log(updateData);
 
       return {
         statusCode: 200,

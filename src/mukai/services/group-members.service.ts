@@ -30,7 +30,7 @@ export class GroupMemberService {
   async createGroupMember(
     createGroupMemberDto: CreateGroupMemberDto,
   ): Promise<GroupMembers | object | ErrorResponseDto> {
-    console.log(createGroupMemberDto);
+    this.logger.log(createGroupMemberDto);
     try {
       const { data: createGroupMemberResponse, error } = await this.postgresrest
         .from('group_members')
@@ -45,7 +45,7 @@ export class GroupMemberService {
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         if (error.details == 'The result contains 0 rows') {
           return {
             data: `User ${createGroupMemberDto.member_id} is already in this group`,
@@ -121,8 +121,8 @@ export class GroupMemberService {
   async findMembersInGroup(
     cooperative_id: string,
   ): Promise<GroupMembers[] | ErrorResponseDto> {
-    console.log('cooperative_id');
-    console.log(cooperative_id);
+    this.logger.log('cooperative_id');
+    this.logger.log(cooperative_id);
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')

@@ -18,10 +18,12 @@ async function bootstrap() {
       'Mukai Savings and Credit Co-operatives Management API Documentation',
     )
     .setVersion('1.0')
+
     .build();
 
   const options: SwaggerDocumentOptions = {
     operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    ignoreGlobalPrefix: false,
   };
 
   const document = SwaggerModule.createDocument(app, config, options);

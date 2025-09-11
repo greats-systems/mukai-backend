@@ -20,13 +20,15 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { CreateSavingsDto } from '../dto/create/create-wallet-savings.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Savings Portfolio')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiExcludeController()
 @Controller('savings-portfolio')
 export class SavingsController {
   constructor(private readonly savingsService: SavingsService) {}

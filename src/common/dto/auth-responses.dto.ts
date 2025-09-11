@@ -1,4 +1,49 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class UserResponse {
+  @ApiProperty({
+    description: 'User ID',
+    example: '7244f219-a9f1-4f97-a01d-7c994fc3265b',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'User email',
+    example: 'moyongqaa1@gmail.com',
+  })
+  email: string;
+
+  @ApiPropertyOptional({
+    description: 'User phone number',
+    example: '263718439965',
+    nullable: true,
+  })
+  phone?: string | null;
+
+  @ApiProperty({
+    description: 'User first name',
+    example: 'simon',
+  })
+  first_name: string;
+
+  @ApiProperty({
+    description: 'User last name',
+    example: 'moyo',
+  })
+  last_name: string;
+
+  @ApiProperty({
+    description: 'Account type',
+    example: 'coop-manager',
+  })
+  account_type: string;
+
+  @ApiProperty({
+    description: 'User role',
+    example: 'authenticated',
+  })
+  role: string;
+}
 
 export class AuthSuccessResponse {
   @ApiProperty({
@@ -73,6 +118,59 @@ export class AuthSuccessResponse {
   error: null;
 }
 
+export class AuthLoginSuccessResponse {
+  @ApiProperty({
+    description: 'Status message',
+    example: 'account authenticated',
+  })
+  status: string;
+
+  @ApiProperty({
+    description: 'HTTP status code',
+    example: 200,
+  })
+  statusCode: number;
+
+  @ApiProperty({
+    description: 'Detailed message',
+    example: 'account authenticated successfully',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: 'JWT access token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  access_token: string;
+
+  @ApiPropertyOptional({
+    description: 'Refresh token',
+    example: 'refresh_token_value',
+    nullable: true,
+  })
+  refresh_token?: string;
+
+  @ApiProperty({
+    description: 'Token type',
+    example: 'bearer',
+  })
+  token_type: string;
+
+  @ApiProperty({ type: UserResponse })
+  user: UserResponse;
+
+  @ApiPropertyOptional({
+    description: 'Additional data',
+    nullable: true,
+  })
+  data?: string;
+
+  // @ApiPropertyOptional({
+  //   description: 'Error information',
+  //   nullable: true,
+  // })
+  // error?: null;
+}
 export class AuthErrorResponse {
   @ApiProperty({
     description: 'status',

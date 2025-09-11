@@ -24,7 +24,7 @@ export class SignupDto {
   email: string;
 
   @ApiProperty({
-    example: '+1234567890',
+    example: '263770888000',
     description: 'Phone number of the user',
     required: true,
   })
@@ -33,7 +33,7 @@ export class SignupDto {
   phone: string;
 
   @ApiProperty({
-    example: '+1234567890',
+    example: '26371800800',
     description: 'Coop phone number of the user (for which they are the admin)',
     required: true,
   })
@@ -93,13 +93,13 @@ export class SignupDto {
   @IsString()
   gender: string;
 
-  @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Wallet ID associated with the user',
-    required: true,
-  })
-  @IsString()
-  wallet_id: string;
+  // @ApiProperty({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Wallet ID associated with the user',
+  //   required: true,
+  // })
+  // @IsString()
+  // wallet_id: string;
 
   // @ApiPropertyOptional({
   //   example: '123e4567-e89b-12d3-a456-426614174000',
@@ -115,12 +115,12 @@ export class SignupDto {
   @IsString()
   business_id: string;
 
-  @ApiPropertyOptional({
-    example: 'member',
-    description: 'Affiliations of the user',
-  })
-  @IsString()
-  affiliations: string;
+  // @ApiPropertyOptional({
+  //   example: 'member',
+  //   description: 'Affiliations of the user',
+  // })
+  // @IsString()
+  // affiliations: string;
 
   @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',

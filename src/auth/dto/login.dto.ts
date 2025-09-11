@@ -1,36 +1,50 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Data Transfer Object (DTO) for user login.
  * Validates and structures the data required for authenticating a user.
  */
 export class LoginDto {
-  /** Email address of the user. Must be a valid email format and cannot be empty. */
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'igreats@gmail.com',
+    format: 'email',
+  })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  /** Password for the user account. Must be at least 8 characters long and cannot be empty. */
+  @ApiProperty({
+    description:
+      'Password for the user account. Must be at least 8 characters long',
+    example: 'password',
+    minLength: 8,
+  })
   @IsString()
   @IsNotEmpty()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
 
-  /** Password for the user account. Must be at least 8 characters long and cannot be empty. */
+  /*
+  @ApiPropertyOptional({
+    description: 'Phone number for the user account (optional)',
+    example: '+1234567890',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   phone?: string;
 
-  /** Password for the user account. Must be at least 8 characters long and cannot be empty. */
+  @ApiPropertyOptional({
+    description: 'One-time password for authentication (optional)',
+    example: '123456',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   otp?: string;
+  */
 }
 
 /**
@@ -38,7 +52,10 @@ export class LoginDto {
  * Validates and structures the data required for token-based authentication.
  */
 export class AccessAccountDto {
-  /** Access token for the user account. Cannot be empty. */
+  @ApiProperty({
+    description: 'Access token for the user account',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
   @IsString()
   @IsNotEmpty()
   accessToken: string;

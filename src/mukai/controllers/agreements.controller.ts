@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Agreement } from '../entities/agreement.entity';
 
@@ -27,6 +28,7 @@ import { Agreement } from '../entities/agreement.entity';
 export class AgreementsController {
   constructor(private readonly agreementsService: AgreementsService) {}
 
+  @ApiExcludeEndpoint()
   @Post()
   @ApiOperation({ summary: 'Create a new agreement' })
   @ApiBody({ type: CreateAgreementDto })
@@ -68,6 +70,7 @@ export class AgreementsController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Get()
   @ApiOperation({ summary: 'Get all agreements' })
   @ApiResponse({
@@ -97,6 +100,7 @@ export class AgreementsController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific agreement' })
   @ApiParam({
@@ -132,6 +136,7 @@ export class AgreementsController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Patch(':id')
   @ApiOperation({ summary: 'Update an agreement' })
   @ApiParam({
@@ -175,6 +180,7 @@ export class AgreementsController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an agreement' })
   @ApiParam({

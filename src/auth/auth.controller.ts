@@ -14,9 +14,15 @@ import { AccessAccountDto, LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiExcludeEndpoint,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import {
   AuthErrorResponse,
+  AuthLoginSuccessResponse,
   AuthSuccessResponse,
 } from 'src/common/dto/auth-responses.dto';
 
@@ -32,11 +38,13 @@ export class AuthController {
    * Retrieves all user profiles.
    * @returns Promise<Profile[]> - Array of user profiles
    */
+  @ApiExcludeEndpoint()
   @Get('profiles')
   async getProfiles() {
     return this.authService.getProfiles();
   }
 
+  @ApiExcludeEndpoint()
   @Get('profiles/except/:id')
   async getProfilesExcept(@Param('id') id: string) {
     return this.authService.getProfilesExcept(id);
@@ -47,6 +55,7 @@ export class AuthController {
    * @param id - The ID to search similar profiles for
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
+  @ApiExcludeEndpoint()
   @Get('profiles/like_wallet_id/:id')
   async getProfilesLikeWalletID(@Param('id') id: string) {
     return this.authService.getProfilesLikeWalletID(id);
@@ -57,11 +66,13 @@ export class AuthController {
    * @param id - The ID to search similar profiles for
    * @returns Promise<Profile[]> - Array of matching user profiles
    */
+  @ApiExcludeEndpoint()
   @Get('profiles/like/:id')
   async getProfilesLike(@Param('id') id: string) {
     return this.authService.getProfilesLike(id);
   }
 
+  @ApiExcludeEndpoint()
   @Get('profiles/:id')
   async getProfile(@Param('id') id: string) {
     console.log('AuthGuard works 🎉');
@@ -87,7 +98,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 422,
-    description: 'Phone number already exists',
+    description: 'Phone/Email number already exists',
   })
   @ApiResponse({
     status: 422,
@@ -107,6 +118,7 @@ export class AuthController {
    * @param profile - Updated user profile data
    * @returns Promise<any> - Result of the update operation
    */
+  @ApiExcludeEndpoint()
   @Patch('update-account/:id')
   async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
@@ -117,17 +129,18 @@ export class AuthController {
    * @param profile - User profile with updated FCM token
    * @returns Promise<any> - Result of the FCM update operation
    */
+  @ApiExcludeEndpoint()
   @Put('update-fcm/:id')
   async updateFCM(@Body() profile: Profile) {
     return this.authService.updateFCM(profile);
   }
 
   @ApiOperation({ summary: 'Login' })
-  @ApiBody({ type: SignupDto })
+  @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Login successful',
-    type: AuthSuccessResponse,
+    type: AuthLoginSuccessResponse,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -169,6 +182,7 @@ export class AuthController {
     return response;
   }
 
+  /*
   @ApiOperation({ summary: 'Send OTP' })
   @ApiBody({ type: SignupDto })
   @ApiResponse({
@@ -207,6 +221,7 @@ export class AuthController {
     }
     return response;
   }
+  
 
   @ApiOperation({ summary: 'Send OTP' })
   @ApiBody({ type: SignupDto })
@@ -249,7 +264,8 @@ export class AuthController {
     }
     return response;
   }
-
+    */
+  @ApiExcludeEndpoint()
   @Post('refresh')
   async refreshToken(@Body() body: { refreshToken: string }) {
     const response = await this.authService.refreshToken(body);
@@ -257,11 +273,11 @@ export class AuthController {
     // this.logger.log(response);
   }
 
-  /**
-   * Logs out a user by invalidating their session.
-   * @param id - ID of the user to logout
-   * @returns Promise<any> - Result of the logout operation
-   */
+  @ApiOperation({ summary: 'Logout' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User logged out successfully',
+  })
   @Post('logout/:id')
   async logout(@Param('id') id: string) {
     return this.authService.logout(id);
@@ -272,6 +288,7 @@ export class AuthController {
    * @param accessToken - Access token to validate
    * @returns Promise<any> - Validation result with user profile
    */
+  @ApiExcludeEndpoint()
   @Post('validate-profile')
   async validate_profile(@Body() accessToken: AccessAccountDto) {
     return this.authService.validate_profile(accessToken);

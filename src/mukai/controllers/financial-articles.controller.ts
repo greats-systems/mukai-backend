@@ -18,6 +18,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { CreateFinancialArticleDto } from '../dto/create/create-financial-article.dto';
@@ -27,13 +28,14 @@ import { FinancialArticleService } from '../services/financial-article.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('FinancialArticles')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiExcludeController()
 @Controller('financial_articles')
 export class FinancialArticleController {
   constructor(
     private readonly financialArticlesService: FinancialArticleService,
-  ) { }
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new financial_article' })

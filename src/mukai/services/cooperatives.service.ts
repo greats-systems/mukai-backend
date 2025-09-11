@@ -78,7 +78,7 @@ export class CooperativesService {
         );
         return new GeneralErrorResponseDto(
           409,
-          'This coop is taken. Please edit your coop info',
+          'This number is taken. Please change your coop phone number',
           existingCoopResult.data,
         );
       }
@@ -451,8 +451,8 @@ export class CooperativesService {
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
         .is('cooperative_id', null)
-        .order('first_name', { ascending: true })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('first_name', { ascending: true });
 
       if (error) {
         this.logger.error(`Error fetching available members`, error);

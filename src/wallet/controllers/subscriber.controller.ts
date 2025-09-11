@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { CreateSubscriberDto } from '../dto/create/create-subscriber.dto';
 import { UpdateSubscriberDto } from '../dto/update/update-subscriber.dto';
@@ -24,6 +25,7 @@ import { Subscriber } from '../entities/subscriber.entity';
 
 @ApiTags('Subscriber')
 @Controller('subscribers')
+@ApiExcludeController()
 export class SubscriberController {
   constructor(private readonly subscriberService: SubscriberService) {}
 

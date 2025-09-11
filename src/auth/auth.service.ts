@@ -33,6 +33,7 @@ import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/t
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 import {
   AuthErrorResponse,
+  AuthLoginSuccessResponse,
   AuthSuccessResponse,
 } from 'src/common/dto/auth-responses.dto';
 import * as CryptoJS from 'crypto-js';
@@ -40,6 +41,7 @@ import { WhatsAppService } from 'src/common/whatsapp/whatsapp.service';
 import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.requests.dto';
 import { first } from 'rxjs';
 import { UpdateWalletDto } from 'src/mukai/dto/update/update-wallet.dto';
+import { Auth } from 'firebase-admin/lib/auth/auth';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -370,7 +372,10 @@ export class AuthService {
       }
 
       // 4. Build minimal response
-      const response = {
+      // const user = await this.validateUser(loginDto);
+      // const session = await this.createSession(user.id);
+
+      const response: AuthLoginSuccessResponse = {
         status: 'account authenticated',
         statusCode: 200,
         message: 'account authenticated successfully',
@@ -388,18 +393,10 @@ export class AuthService {
           first_name: profileData?.first_name || '',
           last_name: profileData?.last_name || '',
           account_type: profileData?.account_type || 'authenticated',
-          balance:
-            balanceUSD.status === 'fulfilled' &&
-            balanceUSD.value instanceof SuccessResponseDto
-              ? balanceUSD.value.data.data.billerResponse.balance
-              : 0,
-          balance_zwg:
-            balanceZWG.status === 'fulfilled' &&
-            balanceZWG.value instanceof SuccessResponseDto
-              ? balanceZWG.value.data.data.billerResponse.balance
-              : 0,
           role: user.role || 'authenticated',
         },
+        data: undefined, // Explicitly set as undefined
+        // error: null
       };
 
       return response;
@@ -504,9 +501,9 @@ export class AuthService {
         account_type: signupDto.account_type,
         dob: signupDto.dob,
         gender: signupDto.gender,
-        wallet_id: signupDto.wallet_id,
+        // wallet_id: signupDto.wallet_id,
         business_id: signupDto.business_id,
-        affiliations: signupDto.affiliations,
+        // affiliations: signupDto.affiliations,
         coop_account_id: signupDto.coop_account_id,
         push_token: signupDto.push_token,
         avatar: signupDto.avatar,
@@ -651,7 +648,7 @@ export class AuthService {
           gender: signupDto.gender,
           wallet_id: walletResponse['data']['id'],
           business_id: signupDto.business_id,
-          affiliations: signupDto.affiliations,
+          // affiliations: signupDto.affiliations,
           coop_account_id: signupDto.coop_account_id,
           push_token: signupDto.push_token,
           avatar: signupDto.avatar,

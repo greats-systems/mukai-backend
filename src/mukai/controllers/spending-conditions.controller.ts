@@ -21,13 +21,15 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { SpendingConditions } from '../entities/spending-conditions.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Spending Conditions')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiExcludeController()
 @Controller('spending-conditions')
 export class SpendingConditionsController {
   constructor(

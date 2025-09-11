@@ -5,8 +5,10 @@ import {
   ExpressPaymentSmilePayRequestAuth,
   ExpressPaymentSmilePayRequestConfirm,
 } from '../requests/smilepay.requests';
+import { ApiExcludeController } from '@nestjs/swagger';
 
 @Controller('smilepay')
+@ApiExcludeController()
 export class SmilePayController {
   constructor(private readonly spService: SmilePayService) {}
 

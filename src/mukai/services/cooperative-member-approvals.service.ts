@@ -449,127 +449,150 @@ export class CooperativeMemberApprovalsService {
   async disburseLoan(
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<boolean> {
-    const walletService = new WalletsService(
-      this.postgresrest,
-      // new SmileWalletService(),
-    );
-    this.logger.warn(`Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`);
-    // updateCooperativeMemberApprovalsDto.is_approved = true;
+    try {
+      this.logger.warn(
+        `Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`,
+      );
 
-    // Create SmileCash transaction
-    const smileCashService = new SmileCashWalletService(this.postgresrest);
+      // Initialize services
+      const walletService = new WalletsService(this.postgresrest);
+      const smileCashService = new SmileCashWalletService(this.postgresrest);
+      const loanService = new LoanService(this.postgresrest);
+      const transService = new TransactionsService(this.postgresrest);
 
-    const { data: sender, error: senderError } = await this.postgresrest
-      .from('cooperatives')
-      .select()
-      .eq('id', updateCooperativeMemberApprovalsDto.group_id)
-      .single();
-    const { data: receiver, error: receiverError } = await this.postgresrest
-      .from('profiles')
-      .select()
-      .eq('id', updateCooperativeMemberApprovalsDto.profile_id)
-      .single();
-    const senderPhone = sender['coop_phone'];
-    const receiverPhone = receiver['phone'];
-    const { data: currency, error: currencyError } = await this.postgresrest
-      .from('loans')
-      .select('currency')
-      .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
-      .maybeSingle();
-    this.logger.log(`currency: ${JSON.stringify(currency)}`);
-    const { data: loanTerm, error: loanTermError } = await this.postgresrest
-      .from('loans')
-      .select('loan_term_months')
-      .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
-      .maybeSingle();
-    this.logger.log(`Loan term: ${JSON.stringify(loanTerm)}`);
+      // Fetch all required data in parallel
+      const [
+        { data: sender, error: senderError },
+        { data: receiver, error: receiverError },
+        { data: loanData, error: loanError },
+      ] = await Promise.all([
+        this.postgresrest
+          .from('cooperatives')
+          .select()
+          .eq('id', updateCooperativeMemberApprovalsDto.group_id)
+          .single(),
+        this.postgresrest
+          .from('profiles')
+          .select()
+          .eq('id', updateCooperativeMemberApprovalsDto.profile_id)
+          .single(),
+        this.postgresrest
+          .from('loans')
+          .select('currency, loan_term_months')
+          .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
+          .maybeSingle(),
+      ]);
 
-    const w2wRequest = {
-      receiverMobile: receiverPhone,
-      senderPhone: senderPhone,
-      amount: Number(updateCooperativeMemberApprovalsDto.additional_info),
-      currency: currency!['currency'] as string,
-      channel: 'USSD',
-      narration: 'loan disbursement',
-    } as WalletToWalletTransferRequest;
-    const smileCashTransaction =
-      await smileCashService.walletToWallet(w2wRequest);
-    this.logger.debug('smileCashTransaction');
-    this.logger.debug(smileCashTransaction);
-    if (smileCashTransaction instanceof ErrorResponseDto) {
-      this.logger.error(smileCashTransaction);
+      // Handle errors from data fetching
+      if (senderError || receiverError || loanError) {
+        this.logger.error('Failed to fetch required data:', {
+          senderError,
+          receiverError,
+          loanError,
+        });
+        return false;
+      }
+
+      if (!sender || !receiver || !loanData) {
+        this.logger.error('Required data not found');
+        return false;
+      }
+
+      const senderPhone = sender.coop_phone;
+      const receiverPhone = receiver.phone;
+      const currencyCode = loanData.currency;
+      const loanTerm = loanData.loan_term_months;
+
+      this.logger.log(`Currency: ${currencyCode}, Loan term: ${loanTerm}`);
+
+      // Execute wallet-to-wallet transfer
+      const w2wRequest: WalletToWalletTransferRequest = {
+        receiverMobile: receiverPhone,
+        senderPhone: senderPhone,
+        amount: Number(updateCooperativeMemberApprovalsDto.additional_info),
+        currency: currencyCode,
+        channel: 'USSD',
+        narration: 'loan disbursement',
+        transactionId: undefined,
+      };
+
+      const smileCashTransaction =
+        await smileCashService.walletToWallet(w2wRequest);
+
+      if (smileCashTransaction instanceof ErrorResponseDto) {
+        this.logger.error(
+          'SmileCash transaction failed:',
+          smileCashTransaction,
+        );
+        return false;
+      }
+
+      this.logger.debug('SmileCash transaction successful');
+
+      // Fetch wallets in parallel
+      const [receivingWallet, disbursingWallet] = await Promise.all([
+        walletService.viewProfileWalletID(
+          updateCooperativeMemberApprovalsDto.profile_id!,
+        ),
+        walletService.viewCoopWallet(
+          updateCooperativeMemberApprovalsDto.group_id!,
+        ),
+      ]);
+
+      // Update loan status
+      const updateLoanDto = new CreateLoanDto();
+      updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
+      updateLoanDto.status = 'disbursed';
+      updateLoanDto.is_approved = true;
+      updateLoanDto.updated_at = DateTime.now().toISO();
+      updateLoanDto.remaining_balance = parseFloat(
+        updateCooperativeMemberApprovalsDto.additional_info,
+      );
+      updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
+      updateLoanDto.cooperative_id =
+        updateCooperativeMemberApprovalsDto.group_id;
+
+      const loanResponse = await loanService.updateLoan(
+        updateLoanDto.id!,
+        updateLoanDto,
+      );
+
+      if (loanResponse instanceof ErrorResponseDto) {
+        this.logger.error('Loan update failed:', loanResponse);
+        return false;
+      }
+
+      this.logger.debug('Loan update successful');
+
+      // Record transaction
+      const transactionDto = new CreateTransactionDto();
+      transactionDto.transaction_type = 'loan disbursement';
+      transactionDto.category = 'transfer';
+      transactionDto.amount = Number(
+        updateCooperativeMemberApprovalsDto.additional_info,
+      );
+      transactionDto.currency = currencyCode;
+      transactionDto.narrative = 'debit';
+      transactionDto.receiving_wallet = receivingWallet['data'].id;
+      transactionDto.receiving_phone = receivingWallet['data'].phone;
+      transactionDto.sending_wallet = disbursingWallet['data'].id;
+      transactionDto.sending_phone = disbursingWallet['data'].coop_phone;
+
+      const transactionResponse =
+        await transService.createTransaction(transactionDto);
+
+      if (transactionResponse instanceof ErrorResponseDto) {
+        this.logger.error('Transaction recording failed:', transactionResponse);
+        return false;
+      }
+
+      this.logger.debug('Transaction recorded successfully');
+      return true;
+    } catch (error) {
+      this.logger.error('Unexpected error in disburseLoan:', error);
       return false;
     }
-
-    const receivingWallet = await walletService.viewProfileWalletID(
-      updateCooperativeMemberApprovalsDto.profile_id!,
-    );
-    this.logger.debug('receivingWallet');
-    this.logger.debug(receivingWallet['data']['id']);
-    const disbursingWallet = await walletService.viewCoopWallet(
-      updateCooperativeMemberApprovalsDto.group_id!,
-    );
-    this.logger.debug('disbursingWallet');
-    this.logger.debug(disbursingWallet['data']['id']);
-    const updateLoanDto = new CreateLoanDto();
-    const loanService = new LoanService(this.postgresrest);
-    updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
-    updateLoanDto.status = 'disbursed';
-    updateLoanDto.is_approved = true;
-    updateLoanDto.updated_at = DateTime.now().toISO();
-    updateLoanDto.remaining_balance = parseFloat(
-      updateCooperativeMemberApprovalsDto.additional_info,
-    );
-    updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
-    updateLoanDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-    // Calculate due date based on cooperative's loan term
-    const currentDate = new Date();
-    // const nextDate = new Date(currentDate.getTime());
-    // const dueDate = nextDate.setMonth(
-    //   nextDate.getMonth() + loanTerm!['loan_term_months'],
-    // );
-    // updateLoanDto.due_date = new Date(dueDate);
-    // updateLoanDto.due_date =
-    this.logger.debug('updateLoanDto');
-    this.logger.debug(updateLoanDto);
-    const loanResponse = await loanService.updateLoan(
-      updateLoanDto.id!,
-      updateLoanDto,
-    );
-    this.logger.debug('loanResponse');
-    this.logger.debug(loanResponse);
-    if (loanResponse instanceof ErrorResponseDto) {
-      this.logger.error(loanResponse);
-      return false;
-    }
-
-    // Record the transaction
-    const transactionDto = new CreateTransactionDto();
-    transactionDto.transaction_type = 'loan disbursement';
-    transactionDto.category = 'transfer';
-    transactionDto.amount =
-      updateCooperativeMemberApprovalsDto.additional_info as number;
-    transactionDto.currency = currency!['currency'] as string;
-    transactionDto.narrative = 'debit';
-    transactionDto.currency = updateCooperativeMemberApprovalsDto.currency;
-    transactionDto.receiving_wallet = receivingWallet['data']['id'];
-    transactionDto.sending_wallet = disbursingWallet['data']['id'];
-
-    const transService = new TransactionsService(
-      this.postgresrest,
-      // new SmileWalletService(),
-    );
-    const transactionResponse =
-      await transService.createTransaction(transactionDto);
-    if (transactionResponse instanceof ErrorResponseDto) {
-      this.logger.error(transactionResponse);
-      return false;
-    }
-    this.logger.debug('transactionResponse');
-    this.logger.debug(transactionResponse);
-    return true;
   }
-
   async updateMemberRole(
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<boolean> {

@@ -16,8 +16,10 @@ import { EmployeesService } from '../services/employee.service';
 import { CreateEmployeeDto } from '../dto/create/create-employee.dto';
 import { UpdateEmployeeDto } from '../dto/update/update-employee.dto';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { ApiExcludeController } from '@nestjs/swagger';
 
 @Injectable()
+@ApiExcludeController()
 @Controller('employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}

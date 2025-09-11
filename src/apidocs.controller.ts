@@ -1,5 +1,5 @@
 // @Get('/api-docs')
-//   // @UseGuards(JwtAuthGuard)
+//   @UseGuards(JwtAuthGuard)
 //   protected(@Req() req) {
 //     return {
 //       message: 'AuthGuard works 🎉',

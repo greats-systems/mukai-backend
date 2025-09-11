@@ -14,6 +14,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 // import { WalletTransaction } from 'typeorm';
 import { WalletTransactionService } from '../services/wallet-transaction.service';
@@ -21,6 +22,7 @@ import { CreateWalletTransactionDto } from '../dto/create/create-wallet-transact
 import { WalletTransaction } from '../entities/wallet-transactions.entity';
 
 @ApiTags('WalletTransaction')
+@ApiExcludeController()
 @Controller('zb_wallet_transactions')
 export class WalletTransactionController {
   constructor(private readonly transactionService: WalletTransactionService) {}

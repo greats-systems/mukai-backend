@@ -16,7 +16,9 @@ import {
   WalletToWalletTransferRequest,
 } from '../requests/transactions.requests';
 import { SmileCashWalletService } from '../services/smilecash-wallet.service';
+import { ApiExcludeController } from '@nestjs/swagger';
 
+@ApiExcludeController()
 @Controller('smilecash-wallet')
 export class SmileCashWalletController {
   constructor(private readonly scWallet: SmileCashWalletService) {}

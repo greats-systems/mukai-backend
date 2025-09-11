@@ -18,6 +18,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { GroupMemberService } from '../services/group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
@@ -26,9 +27,23 @@ import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 // import { Cooperative } from '../entities/cooperative.entity';
 
-@ApiTags('GroupMembers')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@ApiTags('Group Members')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiHeader({
+  name: 'apikey',
+  description: 'API key for authentication (insert access token)',
+  required: true, // Set to true if thpe header is mandatory
+  example:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ'
+}) // Optional: provide an example value
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer token for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ'
+}) // Optional: provide an example value
 @Controller('group_members')
 export class GroupMemberController {
   constructor(private readonly groupMemberService: GroupMemberService) {}

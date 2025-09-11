@@ -13,9 +13,9 @@ async function bootstrap() {
   app.enableCors();
   const config = new DocumentBuilder()
     .addBasicAuth()
-    .setTitle('Mukai API Docs')
+    .setTitle('MkandoWallet (SmileSACCO) API Docs')
     .setDescription(
-      'Mukai Savings and Credit Co-operatives Management API Documentation',
+      'MkandoWallet (SmileSACCO) Savings and Credit Cooperatives Management API Documentation',
     )
     .setVersion('1.0')
 

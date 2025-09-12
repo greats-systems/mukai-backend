@@ -72,7 +72,7 @@ export class CreateLoanDto {
   })
   @IsDate()
   @IsOptional()
-  due_date?: Date;
+  due_date?: string;
 
   @ApiProperty({
     example: 'active',

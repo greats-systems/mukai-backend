@@ -177,7 +177,8 @@ export class CooperativeMemberApprovalsService {
         )
         // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
-        .eq('group_id', group_id);
+        .eq('group_id', group_id)
+        .order('created_at', { ascending: false });
       // .neq('profile_id', member_id);
 
       if (error) {
@@ -503,7 +504,9 @@ export class CooperativeMemberApprovalsService {
       const currencyCode = loanData.currency;
       const loanTerm = loanData.loan_term_months;
 
-      this.logger.log(`Currency: ${currencyCode}, Loan term: ${loanTerm}`);
+      this.logger.log(
+        `Currency: ${currencyCode}, Loan term: ${loanTerm} months`,
+      );
 
       // Execute wallet-to-wallet transfer
       const w2wRequest: WalletToWalletTransferRequest = {
@@ -540,6 +543,9 @@ export class CooperativeMemberApprovalsService {
       ]);
 
       // Update loan status
+      this.logger.debug(
+        `receiving wallet: ${JSON.stringify(receivingWallet)}\nsending wallet: ${JSON.stringify(disbursingWallet)}`,
+      );
       const updateLoanDto = new CreateLoanDto();
       updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
       updateLoanDto.status = 'disbursed';
@@ -548,10 +554,16 @@ export class CooperativeMemberApprovalsService {
       updateLoanDto.remaining_balance = parseFloat(
         updateCooperativeMemberApprovalsDto.additional_info,
       );
+      const currentDate = DateTime.now();
+      const dueDate = currentDate.plus({
+        months: loanTerm,
+      });
+      updateLoanDto.due_date = dueDate.toFormat('yyyy-MM-dd');
+      // updateLoanDto.due_date = dueDate;
       updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
       updateLoanDto.cooperative_id =
         updateCooperativeMemberApprovalsDto.group_id;
-
+      this.logger.debug(`Updating loan: ${JSON.stringify(updateLoanDto)}`);
       const loanResponse = await loanService.updateLoan(
         updateLoanDto.id!,
         updateLoanDto,

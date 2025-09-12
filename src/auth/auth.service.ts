@@ -561,17 +561,6 @@ export class AuthService {
         createWalletDto.balance_zwg =
           balanceZWG.data.data.billerResponse.balance;
       } else {
-        /**
-         * export interface CreateWalletRequest {
-  firstName: string;
-  lastName: string;
-  mobile: string;
-  dateOfBirth: string;
-  idNumber: string;
-  gender: string; //MALE|FEMALE
-  source: string;
-}
-         */
         createWalletDto.balance = 0.0;
         const scwRegParams = {
           firstName: signupDto.first_name,
@@ -606,7 +595,7 @@ export class AuthService {
 
       // 8. Update profile with wallet ID (non-blocking)
       this.logger.log(
-        `Updating profile with wallet ID...${JSON.stringify(walletResponse['data']['id'])}`,
+        `Updating profile with wallet ID...${JSON.stringify(walletResponse)}`,
       );
       this.logger.log('Wallet was created successfully. Updating account...');
       await this.postgresRest

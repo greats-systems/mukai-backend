@@ -50,18 +50,17 @@ export class CooperativesService {
           .from('cooperatives')
           .select()
           .eq('name', createCooperativeDto.name)
-          .eq('coop_phone', createCooperativeDto.phone)
+          .eq('coop_phone', createCooperativeDto.coop_phone)
           .eq('category', createCooperativeDto.category)
-          .eq('city', createCooperativeDto.city)
-          .maybeSingle(),
+          .eq('city', createCooperativeDto.city),
         this.postgresrest
           .from('profiles')
           .select()
-          .eq('phone', createCooperativeDto.coop_phone)
-          .maybeSingle(),
+          .eq('phone', createCooperativeDto.coop_phone),
+          // .maybeSingle(), 
       ]);
 
-      // Handle existing coop check
+      // Handle errors for both queries
       if (existingCoopResult.error) {
         this.logger.error(
           `Failed to check for existing coop: ${JSON.stringify(existingCoopResult.error)}`,
@@ -72,21 +71,10 @@ export class CooperativesService {
           existingCoopResult.error,
         );
       }
-      if (existingCoopResult.data) {
-        this.logger.log(
-          `Coop found: ${JSON.stringify(existingCoopResult.data)}`,
-        );
-        return new GeneralErrorResponseDto(
-          409,
-          'This number is taken. Please change your coop phone number',
-          existingCoopResult.data,
-        );
-      }
 
-      // Handle existing user check
       if (existingUserResult.error) {
         this.logger.error(
-          `Failed to check for existing user: ${JSON.stringify(existingUserResult.error)}`,
+          `Failed to check for user profile: ${JSON.stringify(existingUserResult.error)}`,
         );
         return new GeneralErrorResponseDto(
           400,
@@ -94,14 +82,48 @@ export class CooperativesService {
           existingUserResult.error,
         );
       }
-      if (existingUserResult.data) {
+
+      // Check if cooperative already exists (data array is NOT empty)
+      if (existingCoopResult.data && existingCoopResult.data.length > 0) {
         this.logger.log(
-          `User found: ${JSON.stringify(existingUserResult.data)}`,
+          `Coop already exists: ${JSON.stringify(existingCoopResult.data)}`,
         );
         return new GeneralErrorResponseDto(
           409,
+          `A cooperative with these details already exists`,
+          existingCoopResult.data,
+        );
+      }
+
+      // Check if user profile exists for the phone number
+      if (existingUserResult.data) {
+        this.logger.log(
+          `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
+        );
+        return new GeneralErrorResponseDto(
+          409,
+          `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
+          // null,
+        );
+      }
+
+      // Handle existing user check
+      if (existingUserResult) {
+        this.logger.error(
+          `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
+        );
+        return new GeneralErrorResponseDto(
+          400,
+          existingUserResult,
+          // existingUserResult.error,
+        );
+      }
+      if (existingUserResult) {
+        this.logger.log(`User found: ${JSON.stringify(existingUserResult)}`);
+        return new GeneralErrorResponseDto(
+          409,
           'This phone number is taken by another user. Please edit your coop info',
-          existingUserResult.data,
+          existingUserResult,
         );
       }
 

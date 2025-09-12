@@ -27,160 +27,31 @@ export class WalletsService {
 
   async createWallet(
     createWalletDto: CreateWalletDto,
-  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
         .insert(createWalletDto)
-        // .upsert(createWalletDto, {
-        //   onConflict: "group_id,default_currency",
-        //   ignoreDuplicates: true,
-        // })
         .select()
         .single();
+
       if (error) {
         this.logger.log(error);
-        if (error.details == "The result contains 0 rows") {
-          return new ErrorResponseDto(403, `User ${createWalletDto.profile_id} cannot create a wallet of the same type`)
-          // return {
-          //   data:
-          //     `User ${createWalletDto.profile_id} cannot create a wallet of the same type`,
-          // };
+        if (error.details?.includes("The result contains 0 rows") || error.code === '23505') {
+          return new ErrorResponseDto(403, `User ${createWalletDto.profile_id} cannot create a wallet of the same type`);
         }
-        return new ErrorResponseDto(400, error.details);
+        return new ErrorResponseDto(400, error.details || error.message);
       }
-      // get wallet profile
 
       this.logger.log(`Wallet creation data: ${JSON.stringify(data)}`);
 
-      // Make SmileCash balance enquiry
-      const scwService = new SmileCashWalletService(this.postgresrest);
-      const coopBalancePromises: Promise<SuccessResponseDto | null>[] = [];
+      // Make SmileCash balance enquiry only if coop_phone is provided
       if (createWalletDto.coop_phone) {
-        const coopBalanceParamsUSD: BalanceEnquiryRequest = {
-          transactorMobile: createWalletDto.coop_phone,
-          currency: 'USD',
-          channel: 'USSD',
-          transactionId: '',
-        };
-
-        const coopBalanceParamsZWG: BalanceEnquiryRequest = {
-          transactorMobile: createWalletDto.coop_phone,
-          currency: 'ZWG',
-          channel: 'USSD',
-          transactionId: '',
-        };
-
-        // Execute balance enquiries in parallel with timeout
-        coopBalancePromises.push(
-          Promise.race<SuccessResponseDto | null>([
-            scwService.balanceEnquiry(coopBalanceParamsUSD),
-            new Promise<null>((resolve) =>
-              setTimeout(() => resolve(null), 5000),
-            ), // 5s timeout
-          ]),
-          Promise.race<SuccessResponseDto | null>([
-            scwService.balanceEnquiry(coopBalanceParamsZWG),
-            new Promise<null>((resolve) =>
-              setTimeout(() => resolve(null), 5000),
-            ), // 5s timeout
-          ]),
-        );
+        await this.performBalanceEnquiries(data.id, createWalletDto.coop_phone);
       }
-
-      const [coopBalanceUSD, coopBalanceZWG] =
-        await Promise.allSettled(coopBalancePromises);
-
-      const balancePromises: Promise<SuccessResponseDto | null>[] = [];
-      if (createWalletDto.coop_phone) {
-        const balanceParamsUSD: BalanceEnquiryRequest = {
-          transactorMobile: createWalletDto.coop_phone,
-          currency: 'USD',
-          channel: 'USSD',
-          transactionId: '',
-        };
-
-        const balanceParamsZWG: BalanceEnquiryRequest = {
-          transactorMobile: createWalletDto.coop_phone,
-          currency: 'ZWG',
-          channel: 'USSD',
-          transactionId: '',
-        };
-
-        // Execute balance enquiries in parallel with timeout
-        balancePromises.push(
-          Promise.race<SuccessResponseDto | null>([
-            scwService.balanceEnquiry(balanceParamsUSD),
-            new Promise<null>((resolve) =>
-              setTimeout(() => resolve(null), 5000),
-            ), // 5s timeout
-          ]),
-          Promise.race<SuccessResponseDto | null>([
-            scwService.balanceEnquiry(balanceParamsZWG),
-            new Promise<null>((resolve) =>
-              setTimeout(() => resolve(null), 5000),
-            ), // 5s timeout
-          ]),
-        );
+      else if (createWalletDto.phone) {
+        await this.performBalanceEnquiries(data.id, createWalletDto.phone);
       }
-
-      const [balanceUSD, balanceZWG] =
-        await Promise.allSettled(balancePromises);
-
-        // Update coop balances
-      if (
-        coopBalanceUSD.status === 'fulfilled' &&
-        coopBalanceUSD.value instanceof SuccessResponseDto &&
-        coopBalanceZWG.status === 'fulfilled' &&
-        coopBalanceZWG.value instanceof SuccessResponseDto
-      ) {
-        this.logger.log(
-          `balanceUSD: ${JSON.stringify(coopBalanceUSD.value.data.data.billerResponse.balance)}`,
-        );
-        const updateDto = new UpdateWalletDto();
-        updateDto.id = data.id;
-        updateDto.balance = coopBalanceUSD.value.data.data.billerResponse.balance;
-        updateDto.balance_zwg =
-          coopBalanceZWG.value.data.data.billerResponse.balance;
-        // const walletService = new WalletsService(this.postgresrest);
-        const walletResponse = await this.updateWallet(
-          updateDto.id!,
-          updateDto,
-        );
-        this.logger.log(`walletResponse: ${JSON.stringify(walletResponse)}`);
-      }
-
-      // Update individual balances
-      if (
-        balanceUSD.status === 'fulfilled' &&
-        balanceUSD.value instanceof SuccessResponseDto &&
-        balanceZWG.status === 'fulfilled' &&
-        balanceZWG.value instanceof SuccessResponseDto
-      ) {
-        this.logger.log(
-          `balanceUSD: ${JSON.stringify(balanceUSD.value.data.data.billerResponse.balance)}`,
-        );
-        const updateDto = new UpdateWalletDto();
-        updateDto.id = data.id;
-        updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
-        updateDto.balance_zwg =
-          balanceZWG.value.data.data.billerResponse.balance;
-        // const walletService = new WalletsService(this.postgresrest);
-        const walletResponse = await this.updateWallet(
-          updateDto.id!,
-          updateDto,
-        );
-        this.logger.log(`walletResponse: ${JSON.stringify(walletResponse)}`);
-      }
-
-      // Create profile in public.profiles
-      const { error: profileError, data: profileData } = await this.postgresrest
-        .from('profiles')
-        .select('*').eq('id', createWalletDto.profile_id).single();
-      if (profileError) {
-        this.logger.error(`Error fetching profile ${createWalletDto.profile_id}`, profileError);
-      }
-      this.logger.log(`Profile creation profileData: ${JSON.stringify(profileData)}`);
 
       return {
         statusCode: 201,
@@ -188,10 +59,71 @@ export class WalletsService {
         data: data as Wallet,
       };
     } catch (error) {
-      return new ErrorResponseDto(500, error);
+      this.logger.error(`Error creating wallet: ${JSON.stringify(error)}`);
+      return new ErrorResponseDto(500, error instanceof Error ? error.message : 'Unknown error');
     }
   }
 
+  private async performBalanceEnquiries(walletId: string, coopPhone: string): Promise<void> {
+    const scwService = new SmileCashWalletService(this.postgresrest);
+
+    const currencies = ['USD', 'ZWG'];
+    const balancePromises: Promise<SuccessResponseDto | null>[] = [];
+
+    // Create balance enquiry promises for both currencies
+    for (const currency of currencies) {
+      const balanceParams: BalanceEnquiryRequest = {
+        transactorMobile: coopPhone,
+        currency: currency,
+        channel: 'USSD',
+        transactionId: '',
+      };
+
+      const balancePromise = Promise.race<SuccessResponseDto | null>([
+        scwService.balanceEnquiry(balanceParams),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+
+      balancePromises.push(balancePromise);
+    }
+
+    try {
+      const balanceResults = await Promise.allSettled(balancePromises);
+      const balances: Record<string, number | null> = { USD: null, ZWG: null };
+
+      // Process balance results
+      balanceResults.forEach((result, index) => {
+        const currency = currencies[index];
+
+        if (result.status === 'fulfilled' &&
+          result.value instanceof SuccessResponseDto &&
+          result.value.data?.data?.billerResponse?.balance !== undefined) {
+          balances[currency] = result.value.data.data.billerResponse.balance;
+        }
+      });
+
+      // Update wallet balances if we have at least one successful result
+      this.logger.log(`Balances: ${balances.USD} ${balances.ZWG}`)
+      if (balances.USD !== null || balances.ZWG !== null) {
+        const updateDto = new UpdateWalletDto();
+        updateDto.id = walletId;
+        updateDto.balance = balances.USD!;
+        updateDto.balance_zwg = balances.ZWG!;
+
+        try {
+          const walletResponse = await this.updateWallet(walletId, updateDto);
+          this.logger.log(`Wallet balance update response: ${JSON.stringify(walletResponse)}`);
+        } catch (updateError) {
+          this.logger.error(`Error updating wallet balances: ${JSON.stringify(updateError)}`);
+        }
+      } else {
+        this.logger.warn(`No successful balance enquiries for wallet ${walletId}`);
+      }
+
+    } catch (error) {
+      this.logger.error(`Error during balance enquiries: ${JSON.stringify(error)}`);
+    }
+  }
   async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug("Fetching all wallets");
@@ -367,7 +299,7 @@ export class WalletsService {
       } as BalanceEnquiryRequest;
       const scwService = new SmileCashWalletService(this.postgresrest);
       const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
-      
+
       const balanceEnquiryParamsZWG = {
         transactorMobile: walletPhone,
         currency: 'ZWG',
@@ -375,7 +307,7 @@ export class WalletsService {
         transactionId: ''
       } as BalanceEnquiryRequest;
       const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
-      
+
       if (balanceEnquiryResponse instanceof SuccessResponseDto && balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
         data.balance = balanceEnquiryResponse.data.data.billerResponse.balance;
         data.balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
@@ -385,7 +317,7 @@ export class WalletsService {
         updateWalletDto.balance_zwg = data.balance_zwg;
         await this.updateWallet(updateWalletDto.id!, updateWalletDto);
       }
-      
+
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
@@ -497,6 +429,7 @@ export class WalletsService {
         .from("wallets")
         .select()
         .eq("profile_id", profile_id)
+        .eq("is_group_wallet", false)
         .single();
 
       if (error) {
@@ -604,7 +537,7 @@ export class WalletsService {
       return new ErrorResponseDto(500, error);
     }
   }
-  
+
   async updateSmileCashSenderBalance(
     sending_wallet_id: string,
     balance: number,

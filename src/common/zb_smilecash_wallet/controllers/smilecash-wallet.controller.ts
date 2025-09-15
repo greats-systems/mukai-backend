@@ -244,27 +244,27 @@ export class SmileCashWalletController {
   @ApiResponse({
     status: 200,
     description: 'Wallet to wallet transfer successful',
-    type: SuccessResponseDto,
+    // type: SuccessResponseDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Failed to authorize transfer',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   @ApiResponse({
     status: 405,
     description: 'Insufficient funds',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   @ApiResponse({
     status: 406,
     description: 'Failed to process transfer',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   async walletToWallet(
     @Body() walletToWalletTransferRequest: WalletToWalletTransferRequest,

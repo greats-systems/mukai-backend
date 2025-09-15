@@ -288,9 +288,13 @@ export class CooperativeMemberApprovalsService {
       );
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
         // updateCooperativeMemberApprovalsDto.consensus_reached = true;
+        this.logger.debug(
+          `Voting for ${updateCooperativeMemberApprovalsDto.poll_description}`,
+        );
         if (
-          updateCooperativeMemberApprovalsDto.poll_description ==
-          'set interest rate'
+          updateCooperativeMemberApprovalsDto.poll_description?.includes(
+            'interest rate',
+          )
         ) {
           const setInterestReponse = await this.setInterestRate(
             updateCooperativeMemberApprovalsDto,

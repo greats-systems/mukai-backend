@@ -26,10 +26,6 @@ export class GeneralErrorResponseDto {
     required: true,
   })
   public readonly message?: string;
-
-  @ApiProperty({
-    example: 'SmileCash wallet created successfully',
-  })
   public readonly errorObject?: object;
 
   constructor(statusCode: number, message?: string, errorObject?: object) {

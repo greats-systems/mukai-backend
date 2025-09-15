@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { Body, Controller, Post, HttpException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import {
   CreateWalletRequest,
   LoginRequest,
@@ -40,22 +46,31 @@ export class SmileCashWalletController {
   @ApiResponse({
     status: 201,
     description: 'Wallet created successfully',
-    type: SuccessResponseDto,
+    // type: SuccessResponseDto,
+    example: new SuccessResponseDto(201, 'Wallet created successfully', {
+      firstName: 'Tess',
+      lastName: 'Tesseract',
+      mobile: '263711809713',
+      dateOfBirth: '2025-12-13',
+      idNumber: '23111223Q43',
+      gender: 'FEMALE',
+      source: 'Smile SACCO',
+    }),
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   @ApiResponse({
     status: 409,
     description: 'Mobile number already taken',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
   })
   async createWallet(@Body() createWalletRequest: CreateWalletRequest) {
     const response = await this.scWallet.createWallet(createWalletRequest);
@@ -92,6 +107,7 @@ export class SmileCashWalletController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Post('set-password')
   @ApiOperation({ summary: 'Set wallet password' })
   @ApiBody({ type: SetPasswordRequest })
@@ -124,22 +140,64 @@ export class SmileCashWalletController {
   @ApiResponse({
     status: 200,
     description: 'Balance enquiry successful',
-    type: SuccessResponseDto,
+    // type: SuccessResponseDto,
+    example: new SuccessResponseDto(200, 'Balance enquiry successful', {
+      responseCode: '000',
+      responseDescription: 'Approved or completed successfully',
+      data: {
+        id: '3b29efda-2fd7-4faf-a98a-66ad4168fa90',
+        reference: 'Wa12d75cc8e6f40d',
+        currency: 'USD',
+        product: 'default',
+        amount: 0,
+        transactorId: 'db790935-536e-43a2-b7b5-cb72e5266a78',
+        transactorName: 'Simon Moyo',
+        source: '263718439965',
+        destination: '263718439965',
+        transactionDate: '2025-09-15T12:24:44.896425747',
+        channel: 'USSD',
+        description: 'BALANCE_ENQUIRY',
+        transactionStatus: 'COMPLETE',
+        typeOfTransaction: 'BALANCE_ENQUIRY',
+        authResponse: null,
+        billerResponse: {
+          balance: 528.57,
+        },
+        additionalData: null,
+        transactionStateDescription:
+          'Balance Enquiry (Successful)\nAccount: 263718439965\nDate: 15/09/2025 12:24\nBalance: $528.57 USD\n',
+        parsedDetails: {
+          status: 'Balance Enquiry (Successful)',
+          details: {
+            Account: '263718439965',
+            Date: '15/09/2025 12:24',
+            Balance: 528.57,
+            BalanceRaw: '$528.57 USD',
+          },
+        },
+      },
+    }),
   })
   @ApiResponse({
     status: 400,
     description: 'Failed to authorize balance enquiry',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
+    example: new GeneralErrorResponseDto(
+      400,
+      'Failed to authorize balance enquiry',
+    ),
   })
   @ApiResponse({
     status: 405,
     description: 'Insufficient funds',
-    type: GeneralErrorResponseDto,
+    // type: GeneralErrorResponseDto,
+    example: new GeneralErrorResponseDto(405, 'Insufficient funds'),
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
-    type: GeneralErrorResponseDto,
+    example: new GeneralErrorResponseDto(500, 'Internal server error'),
+    // type: GeneralErrorResponseDto,
   })
   async balanceEnquiry(@Body() balanceEnquiryRequest: BalanceEnquiryRequest) {
     const response = await this.scWallet.balanceEnquiry(balanceEnquiryRequest);

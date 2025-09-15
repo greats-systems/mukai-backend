@@ -27,9 +27,7 @@ export class SuccessResponseDto {
   })
   public readonly message?: string;
 
-  @ApiProperty({
-    example: 'Failed to insert/select/update/delete',
-  })
+  // @ApiProperty({})/
   public readonly data?: any;
 
   constructor(

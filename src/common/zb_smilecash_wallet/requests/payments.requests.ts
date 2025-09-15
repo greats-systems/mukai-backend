@@ -1,7 +1,6 @@
-import { PaymentMethod } from "../common/payments.methods";
+import { PaymentMethod } from '../common/payments.methods';
 
-
-export interface PaymentInitiateRequest {
+export class PaymentInitiateRequest {
   amount: number;
   currency: string;
   customerEmail: string;
@@ -12,7 +11,7 @@ export interface PaymentInitiateRequest {
   callbackUrl: string;
 }
 
-export interface PaymentConfirmRequest {
+export class PaymentConfirmRequest {
   paymentId: string;
   otp?: string;
 }

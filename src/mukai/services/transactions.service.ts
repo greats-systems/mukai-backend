@@ -747,6 +747,25 @@ export class TransactionsService {
     }
   }
 
+  async getWithdrawalsAndPayments(
+    wallet_id: string,
+    currency: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'calculate_withdrawals',
+        { p_wallet_id: wallet_id, p_currency: currency },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      this.logger.debug(`Withdrawals and payments: $${data} ${currency}`);
+      return Number(data);
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async generateTransactionReport(
     wallet_id: string,
   ): Promise<object | ErrorResponseDto> {

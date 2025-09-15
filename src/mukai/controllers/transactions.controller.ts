@@ -194,6 +194,43 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('payments')
+  @ApiQuery({
+    name: 'wallet_id',
+    required: true,
+    description: 'Wallet ID to filter by',
+    example: 'd1a0e4f8-32a9-4637-a725-0aa53b5c8294',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Withdrawals and Payments retrieved successfully',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async getWithdrawalsAndPayments(
+    @Query('wallet_id') wallet_id: string,
+    @Query('currency') currency: string,
+  ) {
+    const response = await this.transactionsService.getWithdrawalsAndPayments(
+      wallet_id,
+      currency,
+    );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
   @Get('filter')
   @ApiOperation({
     summary: 'Filter transactions by type',

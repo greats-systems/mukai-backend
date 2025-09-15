@@ -8,7 +8,7 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 
 @Controller('smilepay')
-@ApiExcludeController()
+// @ApiExcludeController()
 export class SmilePayController {
   constructor(private readonly spService: SmilePayService) {}
 

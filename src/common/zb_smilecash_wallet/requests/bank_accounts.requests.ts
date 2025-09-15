@@ -1,4 +1,4 @@
-export interface LinkBankAccountRequest {
+export class LinkBankAccountRequest {
   accountNumber: string;
   mobile: string;
 }

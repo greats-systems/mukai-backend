@@ -38,7 +38,7 @@ export class AuthController {
    * Retrieves all user profiles.
    * @returns Promise<Profile[]> - Array of user profiles
    */
-  @ApiExcludeEndpoint()
+  // @ApiExcludeEndpoint()
   @Get('profiles')
   async getProfiles() {
     return this.authService.getProfiles();
@@ -90,7 +90,30 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User created successfully',
-    type: AuthSuccessResponse,
+    // type: AuthSuccessResponse,
+    example: {
+      status: 'account created',
+      statusCode: 201,
+      message: 'account created successfully',
+      access_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZTguY29tIiwic3ViIjoiOTYwODA1OGQtMTA2ZS00NzZkLTllYWQtNGIyNmExODQwNjkwIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJpYXQiOjE3NTc5MzM1NjAsImV4cCI6MTc1Nzk3MzU2MH0.XVH-7Bn630Tkm8AsKIZZhe3DgE-jk4EQ8MXFt7ebGjE',
+      user: {
+        id: '9608058d-106e-476d-9ead-4b26a1840690',
+        email: 'user@example8.com',
+        first_name: 'John',
+        last_name: 'Doe',
+        account_type: 'individual',
+        dob: '1990-01-01',
+        gender: 'MALE',
+        wallet_id: '78a67d31-6487-4c44-bcec-c0408c0167bd',
+        avatar: 'https://example.com/avatar.jpg',
+        national_id_url: 'https://example.com/national_id.jpg',
+        passport_url: 'https://example.com/passport.jpg',
+        role: 'authenticated',
+      },
+      data: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZTguY29tIiwic3ViIjoiOTYwODA1OGQtMTA2ZS00NzZkLTllYWQtNGIyNmExODQwNjkwIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJpYXQiOjE3NTc5MzM1NjAsImV4cCI6MTc1Nzk3MzU2MH0.XVH-7Bn630Tkm8AsKIZZhe3DgE-jk4EQ8MXFt7ebGjE',
+      error: null,
+    },
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -140,7 +163,25 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Login successful',
-    type: AuthLoginSuccessResponse,
+    // type: AuthLoginSuccessResponse,
+    example: {
+      status: 'account authenticated',
+      statusCode: 200,
+      message: 'account authenticated successfully',
+      access_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1veW9uZ3FhYUBnbWFpbC5jb20iLCJzdWIiOiIzY2M0MTAxZC03MTIwLTQ3NjUtODE2MS1mYTQ1N2QyMTFjOTciLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImlhdCI6MTc1NzkzMzc0NywiZXhwIjoxNzU3OTczNzQ3fQ.RrvXQBnl1gm_8oSAk2ZvzL8u4yW2XxR1z6FPWY_a15I',
+      refresh_token: 'pz4n6kxax4fn',
+      token_type: 'bearer',
+      user: {
+        id: '3cc4101d-7120-4765-8161-fa457d211c97',
+        email: 'moyongqaa@gmail.com',
+        phone: '263718439965',
+        first_name: 'Ngqabutho',
+        last_name: 'Moyo',
+        account_type: 'coop-manager',
+        role: 'authenticated',
+      },
+    },
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -182,89 +223,6 @@ export class AuthController {
     return response;
   }
 
-  /*
-  @ApiOperation({ summary: 'Send OTP' })
-  @ApiBody({ type: SignupDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'OTP sent',
-    type: AuthSuccessResponse,
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Server error',
-  })
-  @Post('otp/send')
-  async sendOtp(@Body() loginDto: LoginDto) {
-    const response = await this.authService.sendOtp(loginDto.phone!);
-    if (response != null && response['error'] !== null) {
-      if (response instanceof AuthErrorResponse) {
-        throw new HttpException(
-          response ?? 'Bad request',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-    }
-    if (response != null && response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'] ?? 'Internal server error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    if (response != null && response['statusCode'] === 401) {
-      if (response instanceof AuthErrorResponse) {
-        throw new HttpException(
-          response ?? 'Invalid credentials',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-    }
-    return response;
-  }
-  
-
-  @ApiOperation({ summary: 'Send OTP' })
-  @ApiBody({ type: SignupDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'OTP sent',
-    type: AuthSuccessResponse,
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Server error',
-  })
-  @Post('otp/verify')
-  async verifyOtp(@Body() loginDto: LoginDto) {
-    const response = await this.authService.verifyOtp(
-      loginDto.phone!,
-      loginDto.otp!,
-    );
-    if (response != null && response['error'] !== null) {
-      if (response instanceof AuthErrorResponse) {
-        throw new HttpException(
-          response ?? 'Bad request',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-    }
-    if (response != null && response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'] ?? 'Internal server error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    if (response != null && response['statusCode'] === 401) {
-      if (response instanceof AuthErrorResponse) {
-        throw new HttpException(
-          response ?? 'Invalid credentials',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-    }
-    return response;
-  }
-    */
   @ApiExcludeEndpoint()
   @Post('refresh')
   async refreshToken(@Body() body: { refreshToken: string }) {

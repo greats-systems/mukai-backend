@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import {
-  Body,
-  Controller,
-  Post,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Body, Controller, Post, HttpException } from '@nestjs/common';
 import {
   CreateWalletRequest,
   LoginRequest,
@@ -27,7 +21,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiExcludeController,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { SuccessResponseDto } from '../../dto/success-response.dto';
@@ -309,7 +302,36 @@ export class SmileCashWalletController {
   @ApiResponse({
     status: 200,
     description: 'Wallet to own bank transfer successful',
-    type: SuccessResponseDto,
+    // type: SuccessResponseDto,
+    example: new SuccessResponseDto(
+      200,
+      'Wallet to own bank transfer successful',
+      {
+        responseCode: '000',
+        responseDescription: 'Approved or completed successfully',
+        data: {
+          id: '4e175fdd-7c3b-4dfe-9073-77661305ad70',
+          reference: 'W9af97ddc7d67462',
+          currency: 'USD',
+          product: 'default',
+          amount: 2.5,
+          transactorId: 'db790935-536e-43a2-b7b5-cb72e5266a78',
+          transactorName: 'Simon Moyo',
+          source: '263718439965',
+          destination: '411300074182405',
+          transactionDate: '2025-09-15T13:03:07.594615648',
+          channel: 'USSD',
+          description: 'Wallet to bank transfer',
+          transactionStatus: 'PENDING',
+          typeOfTransaction: 'WALLET_TO_BANK',
+          authResponse: null,
+          billerResponse: null,
+          additionalData: null,
+          transactionStateDescription:
+            '    Wallet to bank (Successful)\n    Amount: $2.50 USD\n    Destination: 411300074182405\n    Date: 15/09/2025 13:03\n',
+        },
+      },
+    ),
   })
   @ApiResponse({
     status: 400,

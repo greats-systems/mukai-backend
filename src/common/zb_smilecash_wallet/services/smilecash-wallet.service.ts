@@ -222,7 +222,7 @@ export class SmileCashWalletService {
       this.logger.error(`Login error: ${error}`);
       return {
         statusCode: 500,
-        message: error.toString(),
+        message: error,
       };
     }
   }
@@ -244,7 +244,7 @@ export class SmileCashWalletService {
         response.data as SetPasswordResponse,
       );
     } catch (error) {
-      this.logger.error(`setPassword error: ${error.toString()}`);
+      this.logger.error(`setPassword error: ${error}`);
       return {
         statusCode: 500,
         message: error,
@@ -433,7 +433,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'bankToWallet error',
-        error.toString(),
+        error,
       );
     }
   }
@@ -588,7 +588,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',
-        error.response?.data.toString() || error.toString(),
+        error.response?.data.toString() || error,
       );
     }
   }
@@ -664,7 +664,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToOwnBank error',
-        error.toString(),
+        error,
       );
     }
   }
@@ -737,11 +737,11 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      this.logger.error(`walletToOtherBank error: ${error}`);
+      this.logger.error(`walletToOtherBank error: ${JSON.stringify(error)}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToOtherBank error',
-        error.toString(),
+        error,
       );
     }
   }
@@ -801,7 +801,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'payMerchant error',
-        error.toString(),
+        error,
       );
     }
   }
@@ -861,7 +861,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'cashOut error',
-        error.toString(),
+        error,
       );
     }
   }

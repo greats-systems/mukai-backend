@@ -22,7 +22,7 @@ export class CreateCooperativeDto {
   wallet_id?: string;
 
   @ApiProperty({
-    example: '+263718439965',
+    example: '263718439965',
     description: 'Cooperative wallet phone number (optional)',
     required: false,
   })

@@ -11,7 +11,7 @@ import {
 export class BalanceEnquiryRequest {
   @ApiProperty({
     description: 'Mobile number of the transactor',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -53,7 +53,7 @@ export class BalanceEnquiryRequest {
 export class BankToWalletTransferRequest {
   @ApiProperty({
     description: 'Wallet mobile number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -119,7 +119,7 @@ export class BankToWalletTransferRequest {
 export class WalletToWalletTransferRequest {
   @ApiProperty({
     description: 'Destination wallet mobile number',
-    example: '+263772345678',
+    example: '263772345678',
     required: true,
   })
   @IsString()
@@ -128,7 +128,7 @@ export class WalletToWalletTransferRequest {
 
   @ApiProperty({
     description: 'Source wallet mobile number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -185,7 +185,7 @@ export class WalletToWalletTransferRequest {
 export class WalletToOwnBankTransferRequest {
   @ApiProperty({
     description: 'Subscriber mobile number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -260,7 +260,7 @@ export class WalletToOwnBankTransferRequest {
 export class WalletToOtherBankTransferRequest {
   @ApiProperty({
     description: 'Transactor mobile number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -326,7 +326,7 @@ export class WalletToOtherBankTransferRequest {
 export class PayMerchantRequest {
   @ApiProperty({
     description: 'Transactor phone number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -401,7 +401,7 @@ export class PayMerchantRequest {
 export class CashOutRequest {
   @ApiProperty({
     description: 'Subscriber mobile number',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -410,7 +410,7 @@ export class CashOutRequest {
 
   @ApiProperty({
     description: 'Agent phone number',
-    example: '+263773456789',
+    example: '263773456789',
     required: true,
   })
   @IsString()
@@ -467,7 +467,7 @@ export class CashOutRequest {
 export class BankToOtherWalletTransferRequest {
   @ApiProperty({
     description: 'Phone number associated with the transaction',
-    example: '+263771234567',
+    example: '263771234567',
     required: true,
   })
   @IsString()
@@ -476,7 +476,7 @@ export class BankToOtherWalletTransferRequest {
 
   @ApiProperty({
     description: 'Destination wallet account',
-    example: '+263772345678',
+    example: '263772345678',
     required: true,
   })
   @IsString()

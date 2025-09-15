@@ -57,8 +57,18 @@ export class LoanService {
       if (hasActiveLoan instanceof ErrorResponseDto) {
         return hasActiveLoan;
       }
-
+      const { data: loanResponse, error } = await this.postgresrest
+        .from('loans')
+        .insert(createLoanDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      return loanResponse as Loan;
       // Accept the loan request if the applicant does not have active loans
+      /*
       if (!hasActiveLoan) {
         const { data: loanResponse, error } = await this.postgresrest
           .from('loans')
@@ -69,12 +79,6 @@ export class LoanService {
           this.logger.log(error);
           return new ErrorResponseDto(400, error.details);
         }
-        // maDto.group_id = createLoanDto.cooperative_id;
-        // maDto.poll_description = 'loan application';
-        // // maDto.loan_id = createLoanDto.id;
-        // const maResponse =
-        //   await maService.createCooperativeMemberApprovals(maDto);
-        // this.logger.log(maResponse);
         return loanResponse as Loan;
       } else {
         return new ErrorResponseDto(
@@ -82,6 +86,7 @@ export class LoanService {
           `User ${createLoanDto.profile_id} has an active loan and cannot apply for another one`,
         );
       }
+      */
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }

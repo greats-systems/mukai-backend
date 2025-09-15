@@ -180,7 +180,7 @@ export class SmileCashWalletService {
         request,
       );
     } catch (error) {
-      this.logger.error('createWallet error:', error.status);
+      this.logger.error('createWallet error:', JSON.stringify(error));
       if (error.status == 409) {
         return new GeneralErrorResponseDto(
           HttpStatus.CONFLICT,
@@ -191,7 +191,7 @@ export class SmileCashWalletService {
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'createWallet error',
-        error.toString(),
+        error,
       );
     }
   }

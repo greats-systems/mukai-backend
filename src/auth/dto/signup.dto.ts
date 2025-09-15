@@ -7,12 +7,14 @@ import { IsEmail, IsString, MinLength } from 'class-validator';
  * Validates and structures the data required for creating a new user account.
  */
 export class SignupDto {
-  @ApiProperty({
+  /*
+  @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'Unique identifier for the user',
     required: true,
   })
   @IsString()
+  */
   id: string;
 
   @ApiProperty({
@@ -32,6 +34,7 @@ export class SignupDto {
   @MinLength(2)
   phone: string;
 
+  /*
   @ApiProperty({
     example: '26371800800',
     description: 'Coop phone number of the user (for which they are the admin)',
@@ -39,6 +42,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
+  */
   coop_phone: string;
 
   @ApiProperty({
@@ -108,11 +112,11 @@ export class SignupDto {
   // @IsString()
   // cooperative_id: string;
 
-  @ApiPropertyOptional({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Business ID associated with the user',
-  })
-  @IsString()
+  // @ApiPropertyOptional({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Business ID associated with the user',
+  // })
+  // @IsString()
   business_id: string;
 
   // @ApiPropertyOptional({
@@ -122,25 +126,25 @@ export class SignupDto {
   // @IsString()
   // affiliations: string;
 
-  @ApiPropertyOptional({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative account ID associated with the user',
-  })
-  @IsString()
+  // @ApiPropertyOptional({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Cooperative account ID associated with the user',
+  // })
+  // @IsString()
   coop_account_id: string;
 
-  @ApiPropertyOptional({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative account ID associated with the user',
-  })
-  @IsString()
+  // @ApiPropertyOptional({
+  //   example: '123e4567-e89b-12d3-a456-426614174000',
+  //   description: 'Cooperative account ID associated with the user',
+  // })
+  // @IsString()
   cooperative_id: string;
 
-  @ApiPropertyOptional({
-    example: 'abc123',
-    description: 'Push notification token for the user',
-  })
-  @IsString()
+  // @ApiPropertyOptional({
+  //   example: 'abc123',
+  //   description: 'Push notification token for the user',
+  // })
+  // @IsString()
   push_token: string;
 
   @ApiPropertyOptional({

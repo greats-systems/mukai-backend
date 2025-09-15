@@ -282,7 +282,7 @@ export class CooperativesService {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
-        .select('*, cooperatives_profile_id_fkey(*)');
+        .select('*, cooperatives_admin_id_fkey(*)');
 
       if (error) {
         this.logger.error('Error fetching Cooperatives', error);

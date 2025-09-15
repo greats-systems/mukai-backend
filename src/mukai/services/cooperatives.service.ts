@@ -96,7 +96,8 @@ export class CooperativesService {
       }
 
       // Check if user profile exists for the phone number
-      if (existingUserResult.data) {
+      if (existingUserResult.data.length > 0) {
+        this.logger.debug(JSON.stringify(existingUserResult.data.length));
         this.logger.log(
           `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
         );
@@ -108,18 +109,20 @@ export class CooperativesService {
       }
 
       // Handle existing user check
-      if (existingUserResult) {
+      if (existingUserResult.data.length > 0) {
         this.logger.error(
           `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
         );
         return new GeneralErrorResponseDto(
           400,
-          existingUserResult,
+          JSON.stringify(existingUserResult.data),
           // existingUserResult.error,
         );
       }
-      if (existingUserResult) {
-        this.logger.log(`User found: ${JSON.stringify(existingUserResult)}`);
+      if (existingUserResult.data.length > 0) {
+        this.logger.log(
+          `User found: ${JSON.stringify(existingUserResult.data)}`,
+        );
         return new GeneralErrorResponseDto(
           409,
           'This phone number is taken by another user. Please edit your coop info',
@@ -208,7 +211,10 @@ export class CooperativesService {
         } as CreateWalletRequest;
 
         const scwResponse = await scwService.createWallet(scwRequest);
-        if (scwResponse instanceof GeneralErrorResponseDto) {
+        if (
+          scwResponse instanceof GeneralErrorResponseDto &&
+          scwResponse.statusCode != 409
+        ) {
           return scwResponse;
         }
       }

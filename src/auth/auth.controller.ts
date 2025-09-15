@@ -22,8 +22,6 @@ import {
 } from '@nestjs/swagger';
 import {
   AuthErrorResponse,
-  AuthLoginSuccessResponse,
-  AuthSuccessResponse,
 } from 'src/common/dto/auth-responses.dto';
 
 /**

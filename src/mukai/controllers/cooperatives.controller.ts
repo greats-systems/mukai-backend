@@ -23,14 +23,15 @@ import {
   ApiParam,
   ApiBearerAuth,
   ApiHeader,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperatives')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @ApiHeader({
   name: 'apikey',
   description: 'API key for authentication (insert access token)',
@@ -278,6 +279,7 @@ export class CooperativesController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Get(':member_id/active')
   @ApiOperation({ summary: 'Get cooperatives for a specific member' })
   @ApiParam({
@@ -320,6 +322,7 @@ export class CooperativesController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Get(':cooperative_id/subs')
   @ApiOperation({ summary: 'Check member subscriptions for a cooperative' })
   @ApiParam({

@@ -279,7 +279,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    this.logger.log('Logging in');
+    this.logger.log(JSON.stringify(loginDto));
     try {
       // 1. Authenticate user
       const {
@@ -291,6 +291,7 @@ export class AuthService {
       });
 
       if (authError || !user) {
+        this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
         return {
           status: 'failed',
           message: 'Invalid credentials',

@@ -245,6 +245,31 @@ export class SmileCashWalletController {
     status: 200,
     description: 'Wallet to wallet transfer successful',
     // type: SuccessResponseDto,
+    example: {
+      responseCode: '000',
+      responseDescription: 'Approved or completed successfully',
+      data: {
+        id: 'bbf1cdd9-bb11-4eea-bc9b-5eebb5b1b70f',
+        reference: 'W057b0338840c422',
+        currency: 'USD',
+        product: 'default',
+        amount: 5,
+        transactorId: 'db790935-536e-43a2-b7b5-cb72e5266a78',
+        transactorName: 'Simon Moyo',
+        source: '263718439965',
+        destination: '263785076046',
+        transactionDate: '2025-09-15T12:35:37.647911',
+        channel: 'USSD',
+        description: 'P2P Transfer',
+        transactionStatus: 'COMPLETE',
+        typeOfTransaction: 'P2P_TRANSFER',
+        authResponse: null,
+        billerResponse: null,
+        additionalData: null,
+        transactionStateDescription:
+          'P2P Transfer (Successful)\nAmount: $5.00 USD\nDestination: 263785076046\nDate: 15/09/2025 12:35\nBalance: $523.460 USD\n',
+      },
+    },
   })
   @ApiResponse({
     status: 400,

@@ -33,7 +33,7 @@ export class CooperativeMemberRequestsService {
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       if (error) {
         this.logger.error('Error checking member who already joined', error);
         return new ErrorResponseDto(400, error.details);
@@ -82,22 +82,28 @@ export class CooperativeMemberRequestsService {
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       // Check if user has already joined the cooperative
-      this.logger.log('Checking if they have joined the coop');
-      // const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
-      //   createCooperativeMemberRequestDto.cooperative_id!,
-      //   createCooperativeMemberRequestDto.member_id!,
-      // );
-      this.logger.log('Checking if they have requested to join the coop');
+      this.logger.debug('Checking if they have joined the coop');
+      const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
+        createCooperativeMemberRequestDto.cooperative_id!,
+        createCooperativeMemberRequestDto.member_id!,
+      );
+      this.logger.debug('Checking if they have requested to join the coop');
       const hasAlreadyRequested = await this.hasAlreadyRequestedCoop(
         createCooperativeMemberRequestDto.cooperative_id!,
         createCooperativeMemberRequestDto.member_id!,
       );
-      // if (hasAlreadyJoined) {
-      //   return new ErrorResponseDto(
-      //     409,
-      //     'You have already joined this cooperative',
-      //   );
-      // }
+      if (hasAlreadyJoined instanceof ErrorResponseDto) {
+        return hasAlreadyJoined;
+      }
+      if (hasAlreadyRequested instanceof ErrorResponseDto) {
+        return hasAlreadyRequested;
+      }
+      if (hasAlreadyJoined) {
+        return new ErrorResponseDto(
+          409,
+          'You have already joined this cooperative',
+        );
+      }
       if (hasAlreadyRequested) {
         return new ErrorResponseDto(
           409,
@@ -112,8 +118,8 @@ export class CooperativeMemberRequestsService {
           member_id: createCooperativeMemberRequestDto.member_id,
           request_type: createCooperativeMemberRequestDto.request_type,
           status: createCooperativeMemberRequestDto.status,
-          resolved_by: createCooperativeMemberRequestDto.resolved_by,
-          message: createCooperativeMemberRequestDto.message,
+          // resolved_by: createCooperativeMemberRequestDto.resolved_by,
+          // message: createCooperativeMemberRequestDto.message,
           city: createCooperativeMemberRequestDto.city,
           country: createCooperativeMemberRequestDto.country,
           province_state: createCooperativeMemberRequestDto.province_state,

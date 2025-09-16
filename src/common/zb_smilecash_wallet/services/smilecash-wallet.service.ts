@@ -312,6 +312,7 @@ export class SmileCashWalletService {
       }
 
       request.transactionId = authData.data.authResponse.transactionId;
+      request.sendSMS = false;
 
       // Payment request
       const payResponse = await axios.post(

@@ -57,7 +57,6 @@ export class CooperativesService {
           .from('profiles')
           .select()
           .eq('phone', createCooperativeDto.coop_phone),
-          // .maybeSingle(), 
       ]);
 
       // Handle errors for both queries
@@ -97,7 +96,9 @@ export class CooperativesService {
 
       // Check if user profile exists for the phone number
       if (existingUserResult.data.length > 0) {
-        this.logger.debug(JSON.stringify(existingUserResult.data.length));
+        this.logger.debug(
+          `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
+        );
         this.logger.log(
           `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
         );

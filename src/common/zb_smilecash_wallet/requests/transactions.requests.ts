@@ -48,6 +48,8 @@ export class BalanceEnquiryRequest {
   @IsString()
   @IsNotEmpty()
   transactionId: string;
+
+  sendSMS?: boolean;
 }
 
 export class BankToWalletTransferRequest {

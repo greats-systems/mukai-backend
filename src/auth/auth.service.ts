@@ -446,20 +446,19 @@ export class AuthService {
       //   return new ErrorResponseDto(422, 'Email already in use');
       // }
 
-      // if (existingPhoneNumber.data) {
-      //   this.logger.debug(
-      //     `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
-      //   );
-      //   return new ErrorResponseDto(422, 'Phone number already in use');
-      // }
-      /*
+      if (existingPhoneNumber.data) {
+        this.logger.debug(
+          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
+        );
+        return new ErrorResponseDto(422, 'Phone number already in use');
+      }
+      
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
         return new ErrorResponseDto(422, 'National ID already in use');
       }
-      */
 
       // 2. Hash password and prepare data
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);

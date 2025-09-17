@@ -452,7 +452,6 @@ export class AuthService {
         );
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
-      
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,

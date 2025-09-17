@@ -45,6 +45,7 @@ export class CooperativesService {
       this.logger.debug(createCooperativeDto);
 
       // 1. Check for existing coop and user in parallel
+      /*
       const [existingCoopResult, existingUserResult] = await Promise.all([
         this.postgresrest
           .from('cooperatives')
@@ -108,6 +109,7 @@ export class CooperativesService {
           // null,
         );
       }
+      
 
       // Handle existing user check
       if (existingUserResult.data.length > 0) {
@@ -130,7 +132,7 @@ export class CooperativesService {
           existingUserResult,
         );
       }
-
+      */
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =
         await this.postgresrest

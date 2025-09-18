@@ -222,7 +222,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
-      /*
+      
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
         const scwService = new SmileCashWalletService(this.postgresrest);
@@ -236,6 +236,8 @@ export class WalletsService {
         const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(balanceEnquiryParamsUSD);
         if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
           data[0].balance = balanceEnquiryResponseUSD.data.data.billerResponse.balance;
+        } else {
+          data[0].balance = 0.0;
         }
 
         this.logger.debug(`Fetching SmileCash ZWG balance for ${data[0].phone}`);
@@ -248,6 +250,8 @@ export class WalletsService {
         const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
         if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
           data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
+        } else {
+          data[0].balance_zwg = 0.0;
         }
         
 
@@ -257,7 +261,6 @@ export class WalletsService {
           data: data as Wallet[],
         });
       }
-      */
 
       return {
         statusCode: 200,

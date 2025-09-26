@@ -411,6 +411,32 @@ export class AuthService {
     }
   }
 
+  async resetPassword(
+    resetPasswordDto: LoginDto,
+  ): Promise<object | ErrorResponseDto> {
+    // Locate user ID given their email
+    const { data: userData, error: userError } = await this.postgresRest
+      .from('profiles')
+      .select('id')
+      .eq('email', resetPasswordDto.email)
+      .single();
+    if (userError) {
+      this.logger.error(
+        `Error fetching from profiles: ${JSON.stringify(userError)}`,
+      );
+      return new ErrorResponseDto(400, userError.details);
+    }
+    const { data, error } = await this.supabaseAdmin.auth.admin.updateUserById(
+      userData.id,
+      { password: resetPasswordDto.password },
+    );
+    if (error) {
+      this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
+      return new ErrorResponseDto(400, error.details);
+    }
+    return data as object;
+  }
+
   async signup(signupDto: SignupDto): Promise<object | undefined> {
     const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
@@ -420,7 +446,7 @@ export class AuthService {
       this.logger.log('Creating transaction...', signupDto);
 
       // 1. Check for existing users in parallel
-      /*
+
       const [existingUser, existingPhoneNumber, existingNatID] =
         await Promise.all([
           this.supabaseAdmin
@@ -446,7 +472,7 @@ export class AuthService {
       // if (existingUser.data) {
       //   return new ErrorResponseDto(422, 'Email already in use');
       // }
-      
+
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
@@ -459,7 +485,6 @@ export class AuthService {
         );
         return new ErrorResponseDto(422, 'National ID already in use');
       }
-      */
 
       // 2. Hash password and prepare data
       const hashedPassword = await bcrypt.hash(signupDto.password, 10);

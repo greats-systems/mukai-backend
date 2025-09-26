@@ -20,9 +20,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import {
-  AuthErrorResponse,
-} from 'src/common/dto/auth-responses.dto';
+import { AuthErrorResponse } from 'src/common/dto/auth-responses.dto';
 
 /**
  * Controller for handling authentication-related operations.
@@ -196,6 +194,34 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     const response = await this.authService.login(loginDto);
+    if (response != null && response['error'] !== null) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    if (response != null && response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    if (response != null && response['statusCode'] === 401) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Invalid credentials',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    }
+    return response;
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() loginDto: LoginDto) {
+    const response = await this.authService.resetPassword(loginDto);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
         throw new HttpException(

@@ -13,7 +13,7 @@ import { MessagingsService } from './messagings.service';
 
 @ApiTags('notifications')
 @ApiExcludeController()
-@Controller()
+@Controller('messages')
 export class MessagingController {
   constructor(private readonly messagingsService: MessagingsService) {}
 

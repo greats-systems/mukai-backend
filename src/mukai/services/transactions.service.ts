@@ -577,6 +577,10 @@ export class TransactionsService {
         },
       );
       if (error) {
+        this.logger.debug(
+          `coop_wallet_id: ${coop_wallet_id}\nmember_wallet_id: ${member_wallet_id}`,
+        );
+        this.logger.error(`Failed to get total subs: ${JSON.stringify(error)}`);
         return new ErrorResponseDto(400, error.details);
       }
       if (!data) {

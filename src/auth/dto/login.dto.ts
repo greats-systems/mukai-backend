@@ -60,3 +60,8 @@ export class AccessAccountDto {
   @IsNotEmpty()
   accessToken: string;
 }
+
+export class OtpDto {
+  phone: string;
+  otp: string;
+}

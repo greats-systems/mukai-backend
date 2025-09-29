@@ -74,6 +74,7 @@ import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/sm
 import { SmilePayController } from './common/zb_payment_gateway/controllers/smilepay.controller';
 import { SmilePayService } from './common/zb_payment_gateway/services/smilepay.service';
 import { SmilePayModule } from './common/zb_payment_gateway/modules/smilepay.module';
+import { NotifyTextModule } from './messagings/notify-text.module';
 // import { PostmanModule } from './postman/postman.module';
 
 @Module({
@@ -108,6 +109,7 @@ import { SmilePayModule } from './common/zb_payment_gateway/modules/smilepay.mod
     FinancialArticle,
     SmileCashWalletModule,
     SmilePayModule,
+    NotifyTextModule,
     // PostmanModule,
   ],
   controllers: [

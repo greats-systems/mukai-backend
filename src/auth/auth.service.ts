@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -16,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -42,6 +43,10 @@ import { WhatsAppRequestDto } from 'src/common/whatsapp/requests/whatsapp.reques
 import { first } from 'rxjs';
 import { UpdateWalletDto } from 'src/mukai/dto/update/update-wallet.dto';
 import { Auth } from 'firebase-admin/lib/auth/auth';
+import { MessagingController } from 'src/messagings/messaging.controller';
+import { MessagingsService } from 'src/messagings/messagings.service';
+import { NotifyTextService } from 'src/messagings/notify_text.service';
+import { messaging } from 'firebase-admin';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -74,6 +79,20 @@ export class AuthService {
 
   async sendOtp(phone: string): Promise<boolean | GeneralErrorResponseDto> {
     try {
+      const nts = new NotifyTextService();
+      /**
+       * {
+    "sender": "0777757603",
+      "scheduled_time": "string",
+      "smslist": [
+        {
+          "message": "Hello World",
+          "mobiles": "0781294119",
+          "client_ref": "0781294119"
+        }
+        ]
+}
+       */
       this.logger.debug('Sending OTP');
       const now = new Date();
       const futureDate = new Date(now);
@@ -82,7 +101,38 @@ export class AuthService {
       const plainText = generateRandom6DigitNumber().toString();
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
-      this.logger.debug(`Plain text: ${plainText} Cipher text: ${cipherText}`);
+      const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+      const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+      this.logger.debug(
+        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      );
+      const otpBody = {
+        sender: '0777757603',
+        scheduled_time: 'unknown',
+        smslist: [{ message: plainText, mobiles: phone, client_ref: phone }],
+      };
+
+      // Send OTP
+      await nts.sendSms(otpBody);
+
+      // Insert into database (useful when verifying)
+      const { data, error } = await this.postgresRest
+        .from('otps')
+        .insert({
+          otp: cipherText,
+          expires_in: expiresIn,
+          phone: phone,
+        })
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(`Failed to insert into otps: ${JSON.stringify(error)}`);
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to insert into otps',
+          error,
+        );
+      }
       /*
       const { data: otpData, error: otpError } = await this.postgresRest
         .from('otps')
@@ -110,7 +160,7 @@ export class AuthService {
         this.logger.error(`Failed to create OTP: ${JSON.stringify(error)}`);
         return new GeneralErrorResponseDto(400, 'Failed to create OTP', error);
       }
-      */
+      
       const waService = new WhatsAppService();
       const waRequest = new WhatsAppRequestDto();
       waRequest.messaging_product = 'whatsapp';
@@ -129,6 +179,7 @@ export class AuthService {
           'Failed to send WhatsApp message',
         );
       }
+      */
       return true;
     } catch (e) {
       this.logger.error(`sendOtp error: ${e}`);
@@ -136,36 +187,47 @@ export class AuthService {
     }
   }
 
-  async verifyOtp(
-    phone: string,
-    otp: string,
-  ): Promise<boolean | GeneralErrorResponseDto> {
-    try {
-      this.logger.debug('Verifying OTP');
-      const bytes = CryptoJS.AES.decrypt(
-        otp,
-        process.env.SECRET_KEY || 'No secret key',
-      );
-      const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
-      this.logger.log(`Deciphered text: ${decipheredText}`);
-      const { data, error } = await this.postgresRest
-        .from('otps')
-        .select()
-        .eq(otp, decipheredText)
-        .eq(phone, phone);
-      if (error) {
-        this.logger.error(`Failed to verify OTP: ${JSON.stringify(error)}`);
-        return new GeneralErrorResponseDto(400, 'Failed to create OTP', error);
-      }
-      if (data) {
-        return true;
-      }
-      return false;
-    } catch (e) {
-      this.logger.error(`verifyOtp error: ${e}`);
-      return new GeneralErrorResponseDto(500, 'verifyOtp error', e);
+  async verifyOtp(otpDto: OtpDto): Promise<boolean | GeneralErrorResponseDto> {
+  try {
+    this.logger.debug('Verifying OTP');
+    const secretKey = process.env.SECRET_KEY || 'No secret key';
+    
+    // Get the stored OTP record for this phone
+    const { data, error } = await this.postgresRest
+      .from('otps')
+      .select()
+      .eq('phone', otpDto.phone)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error || !data) {
+      this.logger.error(`Failed to fetch from otps: ${JSON.stringify(error)}`);
+      return new GeneralErrorResponseDto(400, 'Failed to fetch from otps', error as object);
     }
+
+    // Decrypt the stored OTP (cipherText from database)
+    const bytes = CryptoJS.AES.decrypt(data.otp, secretKey);
+    const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
+    
+    this.logger.debug(`User entered: ${otpDto.otp}, Decrypted stored: ${decipheredText}`);
+    
+    // Check if OTP matches and is not expired
+    const now = new Date();
+    const isExpired = now > new Date(data.expires_in);
+    
+    this.logger.debug(`OTP expired? ${isExpired}`);
+    
+    if (decipheredText === otpDto.otp && !isExpired) {
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    this.logger.error(`verifyOtp error: ${e}`);
+    return new GeneralErrorResponseDto(500, 'verifyOtp error', e);
   }
+}
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema

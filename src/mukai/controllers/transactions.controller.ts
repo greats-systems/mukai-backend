@@ -25,8 +25,8 @@ import {
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('transactions')
 @ApiHeader({
   name: 'apikey',

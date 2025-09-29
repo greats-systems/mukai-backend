@@ -10,7 +10,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessAccountDto, LoginDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
@@ -40,12 +40,21 @@ export class AuthController {
     return this.authService.getProfiles();
   }
 
+  @Post('send-otp/:phone')
+  async sendOtp(@Param('phone') phone: string) {
+    return await this.authService.sendOtp(phone);
+  }
+
   @ApiExcludeEndpoint()
   @Get('profiles/except/:id')
   async getProfilesExcept(@Param('id') id: string) {
     return this.authService.getProfilesExcept(id);
   }
 
+  @Post('verify-otp')
+  async verifyOtp(@Body() otpDto: OtpDto) {
+    return await this.authService.verifyOtp(otpDto);
+  }
   /**
    * Retrieves user profiles similar to the given ID.
    * @param id - The ID to search similar profiles for

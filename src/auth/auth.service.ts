@@ -96,7 +96,7 @@ export class AuthService {
       this.logger.debug('Sending OTP');
       const now = new Date();
       const futureDate = new Date(now);
-      futureDate.setMinutes(now.getMinutes() + 1); // Add 1 minute
+      futureDate.setMinutes(now.getMinutes() + 5); // Add 5 minutes
       const expiresIn = futureDate.toISOString();
       const plainText = generateRandom6DigitNumber().toString();
       const secretKey = process.env.SECRET_KEY || 'No secret key';
@@ -217,7 +217,9 @@ export class AuthService {
     const isExpired = now > new Date(data.expires_in);
     
     this.logger.debug(`OTP expired? ${isExpired}`);
-    
+
+    this.logger.debug(`${decipheredText === otpDto.otp}`);
+    this.logger.debug(`${!isExpired}`);
     if (decipheredText === otpDto.otp && !isExpired) {
       return true;
     }

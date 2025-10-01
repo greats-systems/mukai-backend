@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -79,20 +79,24 @@ export class AuthService {
 
   async sendOtp(phone: string): Promise<boolean | GeneralErrorResponseDto> {
     try {
+      // Check if the user with that phone number exists
+      const { data: profile, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select()
+        .eq('phone', phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (profileError) {
+        return new ErrorResponseDto(400, 'Failed to fetch profile ID for OTP', profileError);
+      }
+
+      if (!profile || !profile.id) {
+        return new ErrorResponseDto(404, 'Profile not found for provided phone number');
+      }
+      // this.logger.debug(`Profile found: ${JSON.stringify(profile)}`);
       const nts = new NotifyTextService();
-      /**
-       * {
-    "sender": "0777757603",
-      "scheduled_time": "string",
-      "smslist": [
-        {
-          "message": "Hello World",
-          "mobiles": "0781294119",
-          "client_ref": "0781294119"
-        }
-        ]
-}
-       */
+
       this.logger.debug('Sending OTP');
       const now = new Date();
       const futureDate = new Date(now);
@@ -133,53 +137,6 @@ export class AuthService {
           error,
         );
       }
-      /*
-      const { data: otpData, error: otpError } = await this.postgresRest
-        .from('otps')
-        .select()
-        .eq('phone', phone);
-      if (otpError) {
-        this.logger.error(
-          `Failed to check user OTP: ${JSON.stringify(otpError)}`,
-        );
-        return new GeneralErrorResponseDto(
-          400,
-          'Failed to check user OTP',
-          otpError,
-        );
-      }
-      if (otpData) {
-        await this.postgresRest.from('otps').delete().eq('phone', phone);
-      }
-      const { data, error } = await this.postgresRest.from('otps').insert({
-        phone: phone,
-        otp: cipherText,
-        expires_in: futureDate.toISOString(),
-      });
-      if (error) {
-        this.logger.error(`Failed to create OTP: ${JSON.stringify(error)}`);
-        return new GeneralErrorResponseDto(400, 'Failed to create OTP', error);
-      }
-      
-      const waService = new WhatsAppService();
-      const waRequest = new WhatsAppRequestDto();
-      waRequest.messaging_product = 'whatsapp';
-      waRequest.recipient_type = 'individual';
-      waRequest.to = phone;
-      waRequest.type = 'text';
-      waRequest.text.preview_url = false;
-      waRequest.text.body = 'text-message-content';
-      const waResponse = await waService.sendMessage(waRequest);
-      if (waResponse instanceof GeneralErrorResponseDto) {
-        return waResponse;
-      }
-      if (waResponse == false) {
-        return new GeneralErrorResponseDto(
-          400,
-          'Failed to send WhatsApp message',
-        );
-      }
-      */
       return true;
     } catch (e) {
       this.logger.error(`sendOtp error: ${e}`);
@@ -188,48 +145,49 @@ export class AuthService {
   }
 
   async verifyOtp(otpDto: OtpDto): Promise<boolean | GeneralErrorResponseDto> {
-  try {
-    this.logger.debug('Verifying OTP');
-    const secretKey = process.env.SECRET_KEY || 'No secret key';
-    
-    // Get the stored OTP record for this phone
-    const { data, error } = await this.postgresRest
-      .from('otps')
-      .select()
-      .eq('phone', otpDto.phone)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (error || !data) {
-      this.logger.error(`Failed to fetch from otps: ${JSON.stringify(error)}`);
-      return new GeneralErrorResponseDto(400, 'Failed to fetch from otps', error as object);
-    }
+    try {
+      this.logger.debug(`Verifying OTP: ${JSON.stringify(otpDto)}`);
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
 
-    // Decrypt the stored OTP (cipherText from database)
-    const bytes = CryptoJS.AES.decrypt(data.otp, secretKey);
-    const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
-    
-    this.logger.debug(`User entered: ${otpDto.otp}, Decrypted stored: ${decipheredText}`);
-    
-    // Check if OTP matches and is not expired
-    const now = new Date();
-    const isExpired = now > new Date(data.expires_in);
-    
-    this.logger.debug(`OTP expired? ${isExpired}`);
+      // Get the stored OTP record for this phone
+      const { data, error } = await this.postgresRest
+        .from('otps')
+        .select()
+        .eq('phone', otpDto.phone)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-    this.logger.debug(`${decipheredText === otpDto.otp}`);
-    this.logger.debug(`${!isExpired}`);
-    if (decipheredText === otpDto.otp && !isExpired) {
-      return true;
+      if (error || !data) {
+        this.logger.error(`Failed to fetch from otps: ${JSON.stringify(error)}`);
+        return new GeneralErrorResponseDto(400, 'Failed to fetch from otps', error as object);
+      }
+
+      this.logger.debug(`verifyOTP record: ${JSON.stringify(data)}`);
+
+      // Decrypt the stored OTP (cipherText from database)
+      const bytes = CryptoJS.AES.decrypt(data[0].otp, secretKey);
+      const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
+
+      this.logger.debug(`User entered: ${otpDto.otp}, Decrypted stored: ${decipheredText}`);
+
+      // Check if OTP matches and is not expired
+      const now = new Date();
+      const isExpired = now > new Date(data[0].expires_in);
+
+      this.logger.debug(`OTP expired? ${isExpired}`);
+
+      this.logger.debug(`${decipheredText === otpDto.otp}`);
+      this.logger.debug(`${!isExpired}`);
+      if (decipheredText === otpDto.otp && !isExpired) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      this.logger.error(`verifyOtp error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'verifyOtp error', e);
     }
-    
-    return false;
-  } catch (e) {
-    this.logger.error(`verifyOtp error: ${e}`);
-    return new GeneralErrorResponseDto(500, 'verifyOtp error', e);
   }
-}
 
   async validateUser(email: string, password: string): Promise<any> {
     // Query from auth.users schema
@@ -479,14 +437,18 @@ export class AuthService {
     resetPasswordDto: LoginDto,
   ): Promise<object | ErrorResponseDto> {
     // Locate user ID given their email
+    this.logger.debug(`Resetting password using: ${JSON.stringify(resetPasswordDto)}`);
     const { data: userData, error: userError } = await this.postgresRest
       .from('profiles')
       .select('id')
-      .eq('email', resetPasswordDto.email)
+      .eq('phone', resetPasswordDto.phone)
+      // .or(`phone.eq.${resetPasswordDto.phone}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
     if (userError) {
       this.logger.error(
-        `Error fetching from profiles: ${JSON.stringify(userError)}`,
+        `Error fetching email for password reset: ${JSON.stringify(userError)}`,
       );
       return new ErrorResponseDto(400, userError.details);
     }
@@ -498,6 +460,7 @@ export class AuthService {
       this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
       return new ErrorResponseDto(400, error.details);
     }
+    this.logger.log(`Password reset response: ${JSON.stringify(data)}`);
     return data as object;
   }
 
@@ -510,7 +473,6 @@ export class AuthService {
       this.logger.log('Creating transaction...', signupDto);
 
       // 1. Check for existing users in parallel
-
       const [existingUser, existingPhoneNumber, existingNatID] =
         await Promise.all([
           this.supabaseAdmin
@@ -533,9 +495,6 @@ export class AuthService {
             .maybeSingle(),
         ]);
 
-      // if (existingUser.data) {
-      //   return new ErrorResponseDto(422, 'Email already in use');
-      // }
 
       if (existingPhoneNumber.data) {
         this.logger.debug(
@@ -550,15 +509,17 @@ export class AuthService {
         return new ErrorResponseDto(422, 'National ID already in use');
       }
 
-      // 2. Hash password and prepare data
-      const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+
+      // 2. Hash password for auth AND encrypt for profiles
+      // const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+
       const now = new Date().toISOString();
 
-      // 3. Create auth user
+      // 3. Create auth user (uses bcrypt hashing)
       const { data: newAuthUser, error: authError } =
         await this.supabaseAdmin.auth.admin.createUser({
           email: signupDto.email,
-          password: signupDto.password,
+          password: signupDto.password, // This will be hashed by Supabase Auth
           email_confirm: true,
           user_metadata: {
             first_name: signupDto.first_name,
@@ -581,7 +542,20 @@ export class AuthService {
 
       const userId = newAuthUser.user.id;
 
-      // 4. Prepare profile data
+      // 4. Encrypt password for storage in profiles table
+      /*
+      const { data: encryptedPassword, error: encryptError } = await this.postgresRest
+        .rpc('encrypt_user_password', { plain_text: signupDto.password });
+
+      if (encryptError) {
+        this.logger.error('Password encryption failed:', encryptError);
+        // Clean up auth user since we can't create profile properly
+        await this.supabaseAdmin.auth.admin.deleteUser(userId);
+        return new ErrorResponseDto(500, 'Password encryption failed', encryptError);
+      }
+      */
+
+      // 5. Prepare profile data with encrypted password
       const profileData = {
         id: userId,
         id_text: userId,
@@ -592,9 +566,7 @@ export class AuthService {
         account_type: signupDto.account_type,
         dob: signupDto.dob,
         gender: signupDto.gender,
-        // wallet_id: signupDto.wallet_id,
         business_id: signupDto.business_id,
-        // affiliations: signupDto.affiliations,
         coop_account_id: signupDto.coop_account_id,
         push_token: signupDto.push_token,
         avatar: signupDto.avatar,
@@ -604,11 +576,13 @@ export class AuthService {
         city: signupDto.city,
         national_id_number: signupDto.national_id_number,
         date_of_birth: signupDto.date_of_birth,
+        // password: encryptedPassword,
+        // encryption_key_id: 'vault_managed_key',
         created_at: now,
         updated_at: now,
       };
 
-      // 5. Create profile and check balances in parallel
+      // 6. Create profile and check balances in parallel
       const [profileResult, balanceUSD, balanceZWG] = await Promise.allSettled([
         this.postgresRest.from('profiles').insert(profileData),
         scwService.balanceEnquiry({
@@ -635,7 +609,7 @@ export class AuthService {
         );
       }
 
-      // 6. Setup wallet with balance data
+      // 7. Setup wallet with balance data
       createWalletDto.profile_id = userId;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = false;
@@ -681,10 +655,10 @@ export class AuthService {
         );
       }
 
-      // 7. Create wallet
+      // 8. Create wallet
       const walletResponse = await walletsService.createWallet(createWalletDto);
 
-      // 8. Update profile with wallet ID (non-blocking)
+      // 9. Update profile with wallet ID (non-blocking)
       this.logger.log(
         `Updating profile with wallet ID...${JSON.stringify(walletResponse)}`,
       );
@@ -697,16 +671,12 @@ export class AuthService {
         })
         .eq('id', userId);
 
-      // .catch((error) =>
-      //   this.logger.error('Failed to update profile wallet:', error),
-      // );
-
-      // 9. Create ToroNet key in background (non-blocking)
+      // 10. Create ToroNet key in background (non-blocking)
       this._createToroNetKeyInBackground(userId).catch((error) =>
         this.logger.error('ToroNet key creation failed:', error),
       );
 
-      // 10. Generate JWT and return response
+      // 11. Generate JWT and return response
       const payload = {
         email: newAuthUser.user.email,
         sub: userId,
@@ -728,7 +698,6 @@ export class AuthService {
           gender: signupDto.gender,
           wallet_id: walletResponse['data']['id'],
           business_id: signupDto.business_id,
-          // affiliations: signupDto.affiliations,
           coop_account_id: signupDto.coop_account_id,
           push_token: signupDto.push_token,
           avatar: signupDto.avatar,
@@ -866,6 +835,75 @@ export class AuthService {
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
+  async submitSecurityQuestions(sqDto: SecurityQuestionsDto): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresRest.from('security_questions').insert(sqDto).select().single();
+      if (error) {
+        return new ErrorResponseDto(400, 'Error creating security questions', error);
+      }
+      this.logger.debug(`Record created: ${JSON.stringify(data)}`);
+      return true;
+    }
+    catch (e) {
+      this.logger.error(`Error in submitSecurityQuestions: ${e}`);
+      // throw new Error(
+      //   error instanceof Error
+      //     ? error.message
+      //     : 'An unexpected error occurred while searching profiles',
+      // );
+      return new ErrorResponseDto(
+        500,
+        'An unexpected error occurred while searching profiles error',
+        e,
+      );
+    }
+  }
+
+  async getSecurityQuestions(phone: string): Promise<object | ErrorResponseDto> {
+    try {
+      // Get the profile ID first
+      const { data: profile, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select('id')
+        .eq('phone', phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (profileError) {
+        return new ErrorResponseDto(400, 'Failed to fetch profile ID for security questions', profileError);
+      }
+
+      if (!profile || !profile.id) {
+        return new ErrorResponseDto(404, 'Profile not found for provided phone number');
+      }
+      const { data, error } = await this.postgresRest
+        .from('security_questions')
+        .select()
+        .eq('profile_id', profile.id)
+        .maybeSingle();
+      if (error) {
+        return new ErrorResponseDto(400, 'Error fetching security questions', error);
+      }
+      // this.logger.debug(`Record created: ${JSON.stringify(data)}`);
+      this.logger.debug(`Security questions: ${JSON.stringify(data)}`);
+      return data as object;
+    }
+    catch (e) {
+      this.logger.error(`Error in getSecurityQuestions: ${e}`);
+      // throw new Error(
+      //   error instanceof Error
+      //     ? error.message
+      //     : 'An unexpected error occurred while searching profiles',
+      // );
+      return new ErrorResponseDto(
+        500,
+        'An unexpected error occurred while getting security questions',
+        e,
       );
     }
   }
@@ -1076,5 +1114,88 @@ export class AuthService {
     const regex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return regex.test(uuid);
+  }
+
+  async anonymousLogin(phoneNumber: string): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug(`Anonymous login for: ${phoneNumber}`);
+
+      // Validate phone number format
+      // const phoneRegex = /^\+\d{1,15}$/;
+      // if (!phoneRegex.test(phoneNumber)) {
+      //   throw new BadRequestException('Invalid phone number format. Use E.164 format (e.g., +1234567890)');
+      // }
+
+      // Check if anonymous user already exists with this phone
+      const { data: existingProfile } = await this.postgresRest
+        .from('profiles')
+        .select('id, wallet_id, phone, first_name, last_name, account_type, email')
+        .eq('phone', phoneNumber)
+        // .eq('is_anonymous', true)
+        .maybeSingle();
+
+      if (existingProfile) {
+        return await this.handleExistingAnonymousUser(existingProfile);
+      }
+      else {
+        return new GeneralErrorResponseDto(404, 'User not found', undefined);
+      }
+
+    } catch (error) {
+      this.logger.error(`anonymousLogin error: ${error}`);
+      throw new HttpException(
+        error instanceof Error ? error.message : 'Anonymous login failed',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  /**
+   * Handle existing anonymous user
+   */
+  private async handleExistingAnonymousUser(profile: any): Promise<AuthLoginSuccessResponse | GeneralErrorResponseDto> {
+    this.logger.log(`Profile: ${JSON.stringify(profile)}`);
+    const { data: authUser, error: authError } = await this.supabaseAdmin.auth.admin.getUserById(profile.id);
+
+    if (authError || !authUser.user) {
+      return new GeneralErrorResponseDto(404, 'Anonymous user account not found');
+    }
+
+    const { data, error } = await this.postgresRest.rpc(`get_encrypted_password`, { p_user_id: profile.id });
+    if (data) {
+      this.logger.debug(`password: ${data}`);
+      // const response = await this.supabaseAdmin.auth.admin.signInWithPassword(profile.email)
+    }
+    else {
+      this.logger.error('User not found');
+    }
+
+    // Generate JWT token for anonymous user
+    const accessToken = this.jwtService.sign({
+      email: authUser.user.email || profile.phone,
+      sub: profile.id,
+      role: 'anonymous',
+      is_anonymous: true,
+    });
+
+    return {
+      status: 'anonymous_authenticated',
+      statusCode: 200,
+      message: 'Anonymous login successful',
+      access_token: accessToken,
+      token_type: 'bearer',
+      user: {
+        id: profile.id,
+        email: authUser.user.email || profile.phone,
+        phone: profile.phone,
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        account_type: 'anonymous',
+        role: 'anonymous',
+        // is_anonymous: true,
+        // wallet_id: profile.wallet_id,
+      },
+      data: undefined,
+    };
   }
 }

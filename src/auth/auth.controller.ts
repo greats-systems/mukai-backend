@@ -10,7 +10,12 @@ import {
   Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessAccountDto, LoginDto, OtpDto } from './dto/login.dto';
+import {
+  AccessAccountDto,
+  LoginDto,
+  OtpDto,
+  SecurityQuestionsDto,
+} from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
@@ -283,5 +288,20 @@ export class AuthController {
   @Post('validate-profile')
   async validate_profile(@Body() accessToken: AccessAccountDto) {
     return this.authService.validate_profile(accessToken);
+  }
+
+  @Post('anonymous/login/:phone')
+  async anonymousLogin(@Param('phone') phone: string) {
+    return this.authService.anonymousLogin(phone);
+  }
+
+  @Post('security-questions')
+  async submitSecurityQuestions(@Body() sqDto: SecurityQuestionsDto) {
+    return await this.authService.submitSecurityQuestions(sqDto);
+  }
+
+  @Get('security-questions/:phone')
+  async getSecurityQuestions(@Param('phone') phone: string) {
+    return await this.authService.getSecurityQuestions(phone);
   }
 }

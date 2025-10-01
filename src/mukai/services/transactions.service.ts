@@ -629,6 +629,35 @@ export class TransactionsService {
     }
   }
 
+  async fetchMostRecentSenderTransaction(
+    sending_wallet: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select(
+          `*,
+          transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
+          transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
+          
+        )
+        .eq('sending_wallet', sending_wallet)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async filterTransactions(
     transaction_type: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {

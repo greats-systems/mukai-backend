@@ -26,6 +26,8 @@ export class LoginDto {
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
 
+  phone?: string;
+
   /*
   @ApiPropertyOptional({
     description: 'Phone number for the user account (optional)',
@@ -64,4 +66,12 @@ export class AccessAccountDto {
 export class OtpDto {
   phone: string;
   otp: string;
+  request: string;
+}
+
+export class SecurityQuestionsDto {
+  profile: string;
+  primary_school: string;
+  maternal_grandfather: string;
+  lucky_number: string;
 }

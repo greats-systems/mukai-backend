@@ -7,13 +7,13 @@ import {
   Param,
   HttpException,
   HttpStatus,
-  UseGuards,
+  // UseGuards,
   Query,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import {
-  ApiBearerAuth,
+  // ApiBearerAuth,
   ApiBody,
   ApiExcludeEndpoint,
   ApiHeader,
@@ -22,7 +22,7 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+// import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 // @UseGuards(JwtAuthGuard)
@@ -308,6 +308,20 @@ export class TransactionsController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Get(':sending_wallet/recent')
+  async fetchMostRecentSenderTransaction(
+    @Param('sending_wallet') sending_wallet: string,
+  ) {
+    const response =
+      await this.transactionsService.fetchMostRecentSenderTransaction(
+        sending_wallet,
+      );
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }

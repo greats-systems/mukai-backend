@@ -433,6 +433,192 @@ export class AuthService {
     }
   }
 
+  async loginWithPhone(phone: string): Promise<object | ErrorResponseDto> {
+    // this.logger.log(JSON.stringify(loginDto));
+    try {
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('email, password')
+        .eq('phone', phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Profile fetch error:', error);
+        return new ErrorResponseDto(400, 'Profile fetch error', error);
+      }
+
+      this.logger.debug(`User data: ${JSON.stringify(data)}`);
+
+      // 2. Convert bytea/hex format back to the original Base64 string
+      let encryptedPassword: string;
+
+      if (typeof data.password === 'string' && data.password.startsWith('\\x')) {
+        // PostgreSQL bytea hex format contains the Base64 string as hex
+        const hexString = data.password.substring(2); // Remove '\x' prefix
+        const buffer = Buffer.from(hexString, 'hex');
+        encryptedPassword = buffer.toString('utf8'); // This gives us the Base64 string
+
+        this.logger.debug(`Original hex: ${data.password}`);
+        this.logger.debug(`Decoded Base64: ${encryptedPassword}`);
+      } else {
+        encryptedPassword = data.password;
+      }
+
+      // 3. Decrypt password (same as your OTP verification)
+      this.logger.debug(`Attempting to decrypt: ${encryptedPassword}`);
+      const bytes = CryptoJS.AES.decrypt(encryptedPassword, secretKey);
+      const decipheredText = bytes.toString(CryptoJS.enc.Utf8);
+
+      this.logger.debug(`Decryption result bytes: ${bytes.toString()}`);
+      this.logger.debug(`Decrypted text: "${decipheredText}"`);
+
+      if (!decipheredText) {
+        this.logger.error(`Failed to decrypt password. Possible issues:
+        - Wrong secret key
+        - Data corrupted
+        - Encryption method mismatch`);
+        return {
+          status: 'failed',
+          message: 'Invalid credentials',
+          statusCode: 401,
+        } as AuthErrorResponse;
+      }
+
+      this.logger.debug(`Successfully decrypted password: ${decipheredText}`);
+
+      // Continue with login logic...
+      const {
+        data: { user, session },
+        error: authError,
+      } = await this.supabaseAdmin.auth.signInWithPassword({
+        email: data.email,
+        password: decipheredText,
+      });
+
+      if (authError || !user) {
+        this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
+        return {
+          status: 'failed',
+          message: 'Invalid credentials',
+          statusCode: 401,
+        } as AuthErrorResponse;
+      }
+
+      // 2. Get essential profile data only
+      const { data: profileData, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select('id, wallet_id, phone, first_name, last_name, account_type')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+      }
+
+      // 3. Parallel balance enquiries with timeout
+      const scwService = new SmileCashWalletService(this.postgresRest);
+      const walletPhone = profileData?.phone;
+
+      const balancePromises: Promise<SuccessResponseDto | null>[] = [];
+      if (walletPhone) {
+        const balanceParamsUSD: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'USD',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        const balanceParamsZWG: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'ZWG',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        // Execute balance enquiries in parallel with timeout
+        balancePromises.push(
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsUSD),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsZWG),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+        );
+      }
+
+      const [balanceUSD, balanceZWG] =
+        await Promise.allSettled(balancePromises);
+
+      if (
+        balanceUSD.status === 'fulfilled' &&
+        balanceUSD.value instanceof SuccessResponseDto &&
+        balanceZWG.status === 'fulfilled' &&
+        balanceZWG.value instanceof SuccessResponseDto
+      ) {
+        this.logger.log(
+          `balanceUSD: ${JSON.stringify(balanceUSD.value.data.data.billerResponse.balance)}`,
+        );
+        const updateDto = new UpdateWalletDto();
+        updateDto.id = profileData!.wallet_id;
+        updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
+        updateDto.balance_zwg =
+          balanceZWG.value.data.data.billerResponse.balance;
+        const walletService = new WalletsService(this.postgresRest);
+        const walletResponse = await walletService.updateWallet(
+          updateDto.id!,
+          updateDto,
+        );
+        this.logger.log(`walletResponse: ${JSON.stringify(walletResponse)}`);
+      }
+
+      // 4. Build minimal response
+      // const user = await this.validateUser(loginDto);
+      // const session = await this.createSession(user.id);
+
+      const response: AuthLoginSuccessResponse = {
+        status: 'account authenticated',
+        statusCode: 200,
+        message: 'account authenticated successfully',
+        access_token: this.jwtService.sign({
+          email: user.email,
+          sub: user.id,
+          role: user.role || 'authenticated',
+        }),
+        refresh_token: session?.refresh_token,
+        token_type: 'bearer',
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: profileData?.phone || null,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          account_type: profileData?.account_type || 'authenticated',
+          role: user.role || 'authenticated',
+        },
+        data: undefined, // Explicitly set as undefined
+        // error: null
+      };
+
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        status: 'failed',
+        message: 'Login failed. Please try again.',
+        statusCode: 500,
+      };
+    }
+  }
+
   async resetPassword(
     resetPasswordDto: LoginDto,
   ): Promise<object | ErrorResponseDto> {
@@ -511,6 +697,14 @@ export class AuthService {
 
 
       // 2. Hash password for auth AND encrypt for profiles
+      const plainText = signupDto.password;
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
+      const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+      const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+      const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+      this.logger.debug(
+        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      );
       // const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
       const now = new Date().toISOString();
@@ -576,7 +770,7 @@ export class AuthService {
         city: signupDto.city,
         national_id_number: signupDto.national_id_number,
         date_of_birth: signupDto.date_of_birth,
-        // password: encryptedPassword,
+        password: cipherText,
         // encryption_key_id: 'vault_managed_key',
         created_at: now,
         updated_at: now,

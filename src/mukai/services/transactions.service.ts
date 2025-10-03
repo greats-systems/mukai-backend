@@ -639,7 +639,6 @@ export class TransactionsService {
           `*,
           transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
           transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
-          
         )
         .eq('sending_wallet', sending_wallet)
         .order('created_at', { ascending: false })
@@ -655,6 +654,60 @@ export class TransactionsService {
     } catch (error) {
       this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async streamTransactions(
+    wallet_id: string,
+    transaction_type: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      this.logger.debug(
+        `Streaming ${transaction_type} tansactions for wallet id ${wallet_id}`,
+      );
+      let queryBuilder = this.postgresrest.from('transactions').select();
+      if (transaction_type != null) {
+        queryBuilder = queryBuilder
+          .eq('transaction_type', transaction_type)
+          .or(
+            `receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`,
+          );
+      } else {
+        queryBuilder = queryBuilder.or(
+          `receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`,
+        );
+      }
+      const query = queryBuilder
+        .select(
+          `
+        id, amount, currency, status, transaction_type, created_at, sending_wallet, receiving_wallet, member_id, 
+        transactions_member_id_fkey(id, first_name, last_name),
+        transactions_sending_wallet_fkey(
+        id, profile_id, is_group_wallet, phone, coop_phone, 
+        wallets_group_id_fkey(*), wallets_profile_id_fkey(*)),
+        transactions_receiving_wallet_fkey(
+        id, profile_id, is_group_wallet, phone, coop_phone, 
+        wallets_group_id_fkey(*), wallets_profile_id_fkey(*))
+        `,
+        )
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      return data;
+      /*
+      const {data, error} = await this.postgresrest
+      .from('transactions')
+      .select()
+      .eq('transaction_type', transaction_type)
+      .or(`receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`);
+      */
+    } catch (e) {
+      this.logger.log(`streamTransactions error: ${e}`);
+      return new ErrorResponseDto(500, e);
     }
   }
 

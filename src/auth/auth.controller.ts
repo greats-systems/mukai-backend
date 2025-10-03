@@ -318,11 +318,6 @@ export class AuthController {
     return this.authService.validate_profile(accessToken);
   }
 
-  @Post('anonymous/login/:phone')
-  async anonymousLogin(@Param('phone') phone: string) {
-    return this.authService.anonymousLogin(phone);
-  }
-
   @Post('security-questions')
   async submitSecurityQuestions(@Body() sqDto: SecurityQuestionsDto) {
     return await this.authService.submitSecurityQuestions(sqDto);

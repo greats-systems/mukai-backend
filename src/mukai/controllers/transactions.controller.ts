@@ -230,7 +230,7 @@ export class TransactionsController {
     }
     return response;
   }
-
+  /*
   @Get('filter')
   @ApiOperation({
     summary: 'Filter transactions by type',
@@ -261,6 +261,22 @@ export class TransactionsController {
   async filterTransaction(@Query('transaction_type') transaction_type: string) {
     const response =
       await this.transactionsService.filterTransactions(transaction_type);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+  */
+
+  @Get('filter')
+  async streamTransactions(
+    @Query('wallet_id') wallet_id: string,
+    @Query('transaction_type') transaction_type: string,
+  ) {
+    const response = await this.transactionsService.streamTransactions(
+      wallet_id,
+      transaction_type,
+    );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response, response.statusCode);
     }

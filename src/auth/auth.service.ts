@@ -416,6 +416,7 @@ export class AuthService {
           first_name: profileData?.first_name || '',
           last_name: profileData?.last_name || '',
           account_type: profileData?.account_type || 'authenticated',
+          wallet_id: profileData?.wallet_id,
           role: user.role || 'authenticated',
         },
         data: undefined, // Explicitly set as undefined
@@ -602,6 +603,7 @@ export class AuthService {
           first_name: profileData?.first_name || '',
           last_name: profileData?.last_name || '',
           account_type: profileData?.account_type || 'authenticated',
+          wallet_id: profileData?.wallet_id,
           role: user.role || 'authenticated',
         },
         data: undefined, // Explicitly set as undefined
@@ -1308,88 +1310,5 @@ export class AuthService {
     const regex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return regex.test(uuid);
-  }
-
-  async anonymousLogin(phoneNumber: string): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
-    try {
-      this.logger.debug(`Anonymous login for: ${phoneNumber}`);
-
-      // Validate phone number format
-      // const phoneRegex = /^\+\d{1,15}$/;
-      // if (!phoneRegex.test(phoneNumber)) {
-      //   throw new BadRequestException('Invalid phone number format. Use E.164 format (e.g., +1234567890)');
-      // }
-
-      // Check if anonymous user already exists with this phone
-      const { data: existingProfile } = await this.postgresRest
-        .from('profiles')
-        .select('id, wallet_id, phone, first_name, last_name, account_type, email')
-        .eq('phone', phoneNumber)
-        // .eq('is_anonymous', true)
-        .maybeSingle();
-
-      if (existingProfile) {
-        return await this.handleExistingAnonymousUser(existingProfile);
-      }
-      else {
-        return new GeneralErrorResponseDto(404, 'User not found', undefined);
-      }
-
-    } catch (error) {
-      this.logger.error(`anonymousLogin error: ${error}`);
-      throw new HttpException(
-        error instanceof Error ? error.message : 'Anonymous login failed',
-        HttpStatus.BAD_REQUEST
-      );
-    }
-  }
-
-  /**
-   * Handle existing anonymous user
-   */
-  private async handleExistingAnonymousUser(profile: any): Promise<AuthLoginSuccessResponse | GeneralErrorResponseDto> {
-    this.logger.log(`Profile: ${JSON.stringify(profile)}`);
-    const { data: authUser, error: authError } = await this.supabaseAdmin.auth.admin.getUserById(profile.id);
-
-    if (authError || !authUser.user) {
-      return new GeneralErrorResponseDto(404, 'Anonymous user account not found');
-    }
-
-    const { data, error } = await this.postgresRest.rpc(`get_encrypted_password`, { p_user_id: profile.id });
-    if (data) {
-      this.logger.debug(`password: ${data}`);
-      // const response = await this.supabaseAdmin.auth.admin.signInWithPassword(profile.email)
-    }
-    else {
-      this.logger.error('User not found');
-    }
-
-    // Generate JWT token for anonymous user
-    const accessToken = this.jwtService.sign({
-      email: authUser.user.email || profile.phone,
-      sub: profile.id,
-      role: 'anonymous',
-      is_anonymous: true,
-    });
-
-    return {
-      status: 'anonymous_authenticated',
-      statusCode: 200,
-      message: 'Anonymous login successful',
-      access_token: accessToken,
-      token_type: 'bearer',
-      user: {
-        id: profile.id,
-        email: authUser.user.email || profile.phone,
-        phone: profile.phone,
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        account_type: 'anonymous',
-        role: 'anonymous',
-        // is_anonymous: true,
-        // wallet_id: profile.wallet_id,
-      },
-      data: undefined,
-    };
   }
 }

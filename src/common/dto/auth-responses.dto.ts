@@ -39,6 +39,12 @@ export class UserResponse {
   account_type: string;
 
   @ApiProperty({
+    description: 'Wallet ID',
+    example: '7244f219-a9f1-4f97-a01d-7c994fc3265b',
+  })
+  wallet_id: string;
+
+  @ApiProperty({
     description: 'User role',
     example: 'authenticated',
   })

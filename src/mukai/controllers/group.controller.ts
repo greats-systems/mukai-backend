@@ -21,6 +21,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { Group } from '../entities/group.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
@@ -28,6 +29,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 @ApiTags('Groups')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiExcludeController()
 @Controller('groups')
 export class GroupsController {
   constructor(private readonly groupsService: GroupService) {}

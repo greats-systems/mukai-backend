@@ -37,7 +37,7 @@ export class Organization {
   specialization: string;
 
   @ApiPropertyOptional({
-    example: '+263772123456',
+    example: '263772123456',
     description: 'Primary contact phone number in international format',
   })
   @IsString()

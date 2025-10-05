@@ -1,38 +1,29 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateCooperativeMemberRequestDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Optional custom ID',
-    required: false,
+    description: 'Mandatory custom ID',
+    required: true,
   })
   @IsString()
   @IsOptional()
   id?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2023-01-01T00:00:00Z',
-    description: 'Optional update timestamp',
-    required: false,
+    description: 'Mandatory update timestamp',
+    required: true,
   })
   @IsString()
   @IsOptional()
   updated_at?: string;
 
   @ApiProperty({
-    example: '987e6543-e21b-43d2-b456-426614174000',
-    description: 'Optional cooperative ID',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  coop_id?: string;
-
-  @ApiProperty({
-    example: '456e7890-e12b-34d3-c567-426614174000',
-    description: 'Optional member ID',
-    required: false,
+    example: '6134402a-d8f6-4090-856e-fca4bbfc0f04',
+    description: 'Member ID',
+    required: true,
   })
   @IsString()
   @IsOptional()
@@ -40,8 +31,8 @@ export class CreateCooperativeMemberRequestDto {
 
   @ApiProperty({
     example: 'membership',
-    description: 'Optional request type',
-    required: false,
+    description: 'Request type',
+    required: true,
     enum: ['membership', 'withdrawal', 'role_change'],
   })
   @IsString()
@@ -50,112 +41,65 @@ export class CreateCooperativeMemberRequestDto {
 
   @ApiProperty({
     example: 'pending',
-    description: 'Optional initial status',
-    required: false,
-    enum: ['pending', 'approved', 'rejected'],
+    description: 'Mandatory initial status',
+    required: true,
+    enum: ['pending', 'approved', 'rejected', 'invited'],
   })
   @IsString()
   @IsOptional()
   status?: string;
 
   @ApiProperty({
-    example: '789e0123-e45b-67d8-f901-426614174000',
-    description: 'Optional resolver admin ID',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  resolved_by?: string;
-
-  @ApiProperty({
-    example: 'Please review my application',
-    description: 'Optional message',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  message?: string;
-
-  @ApiProperty({
-    example: 'Jane',
-    description: 'Optional member first name',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  profile_first_name?: string;
-
-  @ApiProperty({
-    example: 'Smith',
-    description: 'Optional member last name',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  profile_last_name?: string;
-
-  @ApiProperty({
-    example: 'Hello, here are my documents',
-    description: 'Optional initial message content',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  most_recent_content?: string;
-
-  @ApiProperty({
-    example: 'text',
-    description: 'Optional content format',
-    required: false,
-    enum: ['text', 'image', 'document'],
-  })
-  @IsString()
-  @IsOptional()
-  most_recent_content_format?: string;
-
-  @ApiProperty({
-    example: '321e6543-e98b-12d3-b456-426614174000',
-    description: 'Optional group ID',
-    required: false,
+    example: '7332a170-fa18-47c6-b5cc-8d740a2089f6',
+    description: 'Mandatory group ID',
+    required: true,
   })
   @IsString()
   @IsOptional()
   cooperative_id?: string;
 
   @ApiProperty({
-    example: '321e6543-e98b-12d3-b456-426614174000',
+    example: 'Agricultural Cooperatives',
     description: 'Cooperative category',
-    required: false,
+    required: true,
   })
   @IsString()
   @IsOptional()
   category?: string;
 
   @ApiProperty({
-    example: '321e6543-e98b-12d3-b456-426614174000',
+    example: 'Harare',
     description: 'city',
-    required: false,
+    required: true,
   })
   @IsString()
   @IsOptional()
   city?: string;
 
   @ApiProperty({
-    example: '321e6543-e98b-12d3-b456-426614174000',
+    example: 'Zimbabwe',
     description: 'country',
-    required: false,
+    required: true,
   })
   @IsString()
   @IsOptional()
   country?: string;
 
-
   @ApiProperty({
-    example: '321e6543-e98b-12d3-b456-426614174000',
+    example: 'Harare',
     description: 'province/state',
-    required: false,
+    required: true,
   })
   @IsString()
   @IsOptional()
   province_state?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Flag to indicate if a member has been invited to join a coop',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_invited?: boolean;
 }

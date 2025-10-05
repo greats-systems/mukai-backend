@@ -1,5 +1,6 @@
 import {
   IsAlphanumeric,
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsInt,
@@ -36,6 +37,9 @@ export class CreateUserDto {
   @IsString()
   @IsEnum(['f', 'm', 'u'])
   gender: string;
+
+  @IsBoolean()
+  is_invited: boolean;
 
   @IsNotEmpty()
   @Matches(passwordRegEx, {

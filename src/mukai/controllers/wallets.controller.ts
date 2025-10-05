@@ -21,12 +21,14 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Wallets')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiExcludeController()
 @Controller('wallets')
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
@@ -148,6 +150,37 @@ export class WalletsController {
   @ApiResponse({ status: 500, description: 'Internal server error.' })
   async findChildrenWallets(@Param('wallet_id') wallet_id: string) {
     const response = await this.walletsService.viewChildrenWallets(wallet_id);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('qr/:wallet_id')
+  @ApiOperation({ summary: 'Fetch a wallet scanned by a QR code' })
+  @ApiParam({
+    name: 'wallet_id',
+    description: 'Parent wallet ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Children wallets retrieved successfully.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @ApiResponse({ status: 500, description: 'Internal server error.' })
+  async viewQRWallet(@Param('wallet_id') wallet_id: string) {
+    const response = await this.walletsService.viewQRWallet(wallet_id);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(

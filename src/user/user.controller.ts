@@ -10,8 +10,10 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiExcludeController } from '@nestjs/swagger';
 
 @Controller('user')
+@ApiExcludeController()
 export class UserController {
   constructor(private readonly userService: UserService) {}
   @Post()
@@ -36,7 +38,7 @@ export class UserController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.updateUser(+id, updateUserDto);
+    return this.userService.updateUser(id, updateUserDto);
   }
 
   @Delete(':id')

@@ -202,4 +202,12 @@ export class CreateAssetDto {
   @IsBoolean()
   @IsOptional()
   has_received_vote?: boolean;
+
+  @ApiProperty({
+    example: 'individual',
+    description: 'Ownership type of the asset',
+  })
+  @IsString()
+  @IsOptional()
+  ownership_type: string;
 }

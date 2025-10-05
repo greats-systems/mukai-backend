@@ -13,8 +13,10 @@ import {
 import { CreatePayslipDto } from '../dto/create/create-payslip.dto';
 import { PayslipsService } from '../services/payslip.service';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { ApiExcludeController } from '@nestjs/swagger';
 
 @Injectable()
+@ApiExcludeController()
 @Controller('payslips')
 export class PayslipsController {
   constructor(private readonly payslipsService: PayslipsService) {}

@@ -59,6 +59,14 @@ export class CreateTransactionDto {
   receiving_wallet: string;
 
   @ApiPropertyOptional({
+    example: '0789012345',
+    description: 'Sending phone number',
+  })
+  @IsOptional()
+  @IsUUID()
+  sending_phone?: string;
+
+  @ApiPropertyOptional({
     example: '0712345678',
     description: 'Receiving phone number',
   })

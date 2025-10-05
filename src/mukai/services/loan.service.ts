@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -58,8 +57,18 @@ export class LoanService {
       if (hasActiveLoan instanceof ErrorResponseDto) {
         return hasActiveLoan;
       }
-
+      const { data: loanResponse, error } = await this.postgresrest
+        .from('loans')
+        .insert(createLoanDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      return loanResponse as Loan;
       // Accept the loan request if the applicant does not have active loans
+      /*
       if (!hasActiveLoan) {
         const { data: loanResponse, error } = await this.postgresrest
           .from('loans')
@@ -67,15 +76,9 @@ export class LoanService {
           .select()
           .single();
         if (error) {
-          console.log(error);
-          return new ErrorResponseDto(400, error.message);
+          this.logger.log(error);
+          return new ErrorResponseDto(400, error.details);
         }
-        // maDto.group_id = createLoanDto.cooperative_id;
-        // maDto.poll_description = 'loan application';
-        // // maDto.loan_id = createLoanDto.id;
-        // const maResponse =
-        //   await maService.createCooperativeMemberApprovals(maDto);
-        // console.log(maResponse);
         return loanResponse as Loan;
       } else {
         return new ErrorResponseDto(
@@ -83,6 +86,7 @@ export class LoanService {
           `User ${createLoanDto.profile_id} has an active loan and cannot apply for another one`,
         );
       }
+      */
     } catch (error) {
       return new ErrorResponseDto(500, error);
     }
@@ -96,8 +100,8 @@ export class LoanService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        this.logger.error('Error fetching loan', error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.error('Error fetching loans', error);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -117,7 +121,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error(`Error fetching loan ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -137,16 +141,17 @@ export class LoanService {
         .eq('profile_id', loanDto.profile_id)
         .eq('cooperative_id', loanDto.cooperative_id)
         .eq('status', 'disbursed')
-        .single();
+        .maybeSingle();
 
       if (error) {
-        this.logger.error(`Error fetching loan ${loanDto.id}`, error);
-        if(error.details == 'The result contains 0 rows') {
+        this.logger.error(`Error checking active loan ${loanDto.id}`, error);
+        if (error.details == 'The result contains 0 rows') {
           return false; // No active loan found
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-      if (data) {
+      this.logger.log(`active loan data: ${JSON.stringify(data)}`);
+      if (data != null) {
         return true;
       }
       return false;
@@ -171,7 +176,7 @@ export class LoanService {
           `Error fetching loan for profile ${profile_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -185,12 +190,13 @@ export class LoanService {
     cooperative_id: string,
     profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {
+    this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
     try {
       const { data, error } = await this.postgresrest
         .from('loans')
         .select()
-        .eq('cooperative_id', cooperative_id)
-        .neq('profile_id', profile_id);
+        .eq('cooperative_id', cooperative_id);
+      // .neq('profile_id', profile_id);
       // .single();
 
       if (error) {
@@ -198,9 +204,9 @@ export class LoanService {
           `Error fetching loan for coop ${cooperative_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-
+      this.logger.debug(`viewCoopLoans data: ${JSON.stringify(data)}`);
       return data as Loan[];
     } catch (error) {
       this.logger.error(
@@ -228,7 +234,7 @@ export class LoanService {
           `Error fetching loan for coop ${cooperative_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Loan[];
@@ -254,7 +260,7 @@ export class LoanService {
         .single();
       if (error) {
         this.logger.error(`Error updating loan ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Loan;
     } catch (error) {
@@ -278,7 +284,7 @@ export class LoanService {
       // .single();
       if (error) {
         this.logger.error(`Error updating coop loan ${cooperative_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Loan[];
     } catch (error) {
@@ -300,7 +306,7 @@ export class LoanService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -7,7 +8,10 @@ import { PostgresRest } from 'src/common/postgresrest';
 import { CreateSubscriberDto } from '../dto/create/create-subscriber.dto';
 import { UpdateSubscriberDto } from '../dto/update/update-subscriber.dto';
 import { Subscriber } from '../entities/subscriber.entity';
-import { CreateSubscriberRequest, SmileWalletService } from './zb_digital_wallet.service';
+import {
+  CreateSubscriberRequest,
+  SmileWalletService,
+} from './zb_digital_wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -17,7 +21,10 @@ function initLogger(funcname: Function): Logger {
 export class SubscriberService {
   private readonly logger = initLogger(SubscriberService);
   // inject wallet service
-  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) { }
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
 
   async createSubscriber(
     createSubscriberDto: CreateSubscriberDto,
@@ -30,8 +37,8 @@ export class SubscriberService {
         .single();
 
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
       if (!data) {
         return new ErrorResponseDto(400, 'No data returned from database');
@@ -43,10 +50,9 @@ export class SubscriberService {
           dateOfBirth: data['date_of_birth'],
           idNumber: data['id_number'],
           gender: data['gender'],
-          source: 'Mukai-App'
+          source: 'Mukai-App',
         };
         await this.smileWalletService.createSubscriber(subscriberData);
-
       }
 
       return data as Subscriber;
@@ -64,7 +70,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error('Error fetching subscribers', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Subscriber[];
@@ -84,7 +90,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Subscriber[];
@@ -107,7 +113,7 @@ export class SubscriberService {
         .single();
       if (error) {
         this.logger.error(`Error updating subscribers ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Subscriber;
     } catch (error) {
@@ -126,7 +132,7 @@ export class SubscriberService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

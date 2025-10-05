@@ -26,8 +26,8 @@ export class EscrowService {
         .insert(createEscrowDto)
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Escrow;
     } catch (error) {
@@ -44,7 +44,7 @@ export class EscrowService {
 
       if (error) {
         this.logger.error('Error fetching escrow', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Escrow[];
@@ -64,7 +64,7 @@ export class EscrowService {
 
       if (error) {
         this.logger.error(`Error fetching group ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Escrow[];
@@ -87,7 +87,7 @@ export class EscrowService {
         .single();
       if (error) {
         this.logger.error(`Error updating escrow ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Escrow;
     } catch (error) {
@@ -106,7 +106,7 @@ export class EscrowService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

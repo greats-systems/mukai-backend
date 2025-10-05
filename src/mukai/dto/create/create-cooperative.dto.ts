@@ -22,6 +22,15 @@ export class CreateCooperativeDto {
   wallet_id?: string;
 
   @ApiProperty({
+    example: '263718439965',
+    description: 'Cooperative wallet phone number (optional)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  coop_phone?: string;
+
+  @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Admin ID who manages the cooperative (optional)',
     required: false,
@@ -131,4 +140,18 @@ export class CreateCooperativeDto {
   })
   @IsNumber()
   additional_info: any;
+
+  @ApiProperty({
+    example: '263789012345',
+    description: 'Cooperative phone number (for SmileCash transactions)',
+  })
+  @IsString()
+  phone: string;
+
+  @ApiProperty({
+    example: 10,
+    description: 'Number of members in the coop',
+  })
+  @IsString()
+  no_of_members: number;
 }

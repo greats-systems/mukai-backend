@@ -21,6 +21,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { Asset } from '../entities/asset.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
@@ -28,6 +29,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 @ApiTags('Assets')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiExcludeController()
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
@@ -82,7 +84,8 @@ export class AssetsController {
     description: 'Server error',
   })
   async createIndividual(@Body() createAssetDto: CreateAssetDto) {
-    const response = await this.assetsService.createIndividualAsset(createAssetDto);
+    const response =
+      await this.assetsService.createIndividualAsset(createAssetDto);
     if (response['statusCode'] === 400) {
       throw new HttpException(
         response['message'] ?? 'Bad request',
@@ -97,7 +100,6 @@ export class AssetsController {
     }
     return response;
   }
-  
 
   @Get()
   @ApiOperation({ summary: 'Get all assets' })

@@ -12,14 +12,18 @@ import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooper
 import { UUID } from 'crypto';
 import { CooperativesService } from './cooperatives.service';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { LoanService } from './loan.service';
 import { WalletsService } from './wallets.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { TransactionsService } from './transactions.service';
 import { DateTime } from 'luxon';
-import { GroupMemberService } from './group-members.service';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
+import { SignupDto } from 'src/auth/dto/signup.dto';
+import { UserService } from 'src/user/user.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+// import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -30,31 +34,50 @@ export class CooperativeMemberApprovalsService {
   private readonly logger = initLogger(CooperativeMemberApprovalsService);
   constructor(private readonly postgresrest: PostgresRest) {}
 
+  // A coop admin can create a new poll only if there are no active polls
+  async checkActivePolls(
+    cooperative_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', cooperative_id)
+        .eq('consensus_reached', false);
+
+      if (error) {
+        this.logger.error(`Error checking for active polls: ${error.message}`);
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`checkActivePolls error: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async createCooperativeMemberApprovals(
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       this.logger.debug(createCooperativeMemberApprovalsDto);
-      const gmService = new GroupMemberService(this.postgresrest);
-      const gmResponse = await gmService.findMembersInGroup(
-        createCooperativeMemberApprovalsDto.group_id!,
-      );
-      if (gmResponse instanceof ErrorResponseDto) {
-        return gmResponse;
-      }
-      const groupSize = gmResponse.length;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .upsert(
           {
             group_id: createCooperativeMemberApprovalsDto.group_id,
-            number_of_members: groupSize,
+            // no_of_members: groupSize,
             profile_id: createCooperativeMemberApprovalsDto.profile_id,
             poll_description:
               createCooperativeMemberApprovalsDto.poll_description,
             additional_info:
               createCooperativeMemberApprovalsDto.additional_info,
             asset_id: createCooperativeMemberApprovalsDto.asset_id,
+            elected_member_profile_id:
+              createCooperativeMemberApprovalsDto.elected_member_profile_id,
             loan_id: createCooperativeMemberApprovalsDto.loan_id,
           },
           {
@@ -65,8 +88,8 @@ export class CooperativeMemberApprovalsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as CooperativeMemberApprovals;
     } catch (error) {
@@ -85,7 +108,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error('Error fetching cooperative_member_approvals', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as CooperativeMemberApprovals[];
@@ -110,7 +133,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as CooperativeMemberApprovals[];
@@ -125,27 +148,30 @@ export class CooperativeMemberApprovalsService {
 
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
-    userJson: object,
-  ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
+    // member_id: string,
+  ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
-      this.logger.warn(userJson);
+      this.logger.log('Successfully updated group size');
+      // this.logger.warn(userJson);
       // Fetch data from PostgreSQL
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
-        .select()
-        .neq('profile_id', userJson['profile_id'])
+        .select(
+          '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*),cooperative_member_approvals_loan_id_fkey(*)',
+        )
+        // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
-        .eq('group_id', group_id);
+        .eq('group_id', group_id)
+        .order('created_at', { ascending: false });
+      // .neq('profile_id', member_id);
 
       if (error) {
         this.logger.error(
           `Error fetching approvals for group ${group_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-
-      console.log(data);
       if (!data || data.length === 0) {
         this.logger.log(`No approvals found for group ${group_id}`);
         return [];
@@ -154,15 +180,21 @@ export class CooperativeMemberApprovalsService {
       // Type assertion
       const approvals = data as CooperativeMemberApprovals[];
 
+      // const grou
+
       // Process each approval record
       approvals.forEach((record) => {
+        this.logger.log(
+          `record: ${JSON.stringify(record.cooperative_member_approvals_group_id_fkey.no_of_members)}`,
+        );
         // Safely get vote counts (default to 0 if null/undefined)
         const supportingCount = record.supporting_votes?.length || 0;
         const opposingCount = record.opposing_votes?.length || 0;
 
         // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
         const totalMembersExcludingAdmin = Math.max(
-          (record.number_of_members || 1) - 1,
+          (record.cooperative_member_approvals_group_id_fkey.no_of_members ||
+            1) - 1,
           1,
         );
 
@@ -184,8 +216,12 @@ export class CooperativeMemberApprovalsService {
         record.consensus_reached = has75PercentApproval;
       });
 
-      // console.log(approvals);
-      return approvals;
+      // this.logger.log(approvals);
+      return {
+        statusCode: 200,
+        message: 'Approvals fetched successfully',
+        data: approvals,
+      };
     } catch (error) {
       this.logger.error(
         `Exception in viewCooperativeMemberApprovals for group ${group_id}`,
@@ -200,14 +236,14 @@ export class CooperativeMemberApprovalsService {
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
-      console.log(updateCooperativeMemberApprovalsDto);
+      this.logger.log(updateCooperativeMemberApprovalsDto);
       // const approval = await this.viewCooperativeMemberApprovals(u)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .update({
           group_id: updateCooperativeMemberApprovalsDto.group_id,
-          number_of_members:
-            updateCooperativeMemberApprovalsDto.number_of_members,
+          // no_of_members:
+          //   updateCooperativeMemberApprovalsDto.no_of_members,
           supporting_votes:
             updateCooperativeMemberApprovalsDto.supporting_votes,
           opposing_votes: updateCooperativeMemberApprovalsDto.opposing_votes,
@@ -226,101 +262,55 @@ export class CooperativeMemberApprovalsService {
           `Error updating cooperative_member_approvals ${id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-      this.logger.debug(updateCooperativeMemberApprovalsDto.consensus_reached);
-      this.logger.debug(updateCooperativeMemberApprovalsDto.poll_description);
+      this.logger.debug(
+        `Poll description: ${updateCooperativeMemberApprovalsDto.poll_description}`,
+      );
+      this.logger.debug(
+        `Consensus reached? ${updateCooperativeMemberApprovalsDto.consensus_reached}`,
+      );
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
+        // updateCooperativeMemberApprovalsDto.consensus_reached = true;
+        this.logger.debug(
+          `Voting for ${updateCooperativeMemberApprovalsDto.poll_description}`,
+        );
         if (
-          updateCooperativeMemberApprovalsDto.poll_description ==
-          'set interest rate'
+          updateCooperativeMemberApprovalsDto.poll_description?.includes(
+            'interest rate',
+          )
         ) {
-          const coopService = new CooperativesService(
-            this.postgresrest,
-            new SmileWalletService(),
+          const setInterestReponse = await this.setInterestRate(
+            updateCooperativeMemberApprovalsDto,
           );
-          const updateCoopDto = new UpdateCooperativeDto();
-          updateCoopDto.interest_rate =
-            updateCooperativeMemberApprovalsDto.additional_info;
-          updateCoopDto.id =
-            updateCooperativeMemberApprovalsDto.group_id as UUID;
-          this.logger.debug(updateCoopDto);
-          const updateCoopResponse =
-            await coopService.updateCooperativeAfterVoting(
-              updateCoopDto.id.toString(),
-              updateCoopDto,
-            );
-          console.log(updateCoopResponse);
-        } else if (
-          updateCooperativeMemberApprovalsDto.poll_description ==
-          'loan application'
-        ) {
-          // Take money from coop wallet and deposit it into the group wallet
-          const walletService = new WalletsService(
-            this.postgresrest,
-            new SmileWalletService(),
-          );
-          this.logger.warn(updateCooperativeMemberApprovalsDto.profile_id);
-          const receivingWallet = await walletService.viewProfileWalletID(
-            updateCooperativeMemberApprovalsDto.profile_id!,
-          );
-          this.logger.debug('receivingWallet');
-          this.logger.debug(receivingWallet['data']['id']);
-          const disbursingWallet = await walletService.viewCoopWallet(
-            updateCooperativeMemberApprovalsDto.group_id!,
-          );
-          this.logger.debug('disbursingWallet');
-          this.logger.debug(disbursingWallet['data']['id']);
-          const updateLoanDto = new CreateLoanDto();
-          const loanService = new LoanService(this.postgresrest);
-          // updateLoanDto.cooperative_id =
-          //   updateCooperativeMemberApprovalsDto.group_id;
-          // updateLoanDto.borrower_wallet_id = receivingWallet['data']['id'];
-          // updateLoanDto.lender_wallet_id = disbursingWallet['data']['id'];
-          // updateLoanDto.principal_amount = parseFloat(
-          //   updateCooperativeMemberApprovalsDto.additional_info,
-          // );
-          updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
-          updateLoanDto.status = 'disbursed';
-          updateLoanDto.updated_at = DateTime.now().toISO();
-          // updateLoanDto.remaining_balance = parseFloat(
-          //   updateCooperativeMemberApprovalsDto.additional_info,
-          // );
-          // updateLoanDto.profile_id =
-          //   updateCooperativeMemberApprovalsDto.profile_id;
-          // updateLoanDto.cooperative_id =
-          //   updateCooperativeMemberApprovalsDto.group_id;
-          this.logger.debug('updateLoanDto');
-          this.logger.debug(updateLoanDto);
-          const loanResponse = await loanService.updateLoan(
-            updateLoanDto.id!,
-            updateLoanDto,
-          );
-          this.logger.debug('loanResponse');
-          this.logger.debug(loanResponse);
-          if (loanResponse instanceof ErrorResponseDto) {
-            return loanResponse;
+          if (!setInterestReponse) {
+            this.logger.error('Failed to update interest rate');
+            return new ErrorResponseDto(500, 'Failed to update interest rate');
           }
-
-          // Record the transaction
-          const transactionDto = new CreateTransactionDto();
-          transactionDto.transaction_type = 'loan disbursement';
-          transactionDto.category = 'transfer';
-          transactionDto.amount =
-            updateCooperativeMemberApprovalsDto.additional_info as number;
-          transactionDto.narrative = 'credit';
-          transactionDto.currency = 'usd';
-          transactionDto.receiving_wallet = receivingWallet['data']['id'];
-          transactionDto.sending_wallet = disbursingWallet['data']['id'];
-
-          const transService = new TransactionsService(
-            this.postgresrest,
-            new SmileWalletService(),
+        } else if (
+          updateCooperativeMemberApprovalsDto.poll_description?.includes(
+            'loan application',
+          )
+        ) {
+          const loanResponse = await this.disburseLoan(
+            updateCooperativeMemberApprovalsDto,
           );
-          const transactionResponse =
-            await transService.createTransaction(transactionDto);
-          this.logger.debug('transactionResponse');
-          this.logger.debug(transactionResponse);
+          if (!loanResponse) {
+            this.logger.error('Failed to disburse loan');
+            return new ErrorResponseDto(500, 'Failed to disburse loan');
+          }
+        } else if (
+          updateCooperativeMemberApprovalsDto.poll_description
+            ?.toLowerCase()
+            .includes('elect')
+        ) {
+          const electionResponse = await this.updateMemberRole(
+            updateCooperativeMemberApprovalsDto,
+          );
+          if (!electionResponse) {
+            // this.logger.error('Failed to update member role');
+            return new ErrorResponseDto(400, 'Failed to update member role');
+          }
         }
       } else {
         this.logger.debug('Consensus not yet reached');
@@ -334,6 +324,209 @@ export class CooperativeMemberApprovalsService {
       return new ErrorResponseDto(500, error);
     }
   }
+
+  // Execute these functions when consensus is reached
+
+  async setInterestRate(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const coopService = new CooperativesService(this.postgresrest);
+    const updateCoopDto = new UpdateCooperativeDto();
+    updateCoopDto.interest_rate =
+      updateCooperativeMemberApprovalsDto.additional_info;
+    updateCoopDto.id = updateCooperativeMemberApprovalsDto.group_id as UUID;
+    this.logger.debug(updateCoopDto);
+    const updateCoopResponse = await coopService.updateCooperativeAfterVoting(
+      updateCoopDto.id.toString(),
+      updateCoopDto,
+    );
+    this.logger.log(updateCoopResponse);
+    if (updateCoopResponse instanceof ErrorResponseDto) {
+      this.logger.error(`Failed to update coop: ${updateCoopResponse.message}`);
+      // return new ErrorResponseDto(400, updateCoopDto);
+      return false;
+    }
+    return true;
+  }
+
+  async disburseLoan(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    try {
+      this.logger.warn(
+        `Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`,
+      );
+
+      // Initialize services
+      const walletService = new WalletsService(this.postgresrest);
+      const smileCashService = new SmileCashWalletService(this.postgresrest);
+      const loanService = new LoanService(this.postgresrest);
+      const transService = new TransactionsService(this.postgresrest);
+
+      // Fetch all required data in parallel
+      const [
+        { data: sender, error: senderError },
+        { data: receiver, error: receiverError },
+        { data: loanData, error: loanError },
+      ] = await Promise.all([
+        this.postgresrest
+          .from('cooperatives')
+          .select()
+          .eq('id', updateCooperativeMemberApprovalsDto.group_id)
+          .single(),
+        this.postgresrest
+          .from('profiles')
+          .select()
+          .eq('id', updateCooperativeMemberApprovalsDto.profile_id)
+          .single(),
+        this.postgresrest
+          .from('loans')
+          .select('currency, loan_term_months')
+          .eq('id', updateCooperativeMemberApprovalsDto.loan_id)
+          .maybeSingle(),
+      ]);
+
+      // Handle errors from data fetching
+      if (senderError || receiverError || loanError) {
+        this.logger.error('Failed to fetch required data:', {
+          senderError,
+          receiverError,
+          loanError,
+        });
+        return false;
+      }
+
+      if (!sender || !receiver || !loanData) {
+        this.logger.error('Required data not found');
+        return false;
+      }
+
+      const senderPhone = sender.coop_phone;
+      const receiverPhone = receiver.phone;
+      const currencyCode = loanData.currency;
+      const loanTerm = loanData.loan_term_months;
+
+      this.logger.log(
+        `Currency: ${currencyCode}, Loan term: ${loanTerm} months`,
+      );
+
+      // Execute wallet-to-wallet transfer
+      const w2wRequest: WalletToWalletTransferRequest = {
+        receiverMobile: receiverPhone,
+        senderPhone: senderPhone,
+        amount: Number(updateCooperativeMemberApprovalsDto.additional_info),
+        currency: currencyCode,
+        channel: 'USSD',
+        narration: 'loan disbursement',
+        transactionId: undefined,
+      };
+
+      const smileCashTransaction =
+        await smileCashService.walletToWallet(w2wRequest);
+
+      if (smileCashTransaction instanceof ErrorResponseDto) {
+        this.logger.error(
+          'SmileCash transaction failed:',
+          smileCashTransaction,
+        );
+        return false;
+      }
+
+      this.logger.debug('SmileCash transaction successful');
+
+      // Fetch wallets in parallel
+      const [receivingWallet, disbursingWallet] = await Promise.all([
+        walletService.viewProfileWalletID(
+          updateCooperativeMemberApprovalsDto.profile_id!,
+        ),
+        walletService.viewCoopWallet(
+          updateCooperativeMemberApprovalsDto.group_id!,
+        ),
+      ]);
+
+      // Update loan status
+      this.logger.debug(
+        `receiving wallet: ${JSON.stringify(receivingWallet)}\nsending wallet: ${JSON.stringify(disbursingWallet)}`,
+      );
+      const updateLoanDto = new CreateLoanDto();
+      updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
+      updateLoanDto.status = 'disbursed';
+      updateLoanDto.is_approved = true;
+      updateLoanDto.updated_at = DateTime.now().toISO();
+      updateLoanDto.remaining_balance = parseFloat(
+        updateCooperativeMemberApprovalsDto.additional_info,
+      );
+      const currentDate = DateTime.now();
+      const dueDate = currentDate.plus({
+        months: loanTerm,
+      });
+      updateLoanDto.due_date = dueDate.toFormat('yyyy-MM-dd');
+      // updateLoanDto.due_date = dueDate;
+      updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
+      updateLoanDto.cooperative_id =
+        updateCooperativeMemberApprovalsDto.group_id;
+      this.logger.debug(`Updating loan: ${JSON.stringify(updateLoanDto)}`);
+      const loanResponse = await loanService.updateLoan(
+        updateLoanDto.id!,
+        updateLoanDto,
+      );
+
+      if (loanResponse instanceof ErrorResponseDto) {
+        this.logger.error('Loan update failed:', loanResponse);
+        return false;
+      }
+
+      this.logger.debug('Loan update successful');
+
+      // Record transaction
+      const transactionDto = new CreateTransactionDto();
+      transactionDto.transaction_type = 'loan disbursement';
+      transactionDto.category = 'transfer';
+      transactionDto.amount = Number(
+        updateCooperativeMemberApprovalsDto.additional_info,
+      );
+      transactionDto.currency = currencyCode;
+      transactionDto.narrative = 'debit';
+      transactionDto.receiving_wallet = receivingWallet['data'].id;
+      transactionDto.receiving_phone = receivingWallet['data'].phone;
+      transactionDto.sending_wallet = disbursingWallet['data'].id;
+      transactionDto.sending_phone = disbursingWallet['data'].coop_phone;
+
+      const transactionResponse =
+        await transService.createTransaction(transactionDto);
+
+      if (transactionResponse instanceof ErrorResponseDto) {
+        this.logger.error('Transaction recording failed:', transactionResponse);
+        return false;
+      }
+
+      this.logger.debug('Transaction recorded successfully');
+      return true;
+    } catch (error) {
+      this.logger.error('Unexpected error in disburseLoan:', error);
+      return false;
+    }
+  }
+  async updateMemberRole(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const updateUserDto = new SignupDto();
+    const userService = new UserService(this.postgresrest);
+    updateUserDto.role = updateCooperativeMemberApprovalsDto.additional_info;
+
+    this.logger.warn(
+      `Updating user role to ${updateCooperativeMemberApprovalsDto.additional_info}`,
+    );
+    const updateUserResponse = await userService.updateUser(
+      updateCooperativeMemberApprovalsDto.elected_member_profile_id!,
+      updateUserDto,
+    );
+    if (updateUserResponse instanceof ErrorResponseDto) {
+      return false;
+    }
+    return true;
+  }
+
   async updateCooperativeMemberApprovalsByCoopID(
     group_id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
@@ -411,126 +604,6 @@ export class CooperativeMemberApprovalsService {
     return 'none';
   }
 
-  /*
-  async updateCooperativeMemberApprovalsLoanByCoopID(
-    group_id: string,
-    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-  ): Promise<CooperativeMemberApprovals[] | null | object | ErrorResponseDto> {
-    // console.log(group_id);
-    // Check if member has already voted
-    let hasVotedBefore;
-    let hasSupported;
-    let hasOpposed;
-    const loanService = new LoanService(this.postgresrest);
-    const updateLoanDto = new UpdateLoanDto();
-
-    if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-      hasVotedBefore = await this.checkIfMemberVotedLoan(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-      hasSupported = await this.checkIfMemberSupportedLoan(
-        updateCooperativeMemberApprovalsDto.supporting_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-    }
-    if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-      hasVotedBefore = await this.checkIfMemberVotedLoan(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-      hasOpposed = await this.checkIfMemberOpposedLoan(
-        updateCooperativeMemberApprovalsDto.opposing_votes,
-        updateCooperativeMemberApprovalsDto.loan_id!,
-      );
-    }
-    console.log('Voted?');
-    console.log(hasVotedBefore);
-    console.log('Supported?');
-    console.log(hasSupported);
-    console.log('Opposed?');
-    console.log(hasOpposed);
-    if (
-      (!hasVotedBefore || hasVotedBefore == undefined) &&
-      (!hasSupported || hasSupported == undefined) &&
-      (!hasOpposed || hasOpposed == undefined)
-    ) {
-      console.log('This user has not voted yet');
-      console.log(updateCooperativeMemberApprovalsDto);
-      try {
-        let data;
-
-        // Conditionally append to supporting_votes if provided
-        if (updateCooperativeMemberApprovalsDto.supporting_votes) {
-          console.log(updateCooperativeMemberApprovalsDto.supporting_votes);
-          console.log(
-            typeof updateCooperativeMemberApprovalsDto.supporting_votes,
-          );
-          // Get the first member ID if it's an array, or use the value directly
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.supporting_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.supporting_votes[0]
-            : updateCooperativeMemberApprovalsDto.supporting_votes;
-
-          data = await this.postgresrest.rpc('add_loan_supporting_vote', {
-            p_group_id: group_id,
-            p_loan_id: updateCooperativeMemberApprovalsDto.loan_id,
-            p_member_id: memberId, // No .toString() needed if it's already a UUID string
-          });
-          console.log(data);
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding supporting vote: ${data.error.message},`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Conditionally append to opposing_votes if provided
-        if (updateCooperativeMemberApprovalsDto.opposing_votes) {
-          const memberId = Array.isArray(
-            updateCooperativeMemberApprovalsDto.opposing_votes,
-          )
-            ? updateCooperativeMemberApprovalsDto.opposing_votes[0]
-            : updateCooperativeMemberApprovalsDto.opposing_votes;
-
-          data = await this.postgresrest.rpc('add_loan_opposing_vote', {
-            p_group_id: group_id,
-            p_loan_id: updateCooperativeMemberApprovalsDto.loan_id,
-            p_member_id: memberId,
-          });
-
-          if (data.error) {
-            this.logger.error(
-              `Error adding opposing vote: ${data.error.message}`,
-            );
-            return new ErrorResponseDto(400, data.error.message);
-          }
-        }
-
-        // Update loan status
-        updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
-        updateLoanDto.has_received_vote = true;
-        console.log('updateLoanDto');
-        console.log(updateLoanDto);
-        await loanService.updateLoan(updateLoanDto.id!, updateLoanDto);
-        return data as UpdateCooperativeMemberApprovalsDto;
-      } catch (error) {
-        this.logger.error(
-          `Exception in updateCooperativeMemberApprovals for id ${group_id}`,
-          error,
-        );
-        return new ErrorResponseDto(500, error);
-      }
-    } else {
-      console.log('This user has voted before');
-      return { data: 'You have voted already' };
-    }
-  }
-  */
-
   async deleteCooperativeMemberApprovals(
     id: string,
   ): Promise<boolean | ErrorResponseDto> {
@@ -543,7 +616,7 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

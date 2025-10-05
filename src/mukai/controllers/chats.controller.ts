@@ -17,6 +17,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { ChatsService } from '../services/chats.service';
 import { CreateChatDto } from '../dto/create/create-chat.dto';
@@ -24,6 +25,7 @@ import { UpdateChatDto } from '../dto/update/update-chat.dto';
 import { Chat } from '../entities/chat.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
+@ApiExcludeController()
 @ApiTags('Chats')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()

@@ -5,25 +5,43 @@ import {
   SwaggerModule,
   DocumentBuilder,
   SwaggerDocumentOptions,
+  SwaggerCustomOptions,
 } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   const config = new DocumentBuilder()
-    .setTitle('Mukai API Docs')
+    .addBasicAuth()
+    .setTitle('MkandoWallet (SmileSACCO) API Docs')
     .setDescription(
-      'Mukai Savings and Credit Co-operatives Management API Documentation',
+      'MkandoWallet (SmileSACCO) Savings and Credit Cooperatives Management API Documentation',
     )
     .setVersion('1.0')
-    .addTag('Controllers REST API v2')
+
     .build();
 
   const options: SwaggerDocumentOptions = {
     operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
+    ignoreGlobalPrefix: false,
   };
-  const documentFactory = () =>
-    SwaggerModule.createDocument(app, config, options);
-  SwaggerModule.setup('docs/api', app, documentFactory);
+
+  const document = SwaggerModule.createDocument(app, config, options);
+
+  // Custom Swagger UI configuration for alphabetical sorting
+  const customOptions: SwaggerCustomOptions = {
+    swaggerOptions: {
+      docExpansion: 'none',
+      filter: true,
+      showRequestDuration: true,
+      operationsSorter: 'alpha', // Sort operations alphabetically
+      tagsSorter: 'alpha', // Sort tags alphabetically
+    },
+    customSiteTitle: 'Mukai API Documentation',
+  };
+
+  SwaggerModule.setup('docs/api', app, document, customOptions);
+
   // app.useGlobalPipes(
   //   new ValidationPipe({
   //     whitelist: true, // remove non-whitelisted properties

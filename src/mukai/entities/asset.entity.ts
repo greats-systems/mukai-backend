@@ -109,4 +109,10 @@ export class Asset {
     required: false,
   })
   has_received_vote?: boolean;
+
+  @ApiProperty({
+    example: 'individual',
+    description: 'Ownership type of the asset',
+  })
+  ownership_type: string;
 }

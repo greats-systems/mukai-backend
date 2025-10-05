@@ -7,72 +7,390 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { Transaction } from '../entities/transaction.entity';
-import { WalletsService } from './wallets.service';
+
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-// import { Wallet } from '../entities/wallet.entity';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import {
-  PaymentInitiateRequest,
-  PaymentMethod,
-  SmilePayGateway,
-} from 'src/common/zb_payment_gateway/payments';
-import { Profile } from 'src/user/entities/user.entity';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+  BalanceEnquiryRequest,
+  WalletToWalletTransferRequest,
+} from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { WalletsService } from './wallets.service';
+import { Int32 } from 'typeorm';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
-const paymentGateway = new SmilePayGateway(
-  process.env.SMILEPAY_BASE_URL ?? '',
-  process.env.SMILEPAY_API_KEY ?? '',
-);
+// const paymentGateway = new SmilePayGateway();
+// const smileCashWalletService = new SmileCashWalletService();
+// const smileCashWalletController = new SmileCashWalletController(
+//   smileCashWalletService,
+// );
+
 @Injectable()
 export class TransactionsService {
   private readonly logger = initLogger(TransactionsService);
 
   constructor(
     private readonly postgresrest: PostgresRest,
-    private readonly smileWalletService: SmileWalletService,
+    // private readonly smileWalletService: SmileWalletService,
   ) {}
+
+  async hasPaidSubscription(
+    sending_wallet_uuid: string,
+    check_year: Int32,
+    check_month: Int32,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'has_paid_subscription',
+        { check_month, check_year, sending_wallet_uuid },
+      );
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      this.logger.log(`hasPaidSubscription: ${data}`);
+      if (data) {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.log(error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
 
   async createTransaction(
     senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
        2. the initiator's wallet is debited
        3. the receiver's wallet is credited
        4 the receiver's credit is recorded in the transactions table
+
+       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
        */
       const walletsService = new WalletsService(
         this.postgresrest,
-        this.smileWalletService,
+        // this.smileWalletService,
       );
-      const receiverTransactionDto = new CreateTransactionDto();
-      const { data: sender, error: senderError } = await this.postgresrest
+      const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
         .select()
         .single();
-      if (senderError) {
-        console.log(senderError);
-        return new ErrorResponseDto(400, senderError.message);
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
-      console.log(sender);
-      console.log('Updating sender wallet');
 
+      this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
+      const scSenderParams = {
+        transactorMobile: senderTransactionDto.sending_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      // Update sender's SmileCash balance
+      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
+      this.logger.warn('Updating sender SmileCash balance');
+      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      if (scSenderResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
+        );
+        return scSenderResponse;
+      }
+      const senderResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.sending_wallet,
+        scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
+      );
+
+      // Update receiver's SmileCash balance
+      const scReceiverParams = {
+        transactorMobile: senderTransactionDto.receiving_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      this.logger.warn(`Updating receiver SmileCash balance`);
+      const scReceiverResponse =
+        await scwService.balanceEnquiry(scReceiverParams);
+      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
+        );
+        return scReceiverResponse;
+      }
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
+      );
+      return {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+        data: {
+          message: senderTransactionDto,
+          // transaction_id: data.id,
+          // date: data.created_date,
+          // new_balance: debitResponse['balance'] ?? 0.0,
+        },
+        // debitResponse,
+        // creditResponse
+      };
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async createP2PTransaction(
+    senderTransactionDto: CreateTransactionDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      /*When a transaction is initiated, 4 steps should take place:
+       1. the initiator's transaction is recorded in the transactions table
+       2. the initiator's wallet is debited
+       3. the receiver's wallet is credited
+       4 the receiver's credit is recorded in the transactions table
+
+       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
+       */
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
+
+      const request = {
+        receiverMobile: senderTransactionDto.receiving_phone,
+        senderPhone: senderTransactionDto.sending_phone,
+        amount: senderTransactionDto.amount,
+        currency: senderTransactionDto.currency,
+        channel: senderTransactionDto.transfer_mode,
+        narration: senderTransactionDto.transaction_type,
+      };
+      this.logger.warn('Initiating wallet to wallet transfer');
+      const w2wResponse = await scwService.walletToWallet(
+        request as WalletToWalletTransferRequest,
+      );
+      if (w2wResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
+        );
+        return w2wResponse;
+      }
+      this.logger.debug(
+        `Wallet to wallet transfer response: ${JSON.stringify(w2wResponse)}`,
+      );
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
+
+      /**
+       * "transactorMobile":"263777757603",
+    "currency":"USD", // ZWG | USD
+    "channel":"USSD", //USSD | APP | WEB
+    "transactionId":""
+       */
+
+      const scSenderParams = {
+        transactorMobile: senderTransactionDto.sending_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      // Update sender's SmileCash balance
+      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
+      this.logger.warn('Updating sender SmileCash balance');
+      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      if (scSenderResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
+        );
+        return scSenderResponse;
+      }
+      const senderResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.sending_wallet,
+        scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
+      );
+
+      // Update receiver's SmileCash balance
+      const scReceiverParams = {
+        transactorMobile: senderTransactionDto.receiving_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      this.logger.warn(`Updating receiver SmileCash balance`);
+      const scReceiverResponse =
+        await scwService.balanceEnquiry(scReceiverParams);
+      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
+        );
+        return scReceiverResponse;
+      }
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
+      );
+      return {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+        data: {
+          message: senderTransactionDto,
+          // transaction_id: data.id,
+          // date: data.created_date,
+          // new_balance: debitResponse['balance'] ?? 0.0,
+        },
+        // debitResponse,
+        // creditResponse
+      };
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async createSmilePayTransaction(
+    senderTransactionDto: CreateTransactionDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      /*When a transaction is initiated, 4 steps should take place:
+       1. the initiator's transaction is recorded in the transactions table
+       2. the initiator's wallet is debited
+       3. the receiver's wallet is credited
+       4 the receiver's credit is recorded in the transactions table
+
+       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
+       */
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
+
+      /**
+       * "transactorMobile":"263777757603",
+    "currency":"USD", // ZWG | USD
+    "channel":"USSD", //USSD | APP | WEB
+    "transactionId":""
+       */
+
+      const scSenderParams = {
+        transactorMobile: senderTransactionDto.sending_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      // Update sender's SmileCash balance
+      this.logger.warn('Updating sender SmileCash balance');
+      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      if (scSenderResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
+        );
+        return scSenderResponse;
+      }
+      const senderResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.sending_wallet,
+        scSenderResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
+      );
+
+      // Update receiver's SmileCash balance
+      const scReceiverParams = {
+        transactorMobile: senderTransactionDto.receiving_phone,
+        currency: senderTransactionDto.currency?.toUpperCase(),
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+      this.logger.warn(`Updating receiver SmileCash balance`);
+      const scReceiverResponse =
+        await scwService.balanceEnquiry(scReceiverParams);
+      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
+        this.logger.error(
+          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
+        );
+        return scReceiverResponse;
+      }
+      const receiverResponse = await walletsService.updateSmileCashBalance(
+        senderTransactionDto.receiving_wallet,
+        scReceiverResponse.data.data.billerResponse.balance,
+        senderTransactionDto.currency!.toUpperCase(),
+      );
+
+      this.logger.debug(
+        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
+      );
+
+      /*
+      this.logger.warn('Updating sender wallet');
+      
       const debitResponse = await walletsService.updateSenderBalance(
         senderTransactionDto.sending_wallet,
         senderTransactionDto.amount,
       );
-      console.log(debitResponse);
-      console.log('Updating receiver wallet');
+      this.logger.log(debitResponse);
+      this.logger.warn('Updating receiver wallet');
       const creditResponse = await walletsService.updateReceiverBalance(
         senderTransactionDto.receiving_wallet,
         senderTransactionDto.amount,
       );
-      console.log(creditResponse);
+      this.logger.log(creditResponse);
+
       receiverTransactionDto.sending_wallet =
         senderTransactionDto.sending_wallet;
       receiverTransactionDto.receiving_wallet =
@@ -91,10 +409,10 @@ export class TransactionsService {
         .select()
         .single();
       if (receiverError) {
-        console.log(receiverError);
+        this.logger.log(receiverError);
         return new ErrorResponseDto(400, receiverError.message);
       }
-      console.log(receiver);
+      this.logger.log(receiver);
 
       if (senderTransactionDto.receiving_phone) {
         // GET SENDING PROFILE
@@ -136,11 +454,11 @@ export class TransactionsService {
         // Initiate payment
         const paymentResponse =
           await paymentGateway.initiateExpressPayment(paymentRequest);
-        console.log(paymentResponse);
+        this.logger.log(paymentResponse);
       }
       /*
-      // console.log(debitResponse);
-      // console.log(creditResponse);
+      // this.logger.log(debitResponse);
+      // this.logger.log(creditResponse);
       // send notification to the user
       */ return {
         statusCode: 201,
@@ -159,6 +477,140 @@ export class TransactionsService {
     }
   }
 
+  async getCoopTotalContributions(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    const { data, error } = await this.postgresrest.rpc(
+      'get_total_contributions',
+      { wallet_id },
+    );
+    if (error) {
+      return new ErrorResponseDto(400, error.details);
+    }
+    if (!data) {
+      return 0;
+    }
+    return Number(data);
+  }
+
+  async getCoopTotalSubscriptions(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_subscriptions',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total subs paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getCoopTotalSubscriptionsZWG(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_subscriptions_zwg',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total zwg subs paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch zwg subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getCoopTotalContributionsZWG(
+    wallet_id: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_total_contributions_zwg',
+        { wallet_id },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total zwg contributions paid for ${wallet_id}`);
+      this.logger.debug(data);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch zwg contributions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getMemberTotalSubscriptions(
+    coop_wallet_id: string,
+    member_wallet_id: string,
+    currency: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'get_member_total_subscriptions',
+        {
+          p_coop_wallet_id: coop_wallet_id,
+          p_member_wallet_id: member_wallet_id,
+          p_currency: currency,
+        },
+      );
+      if (error) {
+        this.logger.debug(
+          `coop_wallet_id: ${coop_wallet_id}\nmember_wallet_id: ${member_wallet_id}`,
+        );
+        this.logger.error(`Failed to get total subs: ${JSON.stringify(error)}`);
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (!data) {
+        return 0;
+      }
+      this.logger.debug(`Total subs paid by ${member_wallet_id} ${data}`);
+      return Number(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch subscriptions: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async getCoopTotalsByCategory(
+    wallet_id: string,
+    category: string,
+  ): Promise<number | ErrorResponseDto> {
+    const { data, error } = await this.postgresrest.rpc(
+      'get_transactions_total_by_category',
+      { wallet_id: wallet_id, category: category },
+    );
+    if (error) {
+      return new ErrorResponseDto(400, error.details);
+    }
+    if (!data) {
+      return 0;
+    }
+    return data as number;
+  }
+
   async findAllTransactions(): Promise<Transaction[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
@@ -167,13 +619,117 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error('Error fetching Transactions', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Transaction[];
     } catch (error) {
       this.logger.error('Exception in findAllTransactions', error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async fetchMostRecentSenderTransaction(
+    sending_wallet: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select(
+          `*,
+          transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
+          transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
+        )
+        .eq('sending_wallet', sending_wallet)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async streamTransactions(
+    wallet_id: string,
+    transaction_type: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      this.logger.debug(
+        `Streaming ${transaction_type} tansactions for wallet id ${wallet_id}`,
+      );
+      let queryBuilder = this.postgresrest.from('transactions').select();
+      if (transaction_type != null) {
+        queryBuilder = queryBuilder
+          .eq('transaction_type', transaction_type)
+          .or(
+            `receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`,
+          );
+      } else {
+        queryBuilder = queryBuilder.or(
+          `receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`,
+        );
+      }
+      const query = queryBuilder
+        .select(
+          `
+        id, amount, currency, status, transaction_type, created_at, sending_wallet, receiving_wallet, member_id, 
+        transactions_member_id_fkey(id, first_name, last_name),
+        transactions_sending_wallet_fkey(
+        id, profile_id, is_group_wallet, phone, coop_phone, 
+        wallets_group_id_fkey(*), wallets_profile_id_fkey(*)),
+        transactions_receiving_wallet_fkey(
+        id, profile_id, is_group_wallet, phone, coop_phone, 
+        wallets_group_id_fkey(*), wallets_profile_id_fkey(*))
+        `,
+        )
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      return data;
+      /*
+      const {data, error} = await this.postgresrest
+      .from('transactions')
+      .select()
+      .eq('transaction_type', transaction_type)
+      .or(`receiving_wallet.eq.${wallet_id},sending_wallet.eq.${wallet_id}`);
+      */
+    } catch (e) {
+      this.logger.log(`streamTransactions error: ${e}`);
+      return new ErrorResponseDto(500, e);
+    }
+  }
+
+  async filterTransactions(
+    transaction_type: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select()
+        .eq('transaction_type', transaction_type);
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data as Transaction[],
+      );
+    } catch (e) {
+      this.logger.log(`filterTransactions error: ${e}`);
+      return new ErrorResponseDto(500, e);
     }
   }
 
@@ -187,7 +743,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching Transaction ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Transaction;
@@ -213,7 +769,7 @@ export class TransactionsService {
           `Error fetching contribution for ${wallet_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;
@@ -261,7 +817,7 @@ export class TransactionsService {
           `Error checking subscription payment for ${month}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return !!data; // Returns true if data exists, false otherwise
@@ -274,6 +830,25 @@ export class TransactionsService {
         500,
         error instanceof Error ? error.message : 'Unknown error',
       );
+    }
+  }
+
+  async getWithdrawalsAndPayments(
+    wallet_id: string,
+    currency: string,
+  ): Promise<number | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'calculate_withdrawals',
+        { p_wallet_id: wallet_id, p_currency: currency },
+      );
+      if (error) {
+        return new ErrorResponseDto(400, error.details);
+      }
+      this.logger.debug(`Withdrawals and payments: $${data} ${currency}`);
+      return Number(data);
+    } catch (error) {
+      return new ErrorResponseDto(500, error);
     }
   }
 
@@ -291,9 +866,9 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-      console.log(data.length);
+      this.logger.log(data.length);
       return data as object;
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id`, error);
@@ -306,7 +881,7 @@ export class TransactionsService {
   ): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest.rpc(
-        'get_comprehensive_individual_transaction_report',
+        'get_transaction_reports',
         {
           p_wallet_id: wallet_id,
           // p_period: 'January',
@@ -315,7 +890,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error fetching user financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;
@@ -339,7 +914,7 @@ export class TransactionsService {
 
       if (error) {
         this.logger.error(`Error creating coop financial report`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object;

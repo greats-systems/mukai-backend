@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "generate:postman": "ts-node src/generate-postman.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -37,15 +38,19 @@
     "@nestjs/websockets": "^11.1.1",
     "@supabase/postgrest-js": "^1.19.4",
     "@supabase/supabase-js": "^2.49.4",
+    "@types/crypto-js": "^4.2.2",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.1",
     "firebase-admin": "^13.4.0",
     "hyperledger": "^0.0.1",
     "nestjs-supabase-auth": "^1.0.9",
     "pg": "^8.16.0",
     "pnpm": "^10.12.3",
+    "postman-collection": "^5.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
@@ -68,6 +73,7 @@
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
+    "api-spec-converter": "^2.12.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -84,7 +90,8 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript-eslint": "^8.20.0",
+    "webpack-node-externals": "^3.0.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -103,5 +110,5 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
-  "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
+  "packageManager": "pnpm@10.15.1"
 }

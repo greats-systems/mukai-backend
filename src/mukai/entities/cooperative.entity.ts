@@ -14,6 +14,12 @@ export class Cooperative {
   admin_id: string;
 
   @ApiProperty({
+    example: 'Instance of Profile',
+    description: 'Admin details',
+  })
+  admin: object;
+
+  @ApiProperty({
     example: 'Green Farmers Collective',
     description: 'Name of the cooperative',
   })
@@ -86,4 +92,16 @@ export class Cooperative {
     description: 'Coop interest rate',
   })
   interest_rate: number;
+
+  @ApiProperty({
+    example: 20,
+    description: 'Number of members in the cooperative',
+  })
+  no_of_members: number;
+
+  @ApiProperty({
+    example: '263770123456',
+    description: 'Cooperative phone number (for SmileCash transactions)',
+  })
+  coop_phone: string;
 }

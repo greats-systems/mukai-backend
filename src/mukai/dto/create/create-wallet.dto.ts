@@ -5,6 +5,7 @@ import {
   IsUUID,
   IsBoolean,
   IsArray,
+  IsNumber,
 } from 'class-validator';
 import { UUID } from 'crypto';
 
@@ -78,9 +79,17 @@ export class CreateWalletDto {
     example: 1000,
     description: 'Wallet balance',
   })
-  @IsString()
+  @IsNumber()
   @IsOptional()
   balance?: number;
+
+  @ApiPropertyOptional({
+    example: 1000,
+    description: 'ZWG Wallet balance',
+  })
+  @IsNumber()
+  @IsOptional()
+  balance_zwg?: number;
 
   @ApiPropertyOptional({
     example: '2023-10-01T12:00:00Z',
@@ -105,6 +114,22 @@ export class CreateWalletDto {
   @IsString()
   @IsOptional()
   provider?: string;
+
+  @ApiPropertyOptional({
+    example: '263771234567',
+    description: 'Individual wallet phone number',
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({
+    example: '263712987654',
+    description: 'Cooperative wallet phone number',
+  })
+  @IsString()
+  @IsOptional()
+  coop_phone?: string;
 
   @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',

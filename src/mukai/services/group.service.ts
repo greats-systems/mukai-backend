@@ -27,7 +27,10 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class GroupService {
   private readonly logger = initLogger(GroupService);
-  constructor(private readonly postgresrest: PostgresRest, private readonly smileWalletService: SmileWalletService) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly smileWalletService: SmileWalletService,
+  ) {}
 
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -35,10 +38,16 @@ export class GroupService {
     try {
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const createGroupMemberDto = new CreateGroupMemberDto();
-      const walletsService = new WalletsService(this.postgresrest, this.smileWalletService);
+      const walletsService = new WalletsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
-      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       const cooperativeMemberRequestDto =
@@ -49,8 +58,8 @@ export class GroupService {
         .select()
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
 
       for (const member of createGroupDto.members) {
@@ -58,7 +67,7 @@ export class GroupService {
         createGroupMemberDto.member_id = member;
         const response =
           await groupMembersService.createGroupMember(createGroupMemberDto);
-        console.log(response);
+        this.logger.log(response);
       }
 
       const walletIDs: string[] = [];
@@ -85,7 +94,7 @@ export class GroupService {
       createTransactionDto.narrative = 'credit';
       const transactionResponse =
         await transactionsService.createTransaction(createTransactionDto);
-      console.log(transactionResponse);
+      this.logger.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
         cooperativeMemberRequestDto.status = 'in a group';
@@ -96,8 +105,8 @@ export class GroupService {
             member,
             cooperativeMemberRequestDto,
           );
-        console.log(updateMemberResponse);
-        console.log('\n');
+        this.logger.log(updateMemberResponse);
+        this.logger.log('\n');
         /*
         const updateMemberResponse = await this.postgresrest
           .from('cooperative_member_requests')
@@ -107,7 +116,7 @@ export class GroupService {
           .single();
           */
       }
-      console.log(walletResponse);
+      this.logger.log(walletResponse);
 
       return createGroupResponse as Group;
     } catch (error) {
@@ -124,7 +133,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Group[];
@@ -144,7 +153,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error('Error fetching group', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as object[];
@@ -164,7 +173,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error fetching group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Group[];
@@ -184,7 +193,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error fetching group wallet ${group_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Wallet;
@@ -201,8 +210,14 @@ export class GroupService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(this.postgresrest, this.smileWalletService);
-      const transactionsService = new TransactionsService(this.postgresrest, this.smileWalletService);
+      const walletService = new WalletsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
+      const transactionsService = new TransactionsService(
+        this.postgresrest,
+        // this.smileWalletService,
+      );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')
@@ -217,14 +232,14 @@ export class GroupService {
       const groupWalletJson =
         await walletService.viewCooperativeWallet(group_id);
       const receivingWallet = groupWalletJson['id'];
-      // console.log(receivingWallet);
+      // this.logger.log(receivingWallet);
 
       for (const member of membersJson['member_id'] || []) {
         const walletJson = await walletService.viewProfileWalletID(member);
-        // console.log(walletJson);
+        // this.logger.log(walletJson);
         walletDetails.push(walletJson['id']);
       }
-      // console.log(walletDetails);
+      // this.logger.log(walletDetails);
 
       for (const id of walletDetails) {
         const hasPaid = await transactionsService.checkIfSubsPaid(
@@ -235,7 +250,7 @@ export class GroupService {
         subsDict.push({ member_id: id, has_paid: hasPaid });
       }
 
-      // console.log(subsDict);
+      // this.logger.log(subsDict);
 
       return subsDict;
     } catch (error) {
@@ -257,7 +272,7 @@ export class GroupService {
         .single();
       if (error) {
         this.logger.error(`Error updating group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Group;
     } catch (error) {
@@ -276,7 +291,7 @@ export class GroupService {
 
       if (error) {
         this.logger.error(`Error deleting group ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

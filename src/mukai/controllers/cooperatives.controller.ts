@@ -10,6 +10,7 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
@@ -21,6 +22,8 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiHeader,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
@@ -29,6 +32,20 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 @ApiTags('Cooperatives')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiHeader({
+  name: 'apikey',
+  description: 'API key for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer token for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
 @Controller('cooperatives')
 export class CooperativesController {
   constructor(private readonly cooperativesService: CooperativesService) {}
@@ -93,6 +110,96 @@ export class CooperativesController {
     return response;
   }
 
+  @Get('initialize-data/:member_id')
+  @ApiOperation({ summary: 'Return coops to which a given member belongs' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Cooperative],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async initializeMembers(@Param('member_id') member_id: string) {
+    const response =
+      await this.cooperativesService.initializeMembers(member_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('members/available')
+  @ApiOperation({ summary: 'List all members that do not have a cooperative' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of profiles',
+    type: [Profile],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewAvailableMembers() {
+    const response = await this.cooperativesService.viewAvailableMembers();
+    // console.log(`viewAvailableMembers response: ${JSON.stringify(response)}`);
+    // if (response['statusCode'] === 400) {
+    //   throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    // }
+    // if (response['statusCode'] === 500) {
+    //   throw new HttpException(
+    //     response['message'],
+    //     HttpStatus.INTERNAL_SERVER_ERROR,
+    //   );
+    // }
+    return response;
+  }
+
+  @Get('admin/:admin_id')
+  @ApiOperation({ summary: 'List all cooperatives for a specific admin' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Cooperative],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewCooperativesForAdmin(@Param('admin_id') admin_id: string) {
+    const response =
+      await this.cooperativesService.viewCooperativesForAdmin(admin_id);
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
   @Get(':cooperative_id/members')
   @ApiOperation({ summary: 'Get members for a specific cooperative' })
   @ApiParam({
@@ -137,7 +244,43 @@ export class CooperativesController {
     return response;
   }
 
-  @Get(':member_id/cooperatives')
+  @Get('filter')
+  @ApiOperation({ summary: 'Check if user is admin for a given coop' })
+  @ApiResponse({
+    status: 200,
+    description: 'true',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async checkIfMemberIsCoopAdmin(
+    @Query('admin_id') admin_id: string,
+    @Query('coop_id') coop_id: string,
+  ) {
+    const response = await this.cooperativesService.checkIfMemberIsCoopAdmin(
+      admin_id,
+      coop_id,
+    );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'],
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @ApiExcludeEndpoint()
+  @Get(':member_id/active')
   @ApiOperation({ summary: 'Get cooperatives for a specific member' })
   @ApiParam({
     name: 'member_id',
@@ -179,6 +322,7 @@ export class CooperativesController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Get(':cooperative_id/subs')
   @ApiOperation({ summary: 'Check member subscriptions for a cooperative' })
   @ApiParam({

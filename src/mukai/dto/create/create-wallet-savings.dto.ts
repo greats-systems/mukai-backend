@@ -8,7 +8,6 @@ import {
   IsDateString,
 } from 'class-validator';
 
-
 export class CreateSavingsDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -25,6 +24,14 @@ export class CreateSavingsDto {
   })
   @IsString()
   purpose: string;
+
+  @ApiProperty({
+    example: 'USD',
+    description: 'Savings currency',
+    required: true,
+  })
+  @IsString()
+  currency: string;
 
   @ApiProperty({
     example: 1000.5,
@@ -78,10 +85,7 @@ export class CreateSavingsDto {
   @IsUUID('all', { each: true })
   @IsOptional()
   endoser_id?: string[];
-
-
 }
-
 
 export class SavingsPortfolioDto {
   @ApiProperty({

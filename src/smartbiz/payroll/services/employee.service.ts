@@ -50,8 +50,8 @@ export class EmployeesService {
         .select()
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Employee;
     } catch (error) {
@@ -67,7 +67,7 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error('Error fetching employees', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Employee[];
@@ -88,11 +88,11 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error(`Error fetching employee ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
-      console.log('viewEmployee');
-      console.log(data);
-      console.log(typeof (data as Employee));
+      this.logger.log('viewEmployee');
+      this.logger.log(data);
+      this.logger.log(typeof (data as Employee));
       const employee = new Employee();
       Object.assign(employee, data); // Copies properties from data to employee
       return employee;
@@ -115,7 +115,7 @@ export class EmployeesService {
         .single();
       if (error) {
         this.logger.error(`Error updating employees ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Employee;
     } catch (error) {
@@ -134,7 +134,7 @@ export class EmployeesService {
 
       if (error) {
         this.logger.error(`Error deleting employee ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

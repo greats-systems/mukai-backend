@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
-  IsInt,
   IsArray,
   IsAlphanumeric,
   IsBoolean,
@@ -44,14 +43,14 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsOptional()
   profile_id?: string;
 
-  @ApiProperty({
-    example: 150,
-    description: 'Optional total member count',
-    required: false,
-  })
-  @IsInt()
-  @IsOptional()
-  number_of_members?: number;
+  // @ApiProperty({
+  //   example: 150,
+  //   description: 'Optional total member count',
+  //   required: false,
+  // })
+  // @IsInt()
+  // @IsOptional()
+  // no_of_members?: number;
 
   @ApiProperty({
     example: [
@@ -97,6 +96,14 @@ export class CreateCooperativeMemberApprovalsDto {
 
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Profile ID of elected member',
+  })
+  @IsString()
+  @IsOptional()
+  elected_member_profile_id?: string;
+
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
     description:
       'Loan ID from loans table (useful when voting for loan application)',
   })
@@ -128,4 +135,12 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsAlphanumeric()
   @IsOptional()
   additional_info: any;
+
+  @ApiProperty({
+    example: 'USD',
+    description: 'Currency (useful when concluding a loan disbursement poll)',
+  })
+  @IsString()
+  @IsOptional()
+  currency: string;
 }

@@ -11,10 +11,10 @@ import { Asset } from '../entities/asset.entity';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
+// import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
 // import { CooperativesService } from './cooperatives.service';
-import { GroupMemberService } from './group-members.service';
+import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -29,7 +29,7 @@ export class AssetsService {
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      console.log(createAssetDto.group_id);
+      // this.logger.log(createAssetDto.group_id);
 
       // Create the asset
       const { data, error } = await this.postgresrest
@@ -38,8 +38,8 @@ export class AssetsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -55,13 +55,13 @@ export class AssetsService {
   async createAsset(
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    const createCoopMemberApproval = new CooperativeMemberApprovals();
-    const gmService = new GroupMemberService(this.postgresrest);
+    const createCoopMemberApproval = new CreateCooperativeMemberApprovalsDto();
+    // const gmService = new GroupMemberService(this.postgresrest);
     const coopMemberApprovalService = new CooperativeMemberApprovalsService(
       this.postgresrest,
     );
     try {
-      console.log(createAssetDto.group_id);
+      this.logger.log(createAssetDto.group_id);
 
       // Create the asset
       const { data, error } = await this.postgresrest
@@ -70,24 +70,24 @@ export class AssetsService {
         .select()
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
 
       // Fetch number of members in group
-      const gmResponse = await gmService.findMembersInGroup(
-        createAssetDto.group_id!,
-      );
-      if (gmResponse instanceof ErrorResponseDto) {
-        console.warn('Something happened');
-        console.warn(gmResponse);
-        return gmResponse;
-      }
-      const groupSize = gmResponse.length;
+      // const gmResponse = await gmService.findMembersInGroup(
+      //   createAssetDto.group_id!,
+      // );
+      // if (gmResponse instanceof ErrorResponseDto) {
+      //   console.warn('Something happened');
+      //   console.warn(gmResponse);
+      //   return gmResponse;
+      // }
+      // const groupSize = gmResponse.length;
       createCoopMemberApproval.group_id = createAssetDto.group_id!;
       createCoopMemberApproval.poll_description =
         createAssetDto.asset_description!;
-      createCoopMemberApproval.number_of_members = groupSize;
+      // createCoopMemberApproval.no_of_members = groupSize;
       createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll
@@ -98,8 +98,8 @@ export class AssetsService {
 
       console.info(pollResponse);
       if (pollResponse instanceof ErrorResponseDto) {
-        console.log('Poll response error');
-        console.log(pollResponse);
+        this.logger.log('Poll response error');
+        this.logger.log(pollResponse);
         return pollResponse;
       }
 
@@ -123,7 +123,7 @@ export class AssetsService {
         .eq('group_id', group_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -140,14 +140,16 @@ export class AssetsService {
     profile_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.debug(`Fetching assets for profile ${profile_id}`);
       const { data, error } = await this.postgresrest
         .from('assets')
         .select()
         .eq('profile_id', profile_id);
       if (error) {
         this.logger.error('Error fetching Group Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
+      this.logger.log(JSON.stringify(data));
       return {
         statusCode: 200,
         message: 'Group assets fetched successfully',
@@ -164,7 +166,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error('Error fetching Assets', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Asset[];
@@ -184,7 +186,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error(`Error fetching Asset ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Asset;
@@ -207,7 +209,7 @@ export class AssetsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Assets ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -232,7 +234,7 @@ export class AssetsService {
 
       if (error) {
         this.logger.error(`Error deleting Asset ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,

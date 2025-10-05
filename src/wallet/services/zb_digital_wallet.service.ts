@@ -44,16 +44,15 @@ export enum PaymentMethod {
   INNBUCKS = 'INNBUCKS',
   CARD = 'CARD',
   OMARI = 'OMARI',
-  ONEMONEY = 'ONEMONEY'
+  ONEMONEY = 'ONEMONEY',
 }
 
 export enum PaymentStatus {
   PENDING = 'pending',
   SUCCESS = 'success',
   FAILED = 'failed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
-
 
 // SET PASSWORD
 // Wallet To Bank Auth
@@ -92,20 +91,21 @@ export enum PaymentStatus {
 // "ProcessCashIn",
 //  "LinkCard"
 
-
 export class SmileWalletService {
   private readonly baseUrl: string;
   private readonly apiKey: string;
 
   constructor() {
-    this.baseUrl = process.env.SMILEWALLET_API_URL || 'https://zbnet.zb.co.zw/wallet_sandbox_api';
+    this.baseUrl =
+      process.env.SMILEWALLET_API_URL ||
+      'https://zbnet.zb.co.zw/wallet_sandbox_api';
     this.apiKey = process.env.SMILEWALLET_API_KEY || '';
   }
 
   private getHeaders() {
     return {
       'x-api-key': `${this.apiKey}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
   }
   // authenticate user
@@ -113,7 +113,7 @@ export class SmileWalletService {
     try {
       const data = {
         phone_number,
-        password
+        password,
       };
 
       const response = await axios.post(
@@ -121,8 +121,8 @@ export class SmileWalletService {
         data,
         {
           headers: { 'Content-Type': 'application/json' },
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -131,12 +131,16 @@ export class SmileWalletService {
     }
   }
   // set password
-  async setPassword(phone_number: string, password: string, otp: string): Promise<any> {
+  async setPassword(
+    phone_number: string,
+    password: string,
+    otp: string,
+  ): Promise<any> {
     try {
       const data = {
         phone_number,
         password,
-        otp
+        otp,
       };
 
       const response = await axios.post(
@@ -144,8 +148,8 @@ export class SmileWalletService {
         data,
         {
           headers: { 'Content-Type': 'application/json' },
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -154,7 +158,6 @@ export class SmileWalletService {
     }
   }
 
-
   // resend OTP
   async resendOtp(mobile: string): Promise<any> {
     try {
@@ -162,8 +165,8 @@ export class SmileWalletService {
         `${this.baseUrl}/authentication/api/v1/auth/otp/resend/${mobile}`,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -177,7 +180,11 @@ export class SmileWalletService {
     try {
       console.log('Creating subscriber in Smile Wallet', data);
 
-      const response = await axios.post(`${this.baseUrl}/accounts/api/v1/subscribers/create`, data, { headers: this.getHeaders() });
+      const response = await axios.post(
+        `${this.baseUrl}/accounts/api/v1/subscribers/create`,
+        data,
+        { headers: this.getHeaders() },
+      );
       if (response.statusText !== 'OK') {
         console.error('Error creating subscriber:', response.statusText);
         return null;
@@ -185,7 +192,6 @@ export class SmileWalletService {
         console.log('Subscriber created successfully:', response.data);
         return true;
       }
-
     } catch (error) {
       console.error('Error creating subscriber:', error);
       return null;
@@ -196,7 +202,7 @@ export class SmileWalletService {
     try {
       const response = await axios.get(
         `${this.baseUrl}/accounts/api/v1/accounts/logged-in-transactor`,
-        { headers: this.getHeaders() }
+        { headers: this.getHeaders() },
       );
       return response.data;
     } catch (error) {
@@ -211,7 +217,7 @@ export class SmileWalletService {
       const response = await axios.put(
         `${this.baseUrl}/accounts/api/v1/accounts/block-transactor/${transactorId}`,
         {},
-        { headers: this.getHeaders(), maxBodyLength: Infinity }
+        { headers: this.getHeaders(), maxBodyLength: Infinity },
       );
       return response.data;
     } catch (error) {
@@ -226,7 +232,7 @@ export class SmileWalletService {
       const response = await axios.put(
         `${this.baseUrl}/accounts/api/v1/accounts/unblock_transactor/${transactorId}`,
         {},
-        { headers: this.getHeaders(), maxBodyLength: Infinity }
+        { headers: this.getHeaders(), maxBodyLength: Infinity },
       );
       return response.data;
     } catch (error) {
@@ -241,14 +247,14 @@ export class SmileWalletService {
     currency: string,
     channel: string,
     transactionId: string,
-    requestType: string
+    requestType: string,
   ): Promise<any> {
     try {
       const data = {
         transactorMobile,
         currency,
         channel,
-        transactionId
+        transactionId,
       };
 
       const response = await axios.post(
@@ -256,8 +262,8 @@ export class SmileWalletService {
         data,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -274,7 +280,7 @@ export class SmileWalletService {
     channel: string,
     bankAccount: string,
     narration: string,
-    requestType: string
+    requestType: string,
   ): Promise<any> {
     try {
       const data = {
@@ -283,7 +289,7 @@ export class SmileWalletService {
         currency,
         channel,
         bankAccount,
-        narration
+        narration,
       };
 
       const response = await axios.post(
@@ -291,8 +297,8 @@ export class SmileWalletService {
         data,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -310,7 +316,7 @@ export class SmileWalletService {
     channel: string,
     narration: string,
     transactionId: string,
-    requestType: string
+    requestType: string,
   ): Promise<any> {
     try {
       const data = {
@@ -320,7 +326,7 @@ export class SmileWalletService {
         currency,
         channel,
         narration,
-        transactionId
+        transactionId,
       };
 
       const response = await axios.post(
@@ -328,8 +334,8 @@ export class SmileWalletService {
         data,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -339,11 +345,14 @@ export class SmileWalletService {
   }
 
   // link account to mobile
-  async linkAccountToMobile(accountNumber: string, mobile: string): Promise<any> {
+  async linkAccountToMobile(
+    accountNumber: string,
+    mobile: string,
+  ): Promise<any> {
     try {
       const data = {
         accountNumber,
-        mobile
+        mobile,
       };
 
       const response = await axios.post(
@@ -351,8 +360,8 @@ export class SmileWalletService {
         data,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {
@@ -368,8 +377,8 @@ export class SmileWalletService {
         `${this.baseUrl}/accounts/api/v1/bank-accounts/find-linked-accounts-by-mobile/${mobile}`,
         {
           headers: this.getHeaders(),
-          maxBodyLength: Infinity
-        }
+          maxBodyLength: Infinity,
+        },
       );
       return response.data;
     } catch (error) {

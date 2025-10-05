@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -8,7 +7,7 @@ import {
   Patch,
   Delete,
   HttpException,
-  HttpStatus,
+  // HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
@@ -20,12 +19,31 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiTags,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
+@ApiTags('Cooperative Member Approvals')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiHeader({
+  name: 'apikey',
+  description: 'API key for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer token for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
 @Controller('cooperative_member_approvals')
 export class CooperativeMemberApprovalsController {
   constructor(
@@ -43,10 +61,17 @@ export class CooperativeMemberApprovalsController {
   @ApiResponse({
     status: 400,
     description: 'Invalid input data',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - poll already exists',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async create(
     @Body()
@@ -56,14 +81,8 @@ export class CooperativeMemberApprovalsController {
       await this.cooperativeMemberApprovalsService.createCooperativeMemberApprovals(
         createCooperativeMemberApprovalsDto,
       );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
     return response;
   }
@@ -78,22 +97,58 @@ export class CooperativeMemberApprovalsController {
   @ApiResponse({
     status: 400,
     description: 'Invalid request parameters',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async findAll() {
     const response =
       await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals();
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
+    return response;
+  }
+
+  @Get('coop/:group_id')
+  @ApiOperation({ summary: 'Get specific poll details for a group' })
+  @ApiParam({
+    name: 'group_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Group ID to fetch polls for',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Poll details',
+    type: SuccessResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Poll not found',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async viewCooperativeMemberApprovalsByCoop(
+    @Param('group_id') group_id: string,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
+        group_id,
       );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
     return response;
   }
@@ -108,78 +163,30 @@ export class CooperativeMemberApprovalsController {
   @ApiResponse({
     status: 200,
     description: 'Poll details',
-    type: CooperativeMemberApprovals,
+    type: [CooperativeMemberApprovals],
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid ID format',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Poll not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async findOne(@Param('id') id: string) {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovals(
         id,
       );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
-  }
-
-  @Get('coop/:group_id')
-  @ApiOperation({ summary: 'Get specific poll details for a group' })
-  @ApiParam({
-    name: 'id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Group ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Poll details',
-    type: CooperativeMemberApprovals,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid ID format',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Poll not found',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  async viewCooperativeMemberApprovalsByCoop(
-    @Param('group_id') group_id: string,
-    @Body() userJson: object,
-  ) {
-    const response =
-      await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
-        group_id,
-        userJson,
-      );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
     return response;
   }
@@ -189,7 +196,7 @@ export class CooperativeMemberApprovalsController {
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Poll ID',
+    description: 'Poll ID to update',
   })
   @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
   @ApiResponse({
@@ -200,14 +207,17 @@ export class CooperativeMemberApprovalsController {
   @ApiResponse({
     status: 400,
     description: 'Invalid input data',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Poll not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async update(
     @Param('id') id: string,
@@ -219,42 +229,39 @@ export class CooperativeMemberApprovalsController {
         id,
         updateCooperativeMemberApprovalsDto,
       );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
     return response;
   }
 
-  @Patch('/coop/:coop_id')
-  @ApiOperation({ summary: 'Update a poll by coop_id' })
+  @Patch('coop/:coop_id')
+  @ApiOperation({ summary: 'Update a poll by cooperative ID' })
   @ApiParam({
-    name: 'id',
+    name: 'coop_id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative ID',
+    description: 'Cooperative ID to update polls for',
   })
   @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
   @ApiResponse({
     status: 200,
     description: 'Updated poll details',
-    type: CooperativeMemberApprovals,
+    type: Object,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid input data',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Cooperative not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async updateByCoopID(
     @Param('coop_id') coop_id: string,
@@ -266,108 +273,49 @@ export class CooperativeMemberApprovalsController {
         coop_id,
         updateCooperativeMemberApprovalsDto,
       );
-    if (response) {
-      if (response['statusCode'] === 400) {
-        throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-      }
-      if (response['statusCode'] === 500) {
-        throw new HttpException(
-          response['message'],
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-      return response;
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
+    return response;
   }
-
-  /*
-  @Patch('/coop/:coop_id/loans')
-  @ApiOperation({ summary: 'Update a loan poll by coop_id' })
-  @ApiParam({
-    name: 'id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative ID',
-  })
-  @ApiBody({ type: UpdateCooperativeMemberApprovalsDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Updated poll details',
-    type: CooperativeMemberApprovals,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input data',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Cooperative not found',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  async updateLoanByCoopID(
-    @Param('coop_id') coop_id: string,
-    @Body()
-    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-  ) {
-    const response =
-      await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovalsLoanByCoopID(
-        coop_id,
-        updateCooperativeMemberApprovalsDto,
-      );
-    if (response) {
-      if (response['statusCode'] === 400) {
-        throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-      }
-      if (response['statusCode'] === 500) {
-        throw new HttpException(
-          response['message'],
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-      return response;
-    }
-  }
-  */
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a poll' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Poll ID',
+    description: 'Poll ID to delete',
   })
   @ApiResponse({
     status: 200,
     description: 'Confirmation of deletion',
+    schema: {
+      example: { success: true, message: 'Poll deleted successfully' },
+    },
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid ID format',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 404,
     description: 'Poll not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async delete(@Param('id') id: string) {
     const response =
       await this.cooperativeMemberApprovalsService.deleteCooperativeMemberApprovals(
         id,
       );
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
+    return { success: true, message: 'Poll deleted successfully' };
   }
 }

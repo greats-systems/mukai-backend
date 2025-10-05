@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -29,62 +30,25 @@ export class SavingsService {
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from("wallets")
-        .upsert(createSavingsDto, {
-          onConflict: "wallet_id,is_group_wallet,default_currency",
-          ignoreDuplicates: true,
-        })
+        .from('savings_portfolios')
+        .insert(createSavingsDto)
         .select()
         .single();
       if (error) {
-        console.log(error);
+        this.logger.log(error);
         if (error.details == "The result contains 0 rows") {
           return {
             data:
               `User ${createSavingsDto.wallet_id} cannot create a wallet of the same type`,
           };
         }
-        return new ErrorResponseDto(400, error.message);
-      }
-      // get wallet profile
-
-      // Create profile in public.profiles
-      const { error: profileError, data: profileData } = await this.postgresrest
-        .from('profiles')
-        .select('*').eq('id', createSavingsDto.wallet_id).single();
-      if (profileError) {
-        this.logger.error(`Error fetching profile ${createSavingsDto.wallet_id}`, profileError);
-      }
-      this.logger.log(`Profile creation profileData: ${JSON.stringify(profileData)}`);
-      // Call SmileWalletService to create a wallet in the digital wallet system
-      const smileWalletResponse = await this.smileWalletService.createSubscriber({
-        firstName: profileData.first_name,
-        lastName: profileData.last_name,
-        mobile: profileData.phone,
-        dateOfBirth: profileData.date_of_birth,
-        idNumber: profileData.national_id_number,
-        gender: profileData.gender.toUpperCase() ?? 'MALE',
-        source: 'MkandoWallet',
-      });
-
-      if (smileWalletResponse != null) {
-        this.logger.log(`Native Wallet data: ${JSON.stringify(data)}`);
-        await this.postgresrest
-          .from("wallets")
-          .update({
-            is_smile_cash_activated: true,
-          })
-          .eq("id", data.id);
-        this.logger.log('Smile Wallet Activated');
-
-      } else {
-        this.logger.error('Smile Wallet Not Activated');
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
         statusCode: 201,
-        message: "Wallet created successfully",
-        data: data as Wallet,
+        message: "Portfolio created successfully",
+        data: data as SavingsPortfolioDto,
       };
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -97,7 +61,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -120,10 +84,10 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: "Wallet fetched successfully",
         data: data as Wallet[],
@@ -155,10 +119,10 @@ export class SavingsService {
         if (error.details == "The result contains 0 rows") {
           return { data: "No wallet found" };
         }
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: "Wallet fetched successfully",
         data: data as Wallet,
@@ -182,17 +146,18 @@ export class SavingsService {
       const { data, error } = await this.postgresrest
         .from("savings_portfolios")
         .select()
-        .eq("profile_id", profile_id);
+        .eq("profile_id", profile_id)
+        .order("created_at", { ascending: false });
 
       if (error) {
         this.logger.error(
           `Error fetching profile savings portfolios ${profile_id}`,
           error,
         );
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
-      console.log({
+      this.logger.log({
         statusCode: 200,
         message: "Portfolio fetched successfully",
         data: data as SavingsPortfolioDto[],
@@ -224,7 +189,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {
@@ -276,7 +241,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error fetching Wallet ${wallet_id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       // get profile
       const { data: profileData, error: profileError } = await this.postgresrest
@@ -288,7 +253,7 @@ export class SavingsService {
       if (error) {
         throw new Error(`Failed to fetch profiles: ${profileError?.message}`);
       }
-      console.log("profileData", profileData);
+      this.logger.log("profileData", profileData);
       return {
         statusCode: 200,
         message: "Wallet Profile fetched successfully",
@@ -313,7 +278,7 @@ export class SavingsService {
         .single();
       if (error) {
         this.logger.error(`Error updating Wallets ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return {
         statusCode: 200,
@@ -381,13 +346,13 @@ export class SavingsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      console.log("Updating sender balance");
+      this.logger.log("Updating sender balance");
       const { data: balanceData, error: balanceError } = await this.postgresrest
         .from("wallets")
         .select("balance")
         .eq("id", sending_wallet_id)
         .single();
-      console.log(balanceData);
+      this.logger.log(balanceData);
       if (balanceError) {
         this.logger.error(
           `Error fetching balance ${sending_wallet_id}`,
@@ -411,8 +376,8 @@ export class SavingsService {
         );
         return new ErrorResponseDto(400, updateError.message);
       }
-      console.log("New wallet:");
-      console.log(updateData);
+      this.logger.log("New wallet:");
+      this.logger.log(updateData);
 
       return {
         statusCode: 200,
@@ -440,7 +405,7 @@ export class SavingsService {
 
       if (error) {
         this.logger.error(`Error deleting Wallet ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return {

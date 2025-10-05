@@ -26,8 +26,8 @@ export class AgreementsService {
         .insert(createAgreementDto)
         .single();
       if (error) {
-        console.log(error);
-        return new ErrorResponseDto(400, error.message);
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Agreement;
     } catch (error) {
@@ -43,7 +43,7 @@ export class AgreementsService {
 
       if (error) {
         this.logger.error('Error fetching agreements', error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Agreement[];
@@ -63,7 +63,7 @@ export class AgreementsService {
 
       if (error) {
         this.logger.error(`Error fetching agreement ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return data as Agreement[];
@@ -86,7 +86,7 @@ export class AgreementsService {
         .single();
       if (error) {
         this.logger.error(`Error updating agreements ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
       return data as Agreement;
     } catch (error) {
@@ -105,7 +105,7 @@ export class AgreementsService {
 
       if (error) {
         this.logger.error(`Error deleting agreement ${id}`, error);
-        return new ErrorResponseDto(400, error.message);
+        return new ErrorResponseDto(400, error.details);
       }
 
       return true;

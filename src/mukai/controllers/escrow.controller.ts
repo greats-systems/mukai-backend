@@ -21,6 +21,7 @@ import {
   ApiBody,
   ApiParam,
   ApiBearerAuth,
+  ApiExcludeController,
 } from '@nestjs/swagger';
 import { Escrow } from '../entities/escrow.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
@@ -28,6 +29,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 @ApiTags('Escrows')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@ApiExcludeController()
 @Controller('escrows')
 export class EscrowController {
   constructor(private readonly escrowService: EscrowService) {}

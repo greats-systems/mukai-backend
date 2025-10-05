@@ -32,6 +32,12 @@ export class Wallet {
   })
   balance: number;
 
+  @ApiProperty({
+    example: 1000,
+    description: 'Current balance (ZWG)',
+  })
+  balance_zwg: number;
+
   @ApiPropertyOptional({
     example: '2023-10-01T12:00:00Z',
     description: 'Timestamp of last transaction',
@@ -110,4 +116,10 @@ export class Wallet {
     description: 'Group ID to which the wallet is linked',
   })
   group_id?: string;
+
+  @ApiPropertyOptional({
+    example: '{first_name: Allan, last_name: Davies, role: admin, ...}',
+    description: 'Associated profile details',
+  })
+  profile?: object;
 }

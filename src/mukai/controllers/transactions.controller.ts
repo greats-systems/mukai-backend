@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 // import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
 
 // @UseGuards(JwtAuthGuard)
 // @ApiBearerAuth()
@@ -144,6 +145,25 @@ export class TransactionsController {
   ) {
     const response =
       await this.transactionsService.createP2PTransaction(createTransactionDto);
+
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'Bad request',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Post('bill-payment')
+  async payMunicipalityBill(@Body() mbDto: MunicipalityBillRequest) {
+    const response = await this.transactionsService.payMunicipalityBill(mbDto);
 
     if (response['statusCode'] === 400) {
       throw new HttpException(
@@ -341,6 +361,20 @@ export class TransactionsController {
     }
     return response;
   }
+
+  // @Get('bill-payment/:phone')
+  // async fetchMostRecentBillPayment(
+  //   @Param('phone') phone: string,
+  // ) {
+  //   const response =
+  //     await this.transactionsService.fetchMostRecentSenderTransaction(
+  //       phone,
+  //     );
+  //   if (response instanceof ErrorResponseDto) {
+  //     return new HttpException(response, response.statusCode);
+  //   }
+  //   return response;
+  // }
 
   @ApiOperation({
     summary: 'Get contributions for a wallet',

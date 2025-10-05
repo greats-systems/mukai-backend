@@ -17,6 +17,7 @@ import {
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { WalletsService } from './wallets.service';
 import { Int32 } from 'typeorm';
+import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
@@ -156,6 +157,50 @@ export class TransactionsService {
       };
     } catch (error) {
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async payMunicipalityBill(
+    mbRequest: MunicipalityBillRequest,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      // 1. Transfer customer's US$ funds to agent account (wallet-to-wallet)
+      const pmbResponse = await scwService.payMunicipalityBill(mbRequest);
+      if (pmbResponse instanceof GeneralErrorResponseDto) {
+        return pmbResponse;
+      }
+
+      // 3. Return a success message
+      this.logger.log('Payment successful!');
+
+      const senderTransactionDto = new CreateTransactionDto();
+      senderTransactionDto.narrative = 'bill payment';
+      senderTransactionDto.amount = mbRequest.w2obTransferRequest.amount;
+      senderTransactionDto.currency = 'ZWG';
+      senderTransactionDto.sending_phone = '263780032799';
+      senderTransactionDto.receiving_phone =
+        mbRequest.w2obTransferRequest.bankAccount;
+      senderTransactionDto.transfer_mode = 'WALLETPLUS';
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+
+      if (error) {
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to record transaction',
+          error,
+        );
+      }
+
+      return new SuccessResponseDto(201, 'Payment successful!', data);
+    } catch (e) {
+      this.logger.error(`payMunicipalityBill error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'payMunicipalityBill error', e);
     }
   }
 
@@ -656,6 +701,35 @@ export class TransactionsService {
       return new ErrorResponseDto(500, error);
     }
   }
+  /*
+  async fetchMostRecentBillPayment(
+    phone: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select(
+          `*,
+          transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
+          transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
+        )
+        .eq('sending_wallet', sending_wallet)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+  */
 
   async streamTransactions(
     wallet_id: string,

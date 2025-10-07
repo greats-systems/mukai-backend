@@ -338,7 +338,7 @@ export class SmileCashWalletService {
         TransactionResponsePayment,
         payResponse.data,
       );
-      console.debug(`Balance enquiry successful:`, paymentData);
+      // console.debug(`Balance enquiry successful:`, paymentData);
       if (!paymentData?.data) {
         return new GeneralErrorResponseDto(
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -347,7 +347,7 @@ export class SmileCashWalletService {
         );
       }
       const formattedResponse = this.parseTransactionDescription(paymentData);
-      console.debug(`Formatted response:`, formattedResponse);
+      // console.debug(`Formatted response:`, formattedResponse);
       return new SuccessResponseDto(
         HttpStatus.OK,
         'Balance enquiry successful',

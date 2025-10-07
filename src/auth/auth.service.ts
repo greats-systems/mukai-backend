@@ -648,7 +648,29 @@ export class AuthService {
       this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
       return new ErrorResponseDto(400, error.details);
     }
-    this.logger.log(`Password reset response: ${JSON.stringify(data)}`);
+
+    // Update profile
+    const plainText = resetPasswordDto.password;
+    const secretKey = process.env.SECRET_KEY || 'No secret key';
+    const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+    const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+    const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+    this.logger.debug(
+      `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+    );
+    const { data: update, error: updateError } = await this.postgresRest
+    .from('profiles')
+    .update({ 'password': cipherText })
+    .eq('id', userData.id)
+    .select()
+    .single();
+
+    if (updateError) {
+      this.logger.error(`Error updating profile, ${JSON.stringify(updateError)}`);
+      return new ErrorResponseDto(400, updateError.details);
+    }
+
+    this.logger.log(`Password reset response: ${JSON.stringify(update)}`);
     return data as object;
   }
 
@@ -682,8 +704,7 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-
-
+      
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,

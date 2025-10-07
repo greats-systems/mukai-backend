@@ -287,7 +287,7 @@ export class CooperativesService {
     }
   }
 
-  async findAllCooperatives(): Promise<Cooperative[] | ErrorResponseDto> {
+  async findAllCooperatives(): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -298,7 +298,7 @@ export class CooperativesService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      return data as Cooperative[];
+      return data;
     } catch (error) {
       this.logger.error('Exception in findAllCooperatives', error);
       return new ErrorResponseDto(500, error);

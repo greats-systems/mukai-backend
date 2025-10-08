@@ -14,6 +14,7 @@ import {
   AccessAccountDto,
   LoginDto,
   OtpDto,
+  ProfilesLikeDto,
   SecurityQuestionsDto,
 } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -54,6 +55,12 @@ export class AuthController {
   @Get('profiles/except/:id')
   async getProfilesExcept(@Param('id') id: string) {
     return this.authService.getProfilesExcept(id);
+  }
+
+  @ApiExcludeEndpoint()
+  @Post('profiles/like/except')
+  async getProfilesLikeExcept(@Body() plDto: ProfilesLikeDto) {
+    return this.authService.getProfilesLikeExcept(plDto);
   }
 
   @Post('verify-otp')

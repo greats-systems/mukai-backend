@@ -131,12 +131,13 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error creating cooperative member request', error);
         return new ErrorResponseDto(400, error.details);
       }
+      const profileService = new UserService(this.postgresrest);
+      const updateDto = new SignupDto();
       if (createCooperativeMemberRequestDto.is_invited) {
         this.logger.debug(
           `Updating is_invited for user ${createCooperativeMemberRequestDto.member_id}`,
         );
-        const profileService = new UserService(this.postgresrest);
-        const updateDto = new SignupDto();
+
         updateDto.is_invited = createCooperativeMemberRequestDto.is_invited;
         this.logger.log(
           `Updating invitation status for ${createCooperativeMemberRequestDto.member_id!}`,
@@ -149,6 +150,27 @@ export class CooperativeMemberRequestsService {
           return new ErrorResponseDto(
             400,
             'Failed to update user invitation status',
+            updateResponse.errorObject,
+          );
+        }
+      } else {
+        this.logger.debug(
+          `Updating has_requested for user ${createCooperativeMemberRequestDto.member_id}`,
+        );
+
+        updateDto.has_requested =
+          createCooperativeMemberRequestDto.has_requested ?? false;
+        this.logger.log(
+          `Updating request status for ${createCooperativeMemberRequestDto.member_id!}`,
+        );
+        const updateResponse = await profileService.updateUser(
+          createCooperativeMemberRequestDto.member_id!,
+          updateDto,
+        );
+        if (updateResponse instanceof ErrorResponseDto) {
+          return new ErrorResponseDto(
+            400,
+            'Failed to update user request status',
             updateResponse.errorObject,
           );
         }

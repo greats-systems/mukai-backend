@@ -262,6 +262,8 @@ export class CooperativesService {
         return new ErrorResponseDto(400, JSON.stringify(updateError));
       }
 
+      this.logger.debug(`Update response: ${JSON.stringify(updateResponse)}`);
+
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -481,6 +483,7 @@ export class CooperativesService {
         .select()
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
         .is('cooperative_id', null)
         .order('created_at', { ascending: false })
         .order('first_name', { ascending: true });

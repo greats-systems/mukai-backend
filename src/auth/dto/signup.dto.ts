@@ -215,4 +215,11 @@ export class SignupDto {
   })
   @IsString()
   is_invited: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Indicates if the user has requested to join a coop',
+  })
+  @IsString()
+  has_requested: boolean;
 }

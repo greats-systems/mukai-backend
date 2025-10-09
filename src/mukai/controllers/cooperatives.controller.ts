@@ -170,6 +170,42 @@ export class CooperativesController {
     return response;
   }
 
+  @Get('members/available/like/:searchTerm')
+  @ApiParam({
+    name: 'searchTerm',
+    example: 'john',
+    description: 'Search term to filter members by name, email, or phone',
+  })
+  @ApiOperation({ summary: 'List all members that do not have a cooperative' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of profiles',
+    type: [Profile],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewAvailableMembersLike(@Param('searchTerm') searchTerm: string) {
+    const response =
+      await this.cooperativesService.viewAvailableMembersLike(searchTerm);
+    // console.log(`viewAvailableMembers response: ${JSON.stringify(response)}`);
+    // if (response['statusCode'] === 400) {
+    //   throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    // }
+    // if (response['statusCode'] === 500) {
+    //   throw new HttpException(
+    //     response['message'],
+    //     HttpStatus.INTERNAL_SERVER_ERROR,
+    //   );
+    // }
+    return response;
+  }
+
   @Get('admin/:admin_id')
   @ApiOperation({ summary: 'List all cooperatives for a specific admin' })
   @ApiResponse({

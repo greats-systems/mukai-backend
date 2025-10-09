@@ -69,8 +69,9 @@ export class NotifyTextService {
       headers: this.getHeaders(),
       data,
     };
-
+    // console.debug(`Sending SMS with data: ${JSON.stringify(data)}`);
     const response = await axios.request(config);
+    // console.debug(`SMS response: ${response.data}`);
     return response.data;
   }
 

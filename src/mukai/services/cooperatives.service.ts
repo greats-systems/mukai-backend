@@ -516,6 +516,51 @@ export class CooperativesService {
     }
   }
 
+  async viewAvailableMembersLike(
+    searchTerm: string,
+  ): Promise<Profile[] | Profile | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('profiles')
+        .select()
+        .ilike('account_type', '%member%')
+        .or(
+          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
+        )
+        .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
+        .is('cooperative_id', null)
+        .order('created_at', { ascending: false })
+        .order('first_name', { ascending: true });
+
+      if (error) {
+        this.logger.error(`Error fetching available members`, error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
+
+      if (!data || data.length === 0) {
+        return new ErrorResponseDto(404, `Members not found`);
+      }
+
+      // Extract profiles from the data
+      const profiles = data.flatMap((item) => item.profiles);
+
+      if (profiles.length === 0) {
+        return new ErrorResponseDto(404, `No member profiles found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error(`Exception in viewAvailableMembers`, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
   async viewCooperativesForMember(
     member_id: string,
   ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {

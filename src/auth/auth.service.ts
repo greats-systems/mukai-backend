@@ -704,14 +704,14 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-      /*
+      
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
-      */
+      
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,

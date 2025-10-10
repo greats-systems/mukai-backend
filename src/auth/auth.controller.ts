@@ -70,6 +70,44 @@ export class AuthController {
     return this.authService.getProfilesLikeExcept(plDto);
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({ summary: 'User login with phone number' })
+  @ApiParam({
+    name: 'phone',
+    description: 'Phone number for login',
+    example: '+1234567890',
+  })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 400, description: 'Invalid phone number' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @Post('login/phone')
+  async loginWithPhone2(@Body() loginDto: LoginDto) {
+    const response = await this.authService.loginWithPhone2(loginDto);
+    if (response != null && response['error'] !== null) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Bad request',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    if (response != null && response['statusCode'] === 500) {
+      throw new HttpException(
+        response['message'] ?? 'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    if (response != null && response['statusCode'] === 401) {
+      if (response instanceof AuthErrorResponse) {
+        throw new HttpException(
+          response ?? 'Invalid credentials',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    }
+    return response;
+  }
+
   @ApiTags('OTP')
   @ApiOperation({ summary: 'Verify OTP' })
   @ApiBody({ type: OtpDto, description: 'OTP verification data' })

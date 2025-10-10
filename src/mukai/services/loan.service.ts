@@ -188,9 +188,9 @@ export class LoanService {
 
   async viewCoopLoans(
     cooperative_id: string,
-    profile_id: string,
+    // profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {
-    this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
+    // this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
     try {
       const { data, error } = await this.postgresrest
         .from('loans')

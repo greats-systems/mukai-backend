@@ -1,3 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiExcludeEndpoint,
+} from '@nestjs/swagger';
 import {
   Controller,
   Post,
@@ -20,32 +29,30 @@ import {
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
-import {
-  ApiBody,
-  ApiExcludeEndpoint,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
 import { AuthErrorResponse } from 'src/common/dto/auth-responses.dto';
 
-/**
- * Controller for handling authentication-related operations.
- * Provides endpoints for user signup, login, logout, and profile management.
- */
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /**
-   * Retrieves all user profiles.
-   * @returns Promise<Profile[]> - Array of user profiles
-   */
-  // @ApiExcludeEndpoint()
+  @ApiTags('Profiles')
+  @ApiOperation({ summary: 'Get all user profiles' })
+  @ApiResponse({ status: 200, description: 'Returns all user profiles' })
   @Get('profiles')
   async getProfiles() {
     return this.authService.getProfiles();
   }
 
+  @ApiTags('OTP')
+  @ApiOperation({ summary: 'Send OTP to phone number' })
+  @ApiParam({
+    name: 'phone',
+    description: 'Phone number to send OTP to',
+    example: '+1234567890',
+  })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid phone number' })
   @Post('send-otp/:phone')
   async sendOtp(@Param('phone') phone: string) {
     return await this.authService.sendOtp(phone);
@@ -63,26 +70,22 @@ export class AuthController {
     return this.authService.getProfilesLikeExcept(plDto);
   }
 
+  @ApiTags('OTP')
+  @ApiOperation({ summary: 'Verify OTP' })
+  @ApiBody({ type: OtpDto, description: 'OTP verification data' })
+  @ApiResponse({ status: 200, description: 'OTP verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid OTP' })
   @Post('verify-otp')
   async verifyOtp(@Body() otpDto: OtpDto) {
     return await this.authService.verifyOtp(otpDto);
   }
-  /**
-   * Retrieves user profiles similar to the given ID.
-   * @param id - The ID to search similar profiles for
-   * @returns Promise<Profile[]> - Array of matching user profiles
-   */
+
   @ApiExcludeEndpoint()
   @Get('profiles/like_wallet_id/:id')
   async getProfilesLikeWalletID(@Param('id') id: string) {
     return this.authService.getProfilesLikeWalletID(id);
   }
 
-  /**
-   * Retrieves user profiles similar to the given ID.
-   * @param id - The ID to search similar profiles for
-   * @returns Promise<Profile[]> - Array of matching user profiles
-   */
   @ApiExcludeEndpoint()
   @Get('profiles/like/:id')
   async getProfilesLike(@Param('id') id: string) {
@@ -96,24 +99,17 @@ export class AuthController {
     return this.authService.getProfile(id);
   }
 
-  /**
-   * Creates a new user account.
-   * @param signupDto - User signup data
-   * @returns Promise<any> - Result of the signup operation
-   */
-
-  @ApiOperation({ summary: 'Create a new user' })
+  @ApiTags('User Registration')
+  @ApiOperation({ summary: 'Create a new user account' })
   @ApiBody({ type: SignupDto })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User created successfully',
-    // type: AuthSuccessResponse,
     example: {
       status: 'account created',
       statusCode: 201,
       message: 'account created successfully',
-      access_token:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZTguY29tIiwic3ViIjoiOTYwODA1OGQtMTA2ZS00NzZkLTllYWQtNGIyNmExODQwNjkwIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJpYXQiOjE3NTc5MzM1NjAsImV4cCI6MTc1Nzk3MzU2MH0.XVH-7Bn630Tkm8AsKIZZhe3DgE-jk4EQ8MXFt7ebGjE',
+      access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
       user: {
         id: '9608058d-106e-476d-9ead-4b26a1840690',
         email: 'user@example8.com',
@@ -128,7 +124,7 @@ export class AuthController {
         passport_url: 'https://example.com/passport.jpg',
         role: 'authenticated',
       },
-      data: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZTguY29tIiwic3ViIjoiOTYwODA1OGQtMTA2ZS00NzZkLTllYWQtNGIyNmExODQwNjkwIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJpYXQiOjE3NTc5MzM1NjAsImV4cCI6MTc1Nzk3MzU2MH0.XVH-7Bn630Tkm8AsKIZZhe3DgE-jk4EQ8MXFt7ebGjE',
+      data: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
       error: null,
     },
   })
@@ -140,10 +136,7 @@ export class AuthController {
     status: 422,
     description: 'Phone/Email number already exists',
   })
-  @ApiResponse({
-    status: 422,
-    description: 'Email already exists',
-  })
+  @ApiResponse({ status: 422, description: 'Email already exists' })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Server error',
@@ -153,40 +146,29 @@ export class AuthController {
     return this.authService.signup(signupDto);
   }
 
-  /**
-   * Updates an existing user account.
-   * @param profile - Updated user profile data
-   * @returns Promise<any> - Result of the update operation
-   */
   @ApiExcludeEndpoint()
   @Patch('update-account/:id')
   async update(@Body() profile: MukaiProfile) {
     return this.authService.update(profile);
   }
 
-  /**
-   * Updates the FCM (Firebase Cloud Messaging) token for a user.
-   * @param profile - User profile with updated FCM token
-   * @returns Promise<any> - Result of the FCM update operation
-   */
   @ApiExcludeEndpoint()
   @Put('update-fcm/:id')
   async updateFCM(@Body() profile: Profile) {
     return this.authService.updateFCM(profile);
   }
 
-  @ApiOperation({ summary: 'Login' })
+  @ApiTags('Authentication')
+  @ApiOperation({ summary: 'User login with email and password' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Login successful',
-    // type: AuthLoginSuccessResponse,
     example: {
       status: 'account authenticated',
       statusCode: 200,
       message: 'account authenticated successfully',
-      access_token:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1veW9uZ3FhYUBnbWFpbC5jb20iLCJzdWIiOiIzY2M0MTAxZC03MTIwLTQ3NjUtODE2MS1mYTQ1N2QyMTFjOTciLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImlhdCI6MTc1NzkzMzc0NywiZXhwIjoxNzU3OTczNzQ3fQ.RrvXQBnl1gm_8oSAk2ZvzL8u4yW2XxR1z6FPWY_a15I',
+      access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
       refresh_token: 'pz4n6kxax4fn',
       token_type: 'bearer',
       user: {
@@ -240,6 +222,16 @@ export class AuthController {
     return response;
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({ summary: 'User login with phone number' })
+  @ApiParam({
+    name: 'phone',
+    description: 'Phone number for login',
+    example: '+1234567890',
+  })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 400, description: 'Invalid phone number' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login/:phone')
   async loginWithPhone(@Param('phone') phone: string) {
     const response = await this.authService.loginWithPhone(phone);
@@ -268,6 +260,12 @@ export class AuthController {
     return response;
   }
 
+  @ApiTags('Password Management')
+  @ApiOperation({ summary: 'Reset user password' })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('reset-password')
   async resetPassword(@Body() loginDto: LoginDto) {
     const response = await this.authService.resetPassword(loginDto);
@@ -301,35 +299,58 @@ export class AuthController {
   async refreshToken(@Body() body: { refreshToken: string }) {
     const response = await this.authService.refreshToken(body);
     return response;
-    // this.logger.log(response);
   }
 
-  @ApiOperation({ summary: 'Logout' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User logged out successfully',
+  @ApiTags('Authentication')
+  @ApiOperation({ summary: 'User logout' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID',
+    example: '3cc4101d-7120-4765-8161-fa457d211c97',
   })
+  @ApiResponse({ status: 200, description: 'User logged out successfully' })
   @Post('logout/:id')
   async logout(@Param('id') id: string) {
     return this.authService.logout(id);
   }
 
-  /**
-   * Validates a user profile using an access token.
-   * @param accessToken - Access token to validate
-   * @returns Promise<any> - Validation result with user profile
-   */
   @ApiExcludeEndpoint()
   @Post('validate-profile')
   async validate_profile(@Body() accessToken: AccessAccountDto) {
     return this.authService.validate_profile(accessToken);
   }
 
+  @ApiTags('Security')
+  @ApiOperation({ summary: 'Submit security questions' })
+  @ApiBody({
+    type: SecurityQuestionsDto,
+    description: 'Security questions and answers',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Security questions submitted successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid security questions data' })
   @Post('security-questions')
   async submitSecurityQuestions(@Body() sqDto: SecurityQuestionsDto) {
     return await this.authService.submitSecurityQuestions(sqDto);
   }
 
+  @ApiTags('Security')
+  @ApiOperation({ summary: 'Get security questions for phone number' })
+  @ApiParam({
+    name: 'phone',
+    description: 'Phone number to get security questions for',
+    example: '+1234567890',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Security questions retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Security questions not found for phone number',
+  })
   @Get('security-questions/:phone')
   async getSecurityQuestions(@Param('phone') phone: string) {
     return await this.authService.getSecurityQuestions(phone);

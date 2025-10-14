@@ -107,9 +107,9 @@ export class AuthService {
       const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
       const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
       const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
-      this.logger.debug(
-        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
-      );
+      // this.logger.debug(
+      //   `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      // );
       const otpBody = {
         sender: '0777757603',
         scheduled_time: 'unknown',
@@ -117,7 +117,8 @@ export class AuthService {
       };
 
       // Send OTP
-      await nts.sendSms(otpBody);
+      const ntsResponse = await nts.sendSms(otpBody);
+      this.logger.debug(`SMS response: ${JSON.stringify(ntsResponse)}`);
 
       // Insert into database (useful when verifying)
       const { data, error } = await this.postgresRest

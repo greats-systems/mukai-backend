@@ -9,8 +9,8 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { SignupDto } from 'src/auth/dto/signup.dto';
 
 @Controller('user')
 @ApiExcludeController()
@@ -37,7 +37,7 @@ export class UserController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(@Param('id') id: string, @Body() updateUserDto: SignupDto) {
     return this.userService.updateUser(id, updateUserDto);
   }
 

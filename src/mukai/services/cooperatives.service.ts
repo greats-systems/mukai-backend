@@ -96,6 +96,7 @@ export class CooperativesService {
       }
 
       // Check if user profile exists for the phone number
+      /*
       if (existingUserResult.data.length > 0) {
         this.logger.debug(
           `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
@@ -109,6 +110,7 @@ export class CooperativesService {
           // null,
         );
       }
+      
 
       // Handle existing user check
       if (existingUserResult.data.length > 0) {
@@ -116,8 +118,9 @@ export class CooperativesService {
           `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
         );
         return new GeneralErrorResponseDto(
-          400,
-          JSON.stringify(existingUserResult.data),
+          422,
+          'User already exists',
+          existingUserResult.data,
           // existingUserResult.error,
         );
       }
@@ -131,6 +134,7 @@ export class CooperativesService {
           existingUserResult,
         );
       }
+      */
 
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =

@@ -75,7 +75,6 @@ import { SmilePayController } from './common/zb_payment_gateway/controllers/smil
 import { SmilePayService } from './common/zb_payment_gateway/services/smilepay.service';
 import { SmilePayModule } from './common/zb_payment_gateway/modules/smilepay.module';
 import { NotifyTextModule } from './messagings/notify-text.module';
-import { MunicipalitiesModule } from './mukai/modules/municipalities.module';
 // import { PostmanModule } from './postman/postman.module';
 
 @Module({
@@ -111,7 +110,7 @@ import { MunicipalitiesModule } from './mukai/modules/municipalities.module';
     SmileCashWalletModule,
     SmilePayModule,
     NotifyTextModule,
-    MunicipalitiesModule,
+    // MunicipalitiesModule,
     // PostmanModule,
   ],
   controllers: [

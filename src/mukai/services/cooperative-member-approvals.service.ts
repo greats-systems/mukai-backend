@@ -513,7 +513,11 @@ export class CooperativeMemberApprovalsService {
     const updateUserDto = new SignupDto();
     const userService = new UserService(this.postgresrest);
     updateUserDto.role = updateCooperativeMemberApprovalsDto.additional_info;
-
+    this.logger.debug(
+      JSON.stringify(
+        updateCooperativeMemberApprovalsDto.elected_member_profile_id,
+      ),
+    );
     this.logger.warn(
       `Updating user role to ${updateCooperativeMemberApprovalsDto.additional_info}`,
     );

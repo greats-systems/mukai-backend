@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { Profile, User } from './entities/user.entity';
 import { PostgresRest } from 'src/common/postgresrest/postgresrest';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { SignupDto } from 'src/auth/dto/signup.dto';
 // private readonly userRepository: Repository<User>,
 @Injectable()
 export class UserService {
@@ -71,17 +71,18 @@ export class UserService {
 
   async updateUser(
     id: string,
-    updateUserDto: UpdateUserDto,
+    updateUserDto: SignupDto,
   ): Promise<User | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
         .update({
-          name: updateUserDto.name,
-          age: updateUserDto.age,
+          role: updateUserDto.role,
+          first_name: updateUserDto.first_name,
+          last_name: updateUserDto.last_name,
           email: updateUserDto.email,
-          username: updateUserDto.username,
-          password: updateUserDto.password,
+          // username: updateUserDto.username,
+          // password: updateUserDto.password,
         })
         .eq('id', id)
         .select()

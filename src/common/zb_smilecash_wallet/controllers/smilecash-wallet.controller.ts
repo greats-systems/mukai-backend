@@ -493,6 +493,7 @@ export class SmileCashWalletController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Post('pay/municipality')
   @ApiOperation({ summary: 'Pay municipality' })
   @ApiBody({ type: MunicipalityBillRequest })

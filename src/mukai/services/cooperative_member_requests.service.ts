@@ -290,7 +290,7 @@ export class CooperativeMemberRequestsService {
           'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
         )
         .eq('member_id', member_id)
-        .eq('status', 'unresolved');
+        .or('status.eq.unresolved,status.eq.pending');
 
       if (error) {
         this.logger.error('Error fetching coop invitations', error);

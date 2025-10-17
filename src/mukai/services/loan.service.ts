@@ -51,12 +51,13 @@ export class LoanService {
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
       createLoanDto.created_at = DateTime.now().toISO();
-
+      /*
       // Check if the user has an existing loan
       const hasActiveLoan = await this.hasActiveLoan(createLoanDto);
       if (hasActiveLoan instanceof ErrorResponseDto) {
         return hasActiveLoan;
       }
+      */
       const { data: loanResponse, error } = await this.postgresrest
         .from('loans')
         .insert(createLoanDto)
@@ -135,6 +136,7 @@ export class LoanService {
     loanDto: CreateLoanDto,
   ): Promise<boolean | ErrorResponseDto> {
     try {
+      this.logger.debug(JSON.stringify(loanDto));
       const { data, error } = await this.postgresrest
         .from('loans')
         .select()

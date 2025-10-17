@@ -625,6 +625,7 @@ export class AuthService {
   async loginWithPhone2(loginDto: LoginDto): Promise<object | ErrorResponseDto> {
     // this.logger.log(JSON.stringify(loginDto));
     try {
+      this.logger.debug(JSON.stringify(loginDto))
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -855,14 +856,14 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-      
+      /*
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
-      
+      */
       
       if (existingNatID.data) {
         this.logger.debug(

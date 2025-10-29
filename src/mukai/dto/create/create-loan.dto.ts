@@ -48,6 +48,15 @@ export class CreateLoanDto {
   principal_amount?: number;
 
   @ApiProperty({
+    example: 'USD',
+    description: 'Currency',
+    required: true,
+  })
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @ApiProperty({
     example: 0.02,
     description: 'Interest rate',
     required: true,
@@ -100,7 +109,7 @@ export class CreateLoanDto {
   })
   @IsDate()
   @IsOptional()
-  last_payment_date?: Date;
+  last_payment_date?: string;
 
   @ApiProperty({
     example: '2025/03/03',
@@ -109,7 +118,7 @@ export class CreateLoanDto {
   })
   @IsDate()
   @IsOptional()
-  next_payment_date?: Date;
+  next_payment_date?: string;
 
   @ApiProperty({
     example: 50,
@@ -119,6 +128,15 @@ export class CreateLoanDto {
   @IsNumber()
   @IsOptional()
   payment_amount?: number;
+
+  @ApiProperty({
+    example: 50,
+    description: 'Total repayment amount',
+    required: true,
+  })
+  @IsNumber()
+  @IsOptional()
+  total_repayment_amount?: number;
 
   @ApiProperty({
     example: 'Mortgage',
@@ -162,6 +180,14 @@ export class CreateLoanDto {
   @IsString()
   @IsOptional()
   updated_at?: string;
+
+  @ApiProperty({
+    example: '2023-10-01T00:00:00Z',
+    description: 'Loan disbursement timestamp',
+  })
+  @IsString()
+  @IsOptional()
+  date_disbursed?: string;
 
   @ApiProperty({
     example: true,

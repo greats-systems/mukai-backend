@@ -18,7 +18,8 @@ import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import { Wallet } from '../entities/wallet.entity';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+// import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -29,7 +30,9 @@ export class GroupService {
   private readonly logger = initLogger(GroupService);
   constructor(
     private readonly postgresrest: PostgresRest,
-    private readonly smileWalletService: SmileWalletService,
+    private readonly scwService: SmileCashWalletService,
+    private readonly walletService: WalletsService,
+    private readonly transactionsService: TransactionsService,
   ) {}
 
   async createGroup(
@@ -40,14 +43,14 @@ export class GroupService {
       const createGroupMemberDto = new CreateGroupMemberDto();
       const walletsService = new WalletsService(
         this.postgresrest,
-        // this.smileWalletService,
+        this.scwService,
       );
       const cooperativeMemberRequestsService =
         new CooperativeMemberRequestsService(this.postgresrest);
-      const transactionsService = new TransactionsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // const transactionsService = new TransactionsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      // );
       const createTransactionDto = new CreateTransactionDto();
       const createWalletDto = new CreateWalletDto();
       const cooperativeMemberRequestDto =
@@ -93,7 +96,7 @@ export class GroupService {
       createTransactionDto.transaction_type = 'deposit';
       createTransactionDto.narrative = 'credit';
       const transactionResponse =
-        await transactionsService.createTransaction(createTransactionDto);
+        await this.transactionsService.createTransaction(createTransactionDto);
       this.logger.log(transactionResponse);
 
       for (const member of createGroupDto.members || []) {
@@ -210,14 +213,14 @@ export class GroupService {
     try {
       // const memberIDs: string[] = [];
       const walletDetails: string[] = [];
-      const walletService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
-      const transactionsService = new TransactionsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // const walletService = new WalletsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      // );
+      // const transactionsService = new TransactionsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      // );
       const subsDict: object[] = [];
       const { data: membersJson, error: membersError } = await this.postgresrest
         .from('group_members')
@@ -230,19 +233,19 @@ export class GroupService {
       }
 
       const groupWalletJson =
-        await walletService.viewCooperativeWallet(group_id);
+        await this.walletService.viewCooperativeWallet(group_id);
       const receivingWallet = groupWalletJson['id'];
       // this.logger.log(receivingWallet);
 
       for (const member of membersJson['member_id'] || []) {
-        const walletJson = await walletService.viewProfileWalletID(member);
+        const walletJson = await this.walletService.viewProfileWalletID(member);
         // this.logger.log(walletJson);
         walletDetails.push(walletJson['id']);
       }
       // this.logger.log(walletDetails);
 
       for (const id of walletDetails) {
-        const hasPaid = await transactionsService.checkIfSubsPaid(
+        const hasPaid = await this.transactionsService.checkIfSubsPaid(
           receivingWallet,
           id,
           month,

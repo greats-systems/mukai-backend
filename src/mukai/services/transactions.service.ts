@@ -34,6 +34,8 @@ export class TransactionsService {
 
   constructor(
     private readonly postgresrest: PostgresRest,
+    private readonly scwService: SmileCashWalletService,
+    private readonly walletsService: WalletsService,
     // private readonly smileWalletService: SmileWalletService,
   ) {}
 
@@ -66,7 +68,7 @@ export class TransactionsService {
     senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const scwService = new SmileCashWalletService(this.postgresrest);
+      // const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
        2. the initiator's wallet is debited
@@ -75,10 +77,11 @@ export class TransactionsService {
 
        When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
        */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // const walletsService = new WalletsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      //   // this.smileWalletService,
+      // );
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
@@ -100,14 +103,15 @@ export class TransactionsService {
       // Update sender's SmileCash balance
       this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
       this.logger.warn('Updating sender SmileCash balance');
-      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      const scSenderResponse =
+        await this.scwService.balanceEnquiry(scSenderParams);
       if (scSenderResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashBalance(
+      const senderResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -126,14 +130,14 @@ export class TransactionsService {
       } as BalanceEnquiryRequest;
       this.logger.warn(`Updating receiver SmileCash balance`);
       const scReceiverResponse =
-        await scwService.balanceEnquiry(scReceiverParams);
+        await this.scwService.balanceEnquiry(scReceiverParams);
       if (scReceiverResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
         );
         return scReceiverResponse;
       }
-      const receiverResponse = await walletsService.updateSmileCashBalance(
+      const receiverResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
         scReceiverResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -163,7 +167,7 @@ export class TransactionsService {
     senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const scwService = new SmileCashWalletService(this.postgresrest);
+      // const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
        2. the initiator's wallet is debited
@@ -172,10 +176,11 @@ export class TransactionsService {
 
        When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
        */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // const walletsService = new WalletsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      //   // this.smileWalletService,
+      // );
 
       const request = {
         receiverMobile: senderTransactionDto.receiving_phone,
@@ -186,7 +191,7 @@ export class TransactionsService {
         narration: senderTransactionDto.transaction_type,
       };
       this.logger.warn('Initiating wallet to wallet transfer');
-      const w2wResponse = await scwService.walletToWallet(
+      const w2wResponse = await this.scwService.walletToWallet(
         request as WalletToWalletTransferRequest,
       );
       if (w2wResponse instanceof GeneralErrorResponseDto) {
@@ -228,14 +233,15 @@ export class TransactionsService {
       // Update sender's SmileCash balance
       this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
       this.logger.warn('Updating sender SmileCash balance');
-      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      const scSenderResponse =
+        await this.scwService.balanceEnquiry(scSenderParams);
       if (scSenderResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashBalance(
+      const senderResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -254,14 +260,14 @@ export class TransactionsService {
       } as BalanceEnquiryRequest;
       this.logger.warn(`Updating receiver SmileCash balance`);
       const scReceiverResponse =
-        await scwService.balanceEnquiry(scReceiverParams);
+        await this.scwService.balanceEnquiry(scReceiverParams);
       if (scReceiverResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
         );
         return scReceiverResponse;
       }
-      const receiverResponse = await walletsService.updateSmileCashBalance(
+      const receiverResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
         scReceiverResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -291,7 +297,7 @@ export class TransactionsService {
     senderTransactionDto: CreateTransactionDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const scwService = new SmileCashWalletService(this.postgresrest);
+      // const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
        2. the initiator's wallet is debited
@@ -300,10 +306,11 @@ export class TransactionsService {
 
        When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
        */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // const walletsService = new WalletsService(
+      //   this.postgresrest,
+      //   this.scwService,
+      //   // this.smileWalletService,
+      // );
 
       const { data, error } = await this.postgresrest
         .from('transactions')
@@ -333,14 +340,15 @@ export class TransactionsService {
 
       // Update sender's SmileCash balance
       this.logger.warn('Updating sender SmileCash balance');
-      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
+      const scSenderResponse =
+        await this.scwService.balanceEnquiry(scSenderParams);
       if (scSenderResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
         );
         return scSenderResponse;
       }
-      const senderResponse = await walletsService.updateSmileCashBalance(
+      const senderResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),
@@ -359,14 +367,14 @@ export class TransactionsService {
       } as BalanceEnquiryRequest;
       this.logger.warn(`Updating receiver SmileCash balance`);
       const scReceiverResponse =
-        await scwService.balanceEnquiry(scReceiverParams);
+        await this.scwService.balanceEnquiry(scReceiverParams);
       if (scReceiverResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
         );
         return scReceiverResponse;
       }
-      const receiverResponse = await walletsService.updateSmileCashBalance(
+      const receiverResponse = await this.walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
         scReceiverResponse.data.data.billerResponse.balance,
         senderTransactionDto.currency!.toUpperCase(),

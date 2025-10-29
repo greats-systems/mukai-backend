@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { MultipleDeviceNotificationDto, NotificationDto, TopicNotificationDto } from './dto/create-messaging.dto';
+import {
+  MultipleDeviceNotificationDto,
+  NotificationDto,
+  TopicNotificationDto,
+} from './dto/create-messaging.dto';
 
-import * as admin from "firebase-admin";
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class MessagingsService {
-  constructor() { }
+  constructor() {}
 
   async sendNotification({ token, title, body }: NotificationDto) {
     try {
@@ -18,7 +22,7 @@ export class MessagingsService {
       });
       return response;
     } catch (error) {
-      console.log("Successfully sent error:", error);
+      console.log('Successfully sent error:', error);
 
       throw error;
     }
@@ -38,24 +42,19 @@ export class MessagingsService {
     };
 
     try {
-
       const response = await admin.messaging().sendEachForMulticast(message);
-      console.log("Successfully sent messages:", response.responses);
+      console.log('Successfully sent messages:', response.responses);
       return {
         success: true,
         message: `Successfully sent ${response.successCount} messages; ${response.failureCount} failed.`,
       };
     } catch (error) {
-      console.log("Error sending messages:", error);
-      return { success: false, message: "Failed to send notifications" };
+      console.log('Error sending messages:', error);
+      return { success: false, message: 'Failed to send notifications' };
     }
   }
 
-  async sendTopicNotification({
-    topic,
-    title,
-    body,
-  }: TopicNotificationDto) {
+  async sendTopicNotification({ topic, title, body }: TopicNotificationDto) {
     const message = {
       notification: {
         title,
@@ -66,11 +65,11 @@ export class MessagingsService {
 
     try {
       const response = await admin.messaging().send(message);
-      console.log("Successfully sent message:", response);
-      return { success: true, message: "Topic notification sent successfully" };
+      console.log('Successfully sent message:', response);
+      return { success: true, message: 'Topic notification sent successfully' };
     } catch (error) {
-      console.log("Error sending message:", error);
-      return { success: false, message: "Failed to send topic notification" };
+      console.log('Error sending message:', error);
+      return { success: false, message: 'Failed to send topic notification' };
     }
   }
 }

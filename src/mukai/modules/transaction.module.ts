@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TransactionsController } from '../controllers/transactions.controller';
 import { TransactionsService } from '../services/transactions.service';
-import { PostgresRest } from 'src/common/postgresrest';
-import { WalletsService } from '../services/wallets.service';
-import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
+import { PostgresRestHandlerModule } from 'src/common/postgresrest';
+import { WalletModule } from './wallet.module';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 @Module({
+  imports: [PostgresRestHandlerModule, WalletModule],
   controllers: [TransactionsController],
-  providers: [TransactionsService, WalletsService, PostgresRest, SmileWalletService],
+  providers: [
+    TransactionsService,
+    SmileCashWalletService, // ✅ Provide directly
+  ],
+  exports: [TransactionsService],
 })
 export class TransactionModule {}

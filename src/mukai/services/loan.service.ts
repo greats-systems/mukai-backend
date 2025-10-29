@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -9,6 +11,15 @@ import { UpdateLoanDto } from '../dto/update/update-loan.dto';
 import { Loan } from '../entities/loan.entity';
 import { DateTime } from 'luxon';
 import { v4 as uuidv4 } from 'uuid';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import {
+  BalanceEnquiryRequest,
+  WalletToWalletTransferRequest,
+} from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { TransactionsService } from './transactions.service';
+import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
+import { Cron } from '@nestjs/schedule';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -17,7 +28,11 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class LoanService {
   private readonly logger = initLogger(LoanService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(
+    private readonly transactionsService: TransactionsService, // ✅ Inject
+    private readonly smileCashWalletService: SmileCashWalletService,
+    private readonly postgresrest: PostgresRest,
+  ) {}
 
   calculateRepayAmount(principalAmount: number, loanTermMonths: number) {
     const principal = principalAmount ?? 0;
@@ -42,6 +57,428 @@ export class LoanService {
 
     return dueDate.toJSDate(); // Convert to JavaScript Date if needed
   }
+  /*
+  @Cron()
+  async repayLoan(): Promise<any | GeneralErrorResponseDto> {
+    try {
+      const today = DateTime.now();
+      const loanDto = new CreateLoanDto();
+      const loansService = new LoanService(this.postgresrest);
+      // 1. Fetch loan data
+      const { data, error } = await this.postgresrest
+        .from('active_loans')
+        .select();
+      if (error) {
+        this.logger.error('Failed to fetch active loans', error);
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to fetch active loans',
+          error,
+        );
+      }
+
+      // 2. Loop through each record
+      for (const item of data) {
+        const loanDate = DateTime.fromISO(item.date_disbursed);
+        //  Calculate payment amount
+        const paymentAmount =
+          item.total_repayment_amount / item.loan_term_months;
+        // a. If it's the applicant's 1st repayment
+        if (
+          today.toFormat('yyyy-MM-dd') ==
+            loanDate.plus({ days: 30 }).toFormat('yyyy-MM-dd') &&
+          (item.last_payment_date == null ||
+            item.last_payment_date.isEmpty ||
+            item.last_payment_date)
+        ) {
+          this.logger.debug(`Deducting 1st payment`);
+          // i. Check sender's wallet balance
+          const beResponse = await this.checkBalance(
+            item.borrower_phone,
+            item.currency,
+          );
+          if (beResponse instanceof GeneralErrorResponseDto) {
+            return beResponse;
+          }
+          // ii. Check if balance is sufficient to complete the transaction
+          if (beResponse < paymentAmount) {
+            return new GeneralErrorResponseDto(
+              403,
+              'Insufficient balance for loan repayment',
+            );
+          }
+          // iii. Deduct the money
+          const dmResponse = await this.deductMoney(
+            item.lender_phone,
+            item.borrower_phone,
+            paymentAmount,
+            item.currency,
+          );
+          if (dmResponse instanceof GeneralErrorResponseDto) {
+            return dmResponse;
+          }
+
+          // iv. Record the transaction
+          const transService = new TransactionsService(this.postgresrest);
+          const tranDto = new CreateTransactionDto();
+          tranDto.transaction_type = 'loan repayment';
+          tranDto.narrative = 'debit';
+          tranDto.sending_wallet = item.borrower_wallet_id;
+          tranDto.receiving_wallet = item.lender_wallet_id;
+          tranDto.amount = paymentAmount;
+          tranDto.transfer_mode = 'WALLETPLUS';
+          const transResponse = await transService.createTransaction(tranDto);
+          if (transResponse instanceof ErrorResponseDto) {
+            return transResponse;
+          }
+
+          // v. Insert the new loan record
+          loanDto.status = item.status;
+          loanDto.last_payment_date = today.toString();
+          loanDto.next_payment_date = today.plus({ days: 30 }).toString();
+          loanDto.payment_amount = paymentAmount;
+          loanDto.currency = item.currency;
+          loanDto.borrower_wallet_id = item.borrower_wallet_id;
+          loanDto.lender_wallet_id = item.lender_wallet_id;
+          loanDto.collateral_description = item.collateral_description;
+          loanDto.due_date = item.due_date;
+          loanDto.remaining_balance = item.remaining_balance - paymentAmount;
+          loanDto.interest_rate = item.interest_rate;
+          const loanResponse = await loansService.createLoan(loanDto);
+          if (loanResponse instanceof ErrorResponseDto) {
+            return loanResponse;
+          }
+        }
+        // b. If it's the applicant's 2nd, 3rd,...,(n-1)th payment
+        else if (
+          today.toFormat('yyyy-MM-dd') ==
+          DateTime.fromISO(item.last_payment_date)
+            .plus({ days: 30 })
+            .toFormat('yyyy-MM-dd')
+        ) {
+          this.logger.debug(`Deducting next payment`);
+          // i. Check sender's wallet balance
+          const beResponse = await this.checkBalance(
+            item.borrower_phone,
+            item.currency,
+          );
+          if (beResponse instanceof GeneralErrorResponseDto) {
+            return beResponse;
+          }
+          // ii. Check if balance is sufficient to complete the transaction
+          if (beResponse < paymentAmount) {
+            return new GeneralErrorResponseDto(
+              403,
+              'Insufficient balance for loan repayment',
+            );
+          }
+          // iii. Deduct the money
+          const dmResponse = await this.deductMoney(
+            item.lender_phone,
+            item.borrower_phone,
+            paymentAmount,
+            item.currency,
+          );
+          if (dmResponse instanceof GeneralErrorResponseDto) {
+            return dmResponse;
+          }
+
+          // iv. Record the transaction
+          const transService = new TransactionsService(this.postgresrest);
+          const tranDto = new CreateTransactionDto();
+          tranDto.transaction_type = 'loan repayment';
+          tranDto.narrative = 'debit';
+          tranDto.sending_wallet = item.borrower_wallet_id;
+          tranDto.receiving_wallet = item.lender_wallet_id;
+          tranDto.amount = paymentAmount;
+          tranDto.transfer_mode = 'WALLETPLUS';
+          const transResponse = await transService.createTransaction(tranDto);
+          if (transResponse instanceof ErrorResponseDto) {
+            return transResponse;
+          }
+
+          // v. Insert the new loan record
+          loanDto.status = item.status;
+          loanDto.last_payment_date = today.toString();
+          loanDto.next_payment_date = today.plus({ days: 30 }).toString();
+          loanDto.payment_amount = paymentAmount;
+          loanDto.currency = item.currency;
+          loanDto.borrower_wallet_id = item.borrower_wallet_id;
+          loanDto.lender_wallet_id = item.lender_wallet_id;
+          loanDto.collateral_description = item.collateral_description;
+          loanDto.due_date = item.due_date;
+          loanDto.remaining_balance = item.remaining_balance - paymentAmount;
+          loanDto.interest_rate = item.interest_rate;
+          const loanResponse = await loansService.createLoan(loanDto);
+          if (loanResponse instanceof ErrorResponseDto) {
+            return loanResponse;
+          }
+        }
+        // c. If it's the applicant's last payment
+        else if (
+          today.toFormat('yyyy-MM-dd') ==
+          DateTime.fromISO(item.due_date).toFormat('yyyy-MM-dd')
+        ) {
+          this.logger.debug(`Deducting final payment`);
+          // i. Check sender's wallet balance
+          const beResponse = await this.checkBalance(
+            item.borrower_phone,
+            item.currency,
+          );
+          if (beResponse instanceof GeneralErrorResponseDto) {
+            return beResponse;
+          }
+          // ii. Check if balance is sufficient to complete the transaction
+          if (beResponse < paymentAmount) {
+            return new GeneralErrorResponseDto(
+              403,
+              'Insufficient balance for loan repayment',
+            );
+          }
+          // iii. Deduct the money
+          const dmResponse = await this.deductMoney(
+            item.lender_phone,
+            item.borrower_phone,
+            paymentAmount,
+            item.currency,
+          );
+          if (dmResponse instanceof GeneralErrorResponseDto) {
+            return dmResponse;
+          }
+
+          // iv. Record the transaction
+          const transService = new TransactionsService(this.postgresrest);
+          const tranDto = new CreateTransactionDto();
+          tranDto.transaction_type = 'loan repayment';
+          tranDto.narrative = 'debit';
+          tranDto.sending_wallet = item.borrower_wallet_id;
+          tranDto.receiving_wallet = item.lender_wallet_id;
+          tranDto.amount = paymentAmount;
+          tranDto.transfer_mode = 'WALLETPLUS';
+          const transResponse = await transService.createTransaction(tranDto);
+          if (transResponse instanceof ErrorResponseDto) {
+            return transResponse;
+          }
+
+          // v. Insert the new loan record (add status of 'paid')
+          loanDto.status = 'paid';
+          loanDto.last_payment_date = today.toString();
+          loanDto.next_payment_date = today.plus({ days: 30 }).toString();
+          loanDto.payment_amount = paymentAmount;
+          loanDto.currency = item.currency;
+          loanDto.borrower_wallet_id = item.borrower_wallet_id;
+          loanDto.lender_wallet_id = item.lender_wallet_id;
+          loanDto.collateral_description = item.collateral_description;
+          loanDto.due_date = item.due_date;
+          loanDto.remaining_balance = item.remaining_balance - paymentAmount;
+          loanDto.interest_rate = item.interest_rate;
+          const loanResponse = await loansService.createLoan(loanDto);
+          if (loanResponse instanceof ErrorResponseDto) {
+            return loanResponse;
+          }
+        } else {
+          this.logger.debug('Nothing to process');
+          return;
+        }
+      }
+    } catch (error) {
+      this.logger.error(`repayLoan error: ${JSON.stringify(error)}`);
+      return new GeneralErrorResponseDto(500, 'repayLoan error', error);
+    }
+  }
+  */
+  @Cron('1 * * * * *')
+  handleCron() {
+    this.logger.debug('Calling cron job');
+  }
+  // async repayLoan(): Promise<any | GeneralErrorResponseDto> {
+  //   try {
+  //     const today = DateTime.now();
+  //     /*
+  //     const loanDto = new CreateLoanDto();
+  //     const loansService = new LoanService(this.postgresrest);
+  //     */
+  //     // 1. Fetch loan data
+  //     const { data, error } = await this.postgresrest
+  //       .from('active_loans')
+  //       .select();
+  //     if (error) {
+  //       this.logger.error('Failed to fetch active loans', error);
+  //       return new GeneralErrorResponseDto(
+  //         400,
+  //         'Failed to fetch active loans',
+  //         error,
+  //       );
+  //     }
+
+  //     // 2. Loop through all records
+  //     for (const item of data) {
+  //       /*
+  //       const firstPayDay = DateTime.fromISO(item.date_disbursed).plus({
+  //         days: 30,
+  //       });
+
+  //       let nextPayDay;
+  //       if (item.last_payment_date != null) {
+  //         nextPayDay = DateTime.fromISO(item.last_payment_date).plus({
+  //           days: 30,
+  //         });
+  //       }
+  //       */
+  //       const finalPayDay = DateTime.fromISO(item.due_date);
+
+  //       if (
+  //         today.toFormat('yyyy-MM-dd') != finalPayDay.toFormat('yyyy-MM-dd')
+  //       ) {
+  //         // Handle 1st, 2nd, 3rd, ..., (n-1)th payment
+  //         const processRepaymentResponse = await this.processRepayment(
+  //           item,
+  //           'repaying',
+  //         );
+  //         if (
+  //           processRepaymentResponse instanceof GeneralErrorResponseDto ||
+  //           processRepaymentResponse instanceof ErrorResponseDto
+  //         ) {
+  //           return processRepaymentResponse;
+  //         }
+  //       } else {
+  //         // Handle final (nth) payment
+  //         const processRepaymentResponse = await this.processRepayment(
+  //           item,
+  //           'paid',
+  //         );
+  //         if (
+  //           processRepaymentResponse instanceof GeneralErrorResponseDto ||
+  //           processRepaymentResponse instanceof ErrorResponseDto
+  //         ) {
+  //           return processRepaymentResponse;
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     this.logger.error(`repayLoan error: ${JSON.stringify(error)}`);
+  //     return new GeneralErrorResponseDto(500, 'repayLoan error', error);
+  //   }
+  // }
+
+  private async processRepayment(
+    item: any,
+    loanStatus: string,
+  ): Promise<boolean | GeneralErrorResponseDto | ErrorResponseDto> {
+    try {
+      const today = DateTime.now();
+      const paymentAmount = item.total_repayment_amount / item.loan_term_months;
+      const beResponse = await this.checkBalance(
+        item.borrower_phone,
+        item.currency,
+      );
+      if (beResponse instanceof GeneralErrorResponseDto) {
+        return beResponse;
+      }
+      // ii. Check if balance is sufficient to complete the transaction
+      if (beResponse < paymentAmount) {
+        return new GeneralErrorResponseDto(
+          415,
+          'Insufficient balance for loan repayment',
+        );
+      }
+      // iii. Deduct the money
+      const dmResponse = await this.deductMoney(
+        item.lender_phone,
+        item.borrower_phone,
+        paymentAmount,
+        item.currency,
+      );
+      if (dmResponse instanceof GeneralErrorResponseDto) {
+        return dmResponse;
+      }
+
+      // iv. Record the transaction
+      // const transService = new TransactionsService(this.postgresrest);
+      const tranDto = new CreateTransactionDto();
+      const loanDto = new CreateLoanDto();
+      // const loansService = new LoanService(this.postgresrest);
+      tranDto.transaction_type = 'loan repayment';
+      tranDto.narrative = 'debit';
+      tranDto.sending_wallet = item.borrower_wallet_id;
+      tranDto.receiving_wallet = item.lender_wallet_id;
+      tranDto.amount = paymentAmount;
+      tranDto.transfer_mode = 'WALLETPLUS';
+      const transResponse = await this.transactionsService.createTransaction(tranDto);
+      if (transResponse instanceof ErrorResponseDto) {
+        return transResponse;
+      }
+
+      // v. Insert the new loan record
+      loanDto.status = loanStatus;
+      loanDto.last_payment_date = today.toString();
+      loanDto.next_payment_date = today.plus({ days: 30 }).toString();
+      loanDto.payment_amount = paymentAmount;
+      loanDto.currency = item.currency;
+      loanDto.borrower_wallet_id = item.borrower_wallet_id;
+      loanDto.lender_wallet_id = item.lender_wallet_id;
+      loanDto.collateral_description = item.collateral_description;
+      loanDto.due_date = item.due_date;
+      loanDto.remaining_balance = item.remaining_balance - paymentAmount;
+      loanDto.interest_rate = item.interest_rate;
+      const loanResponse = await this.createLoan(loanDto);
+      if (loanResponse instanceof ErrorResponseDto) {
+        return loanResponse;
+      }
+      return true;
+    } catch (error) {
+      this.logger.error(`processRepayment error: ${error}`);
+      return new GeneralErrorResponseDto(500, 'processRepayment error', error);
+    }
+  }
+
+  private async checkBalance(
+    mobile: string,
+    currency: string,
+  ): Promise<number | GeneralErrorResponseDto> {
+    try {
+      const beRequest = new BalanceEnquiryRequest();
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      beRequest.channel = 'USSD';
+      beRequest.transactorMobile = mobile;
+      beRequest.currency = currency;
+      const beResponse = await scwService.balanceEnquiry(beRequest);
+      if (beResponse instanceof GeneralErrorResponseDto) {
+        return beResponse;
+      }
+      const balance = beResponse.data.data.billerResponse.balance;
+      return Number(balance);
+    } catch (e) {
+      this.logger.error(`checkBalance error: ${JSON.stringify(e)}`);
+      return new GeneralErrorResponseDto(500, 'checkBalance error', e);
+    }
+  }
+
+  private async deductMoney(
+    sender: string,
+    receiver: string,
+    amount: number,
+    currency: string,
+  ): Promise<boolean | GeneralErrorResponseDto> {
+    try {
+      const w2wRequest = new WalletToWalletTransferRequest();
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      w2wRequest.channel = 'USSD';
+      w2wRequest.narration = 'Loan repayment';
+      w2wRequest.senderPhone = sender;
+      w2wRequest.receiverMobile = receiver;
+      w2wRequest.amount = amount;
+      w2wRequest.currency = currency;
+      const w2wResponse = await scwService.walletToWallet(w2wRequest);
+      if (w2wResponse instanceof GeneralErrorResponseDto) {
+        return w2wResponse;
+      }
+      return true;
+    } catch (e) {
+      this.logger.error(`deductMoney error: ${JSON.stringify(e)}`);
+      return new GeneralErrorResponseDto(500, 'deductMoney error', e);
+    }
+  }
 
   async createLoan(
     createLoanDto: CreateLoanDto,
@@ -51,7 +488,18 @@ export class LoanService {
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
       createLoanDto.created_at = DateTime.now().toISO();
-
+      createLoanDto.remaining_balance = createLoanDto.total_repayment_amount;
+      const { data: loanResponse, error } = await this.postgresrest
+        .from('loans')
+        .insert(createLoanDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.log(error);
+        return new ErrorResponseDto(400, error.details);
+      }
+      return loanResponse as Loan;
+      /*
       // Check if the user has an existing loan
       const hasActiveLoan = await this.hasActiveLoan(createLoanDto);
       if (hasActiveLoan instanceof ErrorResponseDto) {
@@ -111,7 +559,7 @@ export class LoanService {
     }
   }
 
-  async viewLoan(id: string): Promise<Loan[] | ErrorResponseDto> {
+  async viewLoan(id: string): Promise<CreateLoanDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('loans')
@@ -124,7 +572,7 @@ export class LoanService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      return data as Loan[];
+      return data as CreateLoanDto;
     } catch (error) {
       this.logger.error(`Exception in viewLoan for id ${id}`, error);
       return new ErrorResponseDto(500, error);

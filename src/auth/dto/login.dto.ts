@@ -75,3 +75,9 @@ export class SecurityQuestionsDto {
   maternal_grandfather: string;
   lucky_number: string;
 }
+
+export class ProfilesLikeDto {
+  id: string;
+  first_name: string;
+  last_name: string;
+}

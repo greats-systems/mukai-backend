@@ -21,7 +21,9 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class WalletsService {
   private readonly logger = initLogger(WalletsService);
-  constructor(private readonly postgresrest: PostgresRest,
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly scwService: SmileCashWalletService,
     // private readonly smileWalletService: SmileWalletService,
   ) { }
 
@@ -65,7 +67,7 @@ export class WalletsService {
   }
 
   private async performBalanceEnquiries(walletId: string, coopPhone: string): Promise<void> {
-    const scwService = new SmileCashWalletService(this.postgresrest);
+    // const scwService = new SmileCashWalletService(this.postgresrest);
 
     const currencies = ['USD', 'ZWG'];
     const balancePromises: Promise<SuccessResponseDto | null>[] = [];
@@ -80,7 +82,7 @@ export class WalletsService {
       };
 
       const balancePromise = Promise.race<SuccessResponseDto | null>([
-        scwService.balanceEnquiry(balanceParams),
+        this.scwService.balanceEnquiry(balanceParams),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
       ]);
 
@@ -171,7 +173,7 @@ export class WalletsService {
           channel: 'USSD',
           transactionId: ''
         } as BalanceEnquiryRequest;
-        const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(balanceEnquiryParamsUSD);
+        const balanceEnquiryResponseUSD = await this.scwService.balanceEnquiry(balanceEnquiryParamsUSD);
         if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
           data[0].balance = balanceEnquiryResponseUSD.data.data.billerResponse.balance;
         }
@@ -184,7 +186,7 @@ export class WalletsService {
           channel: 'USSD',
           transactionId: ''
         } as BalanceEnquiryRequest;
-        const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+        const balanceEnquiryResponseZWG = await this.scwService.balanceEnquiry(balanceEnquiryParamsZWG);
         if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
           data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
         }
@@ -222,10 +224,10 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       // this.logger.log("Wallet data:", JSON.stringify(data));
-      
+
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
-        const scwService = new SmileCashWalletService(this.postgresrest);
+        // const scwService = new SmileCashWalletService(this.postgresrest);
         const walletPhone = data[0]?.phone;
         const balanceEnquiryParamsUSD = {
           transactorMobile: walletPhone,
@@ -233,7 +235,7 @@ export class WalletsService {
           channel: 'USSD',
           transactionId: ''
         } as BalanceEnquiryRequest;
-        const balanceEnquiryResponseUSD = await scwService.balanceEnquiry(balanceEnquiryParamsUSD);
+        const balanceEnquiryResponseUSD = await this.scwService.balanceEnquiry(balanceEnquiryParamsUSD);
         if (balanceEnquiryResponseUSD instanceof SuccessResponseDto) {
           data[0].balance = balanceEnquiryResponseUSD.data.data.billerResponse.balance;
         } else {
@@ -247,13 +249,13 @@ export class WalletsService {
           channel: 'USSD',
           transactionId: ''
         } as BalanceEnquiryRequest;
-        const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+        const balanceEnquiryResponseZWG = await this.scwService.balanceEnquiry(balanceEnquiryParamsZWG);
         if (balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
           data[0].balance_zwg = balanceEnquiryResponseZWG.data.data.billerResponse.balance;
         } else {
           data[0].balance_zwg = 0.0;
         }
-        
+
 
         this.logger.log({
           statusCode: 200,
@@ -300,8 +302,8 @@ export class WalletsService {
         channel: 'USSD',
         transactionId: ''
       } as BalanceEnquiryRequest;
-      const scwService = new SmileCashWalletService(this.postgresrest);
-      const balanceEnquiryResponse = await scwService.balanceEnquiry(balanceEnquiryParams);
+      // const scwService = new SmileCashWalletService(this.postgresrest);
+      const balanceEnquiryResponse = await this.scwService.balanceEnquiry(balanceEnquiryParams);
 
       const balanceEnquiryParamsZWG = {
         transactorMobile: walletPhone,
@@ -309,7 +311,7 @@ export class WalletsService {
         channel: 'USSD',
         transactionId: ''
       } as BalanceEnquiryRequest;
-      const balanceEnquiryResponseZWG = await scwService.balanceEnquiry(balanceEnquiryParamsZWG);
+      const balanceEnquiryResponseZWG = await this.scwService.balanceEnquiry(balanceEnquiryParamsZWG);
 
       if (balanceEnquiryResponse instanceof SuccessResponseDto && balanceEnquiryResponseZWG instanceof SuccessResponseDto) {
         data.balance = balanceEnquiryResponse.data.data.billerResponse.balance;

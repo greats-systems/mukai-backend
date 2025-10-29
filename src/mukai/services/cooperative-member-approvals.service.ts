@@ -12,7 +12,7 @@ import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooper
 import { UUID } from 'crypto';
 import { CooperativesService } from './cooperatives.service';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
-import { CreateLoanDto } from '../dto/create/create-loan.dto';
+// import { CreateLoanDto } from '../dto/create/create-loan.dto';
 import { LoanService } from './loan.service';
 import { WalletsService } from './wallets.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
@@ -32,7 +32,13 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CooperativeMemberApprovalsService {
   private readonly logger = initLogger(CooperativeMemberApprovalsService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(
+    private readonly postgresrest: PostgresRest,
+    private readonly walletService: WalletsService, // ✅ Inject instead of 'new'
+    private readonly smileCashService: SmileCashWalletService, // ✅ Inject instead of 'new'
+    private readonly loanService: LoanService, // ✅ Inject instead of 'new'
+    private readonly transactionsService: TransactionsService,
+  ) {}
 
   // A coop admin can create a new poll only if there are no active polls
   async checkActivePolls(
@@ -351,17 +357,18 @@ export class CooperativeMemberApprovalsService {
 
   async disburseLoan(
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-  ): Promise<boolean> {
+  ): Promise<boolean | ErrorResponseDto> {
     try {
       this.logger.warn(
         `Loan ID: ${updateCooperativeMemberApprovalsDto.loan_id}`,
       );
 
-      // Initialize services
-      const walletService = new WalletsService(this.postgresrest);
-      const smileCashService = new SmileCashWalletService(this.postgresrest);
-      const loanService = new LoanService(this.postgresrest);
-      const transService = new TransactionsService(this.postgresrest);
+      // ✅ Now use the injected services directly - no more 'new'!
+      // Remove these lines:
+      // const walletService = new WalletsService(this.postgresrest);
+      // const smileCashService = new SmileCashWalletService(this.postgresrest);
+      // const loanService = new LoanService(this.postgresrest);
+      // const transService = new TransactionsService(this.postgresrest);
 
       // Fetch all required data in parallel
       const [
@@ -421,8 +428,9 @@ export class CooperativeMemberApprovalsService {
         transactionId: undefined,
       };
 
+      // ✅ Use injected service
       const smileCashTransaction =
-        await smileCashService.walletToWallet(w2wRequest);
+        await this.smileCashService.walletToWallet(w2wRequest);
 
       if (smileCashTransaction instanceof ErrorResponseDto) {
         this.logger.error(
@@ -436,10 +444,12 @@ export class CooperativeMemberApprovalsService {
 
       // Fetch wallets in parallel
       const [receivingWallet, disbursingWallet] = await Promise.all([
-        walletService.viewProfileWalletID(
+        // ✅ Use injected service
+        this.walletService.viewProfileWalletID(
           updateCooperativeMemberApprovalsDto.profile_id!,
         ),
-        walletService.viewCoopWallet(
+        // ✅ Use injected service
+        this.walletService.viewCoopWallet(
           updateCooperativeMemberApprovalsDto.group_id!,
         ),
       ]);
@@ -448,28 +458,32 @@ export class CooperativeMemberApprovalsService {
       this.logger.debug(
         `receiving wallet: ${JSON.stringify(receivingWallet)}\nsending wallet: ${JSON.stringify(disbursingWallet)}`,
       );
-      const updateLoanDto = new CreateLoanDto();
-      updateLoanDto.id = updateCooperativeMemberApprovalsDto.loan_id;
-      updateLoanDto.status = 'disbursed';
-      updateLoanDto.is_approved = true;
-      updateLoanDto.updated_at = DateTime.now().toISO();
-      updateLoanDto.remaining_balance = parseFloat(
+
+      // Fetch existing loan application
+      // ✅ Use injected service
+      const loan = await this.loanService.viewLoan(
+        updateCooperativeMemberApprovalsDto.id!,
+      );
+      if (loan instanceof ErrorResponseDto) {
+        return loan;
+      }
+      loan.status = 'disbursed';
+      loan.updated_at = DateTime.now().toISO();
+      loan.is_approved = true;
+      loan.date_disbursed = DateTime.now().toISO();
+      loan.remaining_balance = parseFloat(
         updateCooperativeMemberApprovalsDto.additional_info,
       );
       const currentDate = DateTime.now();
       const dueDate = currentDate.plus({
         months: loanTerm,
       });
-      updateLoanDto.due_date = dueDate.toFormat('yyyy-MM-dd');
-      // updateLoanDto.due_date = dueDate;
-      updateLoanDto.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
-      updateLoanDto.cooperative_id =
-        updateCooperativeMemberApprovalsDto.group_id;
-      this.logger.debug(`Updating loan: ${JSON.stringify(updateLoanDto)}`);
-      const loanResponse = await loanService.updateLoan(
-        updateLoanDto.id!,
-        updateLoanDto,
-      );
+      loan.due_date = dueDate.toString();
+      loan.profile_id = updateCooperativeMemberApprovalsDto.profile_id;
+      loan.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
+
+      // ✅ Use injected service
+      const loanResponse = await this.loanService.createLoan(loan);
 
       if (loanResponse instanceof ErrorResponseDto) {
         this.logger.error('Loan update failed:', loanResponse);
@@ -492,8 +506,9 @@ export class CooperativeMemberApprovalsService {
       transactionDto.sending_wallet = disbursingWallet['data'].id;
       transactionDto.sending_phone = disbursingWallet['data'].coop_phone;
 
+      // ✅ Use injected service
       const transactionResponse =
-        await transService.createTransaction(transactionDto);
+        await this.transactionsService.createTransaction(transactionDto);
 
       if (transactionResponse instanceof ErrorResponseDto) {
         this.logger.error('Transaction recording failed:', transactionResponse);
@@ -507,6 +522,7 @@ export class CooperativeMemberApprovalsService {
       return false;
     }
   }
+
   async updateMemberRole(
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
   ): Promise<boolean> {

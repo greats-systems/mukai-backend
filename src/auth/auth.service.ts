@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -66,6 +66,8 @@ export class AuthService {
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
     private readonly toroGateway: ToroGateway,
+    private readonly walletService: WalletsService,
+    private readonly scwService: SmileCashWalletService,
   ) {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
@@ -386,8 +388,8 @@ export class AuthService {
         updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
         updateDto.balance_zwg =
           balanceZWG.value.data.data.billerResponse.balance;
-        const walletService = new WalletsService(this.postgresRest);
-        const walletResponse = await walletService.updateWallet(
+        // const walletService = new WalletsService(this.postgresRest);
+        const walletResponse = await this.walletService.updateWallet(
           updateDto.id!,
           updateDto,
         );
@@ -573,8 +575,8 @@ export class AuthService {
         updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
         updateDto.balance_zwg =
           balanceZWG.value.data.data.billerResponse.balance;
-        const walletService = new WalletsService(this.postgresRest);
-        const walletResponse = await walletService.updateWallet(
+        // const walletService = new WalletsService(this.postgresRest);
+        const walletResponse = await this.walletService.updateWallet(
           updateDto.id!,
           updateDto,
         );
@@ -648,7 +650,29 @@ export class AuthService {
       this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
       return new ErrorResponseDto(400, error.details);
     }
-    this.logger.log(`Password reset response: ${JSON.stringify(data)}`);
+
+    // Update profile
+    const plainText = resetPasswordDto.password;
+    const secretKey = process.env.SECRET_KEY || 'No secret key';
+    const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+    const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+    const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+    this.logger.debug(
+      `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+    );
+    const { data: update, error: updateError } = await this.postgresRest
+      .from('profiles')
+      .update({ 'password': cipherText })
+      .eq('id', userData.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      this.logger.error(`Error updating profile, ${JSON.stringify(updateError)}`);
+      return new ErrorResponseDto(400, updateError.details);
+    }
+
+    this.logger.log(`Password reset response: ${JSON.stringify(update)}`);
     return data as object;
   }
 
@@ -690,6 +714,7 @@ export class AuthService {
         );
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
+
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
@@ -914,6 +939,137 @@ export class AuthService {
     }
   }
 
+  async update(profile: MukaiProfile) {
+    const now = new Date().toISOString();
+    const scwService = new SmileCashWalletService(this.postgresRest);
+    const walletsService = new WalletsService(this.postgresRest);
+    const createWalletDto = new CreateWalletDto();
+    // Create profile in public.profiles
+
+    const { data: profileSelectData, error: profileSelectError } = await this.postgresRest
+      .from('profiles')
+      .select()
+      .eq('id', profile.id)
+      .single();
+
+    if (profileSelectError) {
+      return {
+        message: 'Failed to fetch account',
+        code: 400,
+        details: profileSelectError
+      }
+    }
+
+    const { error: profileError } = await this.postgresRest
+      .from('profiles')
+      .update({
+        email: profile.email,
+        phone: profile.phone,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        account_type: profile.account_type,
+        dob: profile.dob,
+        gender: profile.gender,
+        wallet_id: profile.wallet_id,
+        cooperative_id: profile.cooperative_id,
+        business_id: profile.business_id,
+        affiliations: profile.affiliations,
+        coop_account_id: profile.coop_account_id,
+        push_token: profile.push_token,
+        avatar: profile.avatar,
+        national_id_url: profile.national_id_url,
+        passport_url: profile.passport_url,
+        is_invited: profile.is_invited,
+        updated_at: now,
+      })
+      .eq('id', profile.id);
+
+    const { data: walletData, error: walletError } = await this.postgresRest
+      .from('wallets')
+      .update({ 'phone': profile.phone })
+      .eq('profile_id', profile.id);
+
+    if (profileError || walletError) {
+      return {
+        status: 'account not updated',
+        message: 'account updated failed',
+        error: profileError ?? walletError,
+        data: null,
+      };
+    }
+    /*
+    // Get SmileCash balance for new number. If the number is not registered on SmileCash, register it automatically
+    const [balanceUSD, balanceZWG] = await Promise.allSettled([scwService.balanceEnquiry({
+      transactorMobile: profile.phone,
+      currency: 'USD',
+      channel: 'USSD',
+    } as BalanceEnquiryRequest),
+    scwService.balanceEnquiry({
+      transactorMobile: profile.phone,
+      currency: 'ZWG',
+      channel: 'USSD',
+    } as BalanceEnquiryRequest),]);
+
+    if (
+      balanceUSD instanceof SuccessResponseDto &&
+      balanceZWG instanceof SuccessResponseDto
+    ) {
+      createWalletDto.balance = balanceUSD.data.data.billerResponse.balance;
+      createWalletDto.balance_zwg =
+        balanceZWG.data.data.billerResponse.balance;
+      const { data: walletUpdate, error: walletUpdateError } = await this.postgresRest
+        .from('wallets')
+        .update({
+          balance: createWalletDto.balance,
+          balance_zwg: createWalletDto.balance_zwg
+        })
+        .eq('profile_id', profile.id);
+      if (walletUpdateError) {
+        return {
+          status: 400,
+          message: 'Failed to update wallet for updated user',
+          details: walletUpdateError
+        }
+      }
+    } else {
+      createWalletDto.balance = 0.0;
+      const scwRegParams = {
+        firstName: profileSelectData.first_name,
+        lastName: profileSelectData.last_name,
+        mobile: profileSelectData.phone,
+        dateOfBirth: profileSelectData.date_of_birth,
+        idNumber: profileSelectData.national_id_number,
+        gender: profileSelectData.gender.toUpperCase(),
+        source: 'SmileSACCO',
+      } as CreateWalletRequest;
+      this.logger.log(
+        `Registering new SmileCash wallet for updated user: ${JSON.stringify(scwRegParams)}`,
+      );
+      const scwRegResponse = await scwService.createWallet(scwRegParams);
+      if (scwRegResponse instanceof GeneralErrorResponseDto) {
+        if (scwRegResponse.statusCode != 409) {
+          this.logger.error(
+            `SmileCash wallet registration for updated user failed: ${JSON.stringify(
+              scwRegResponse,
+            )}`,
+          );
+          return scwRegResponse;
+        }
+      }
+      this.logger.log(
+        `SmileCash wallet registered: ${JSON.stringify(scwRegResponse)}`,
+      );
+    }
+    */
+
+    return {
+      status: 'account updated',
+      message: 'account updated successfully',
+      error: null,
+      data: profile,
+    };
+  }
+
   // Helper method for background ToroNet key creation
   private async _createToroNetKeyInBackground(userId: string): Promise<void> {
     try {
@@ -1012,6 +1168,36 @@ export class AuthService {
     }
   }
 
+  async getProfilesLikeExcept(plDto: ProfilesLikeDto): Promise<Profile[]> {
+    try {
+      const searchTerm = plDto.first_name; // Since all fields use the same search term
+
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .neq('id', plDto.id)
+        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
+    }
+  }
+
   async getProfile(profile_id: string): Promise<Profile> {
     try {
       const { data, error } = await this.postgresRest
@@ -1037,7 +1223,12 @@ export class AuthService {
 
   async submitSecurityQuestions(sqDto: SecurityQuestionsDto): Promise<boolean | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresRest.from('security_questions').insert(sqDto).select().single();
+      this.logger.debug(JSON.stringify(sqDto));
+      const { data, error } = await this.postgresRest
+        .from('security_questions')
+        .insert(sqDto)
+        .select()
+        .single();
       if (error) {
         return new ErrorResponseDto(400, 'Error creating security questions', error);
       }
@@ -1181,50 +1372,6 @@ export class AuthService {
           : 'An unexpected error occurred while searching profiles',
       );
     }
-  }
-
-  async update(profile: MukaiProfile) {
-    const now = new Date().toISOString();
-    // Create profile in public.profiles
-
-    const { error: profileError } = await this.postgresRest
-      .from('profiles')
-      .update({
-        email: profile.email,
-        phone: profile.phone,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        account_type: profile.account_type,
-        dob: profile.dob,
-        gender: profile.gender,
-        wallet_id: profile.wallet_id,
-        cooperative_id: profile.cooperative_id,
-        business_id: profile.business_id,
-        affiliations: profile.affiliations,
-        coop_account_id: profile.coop_account_id,
-        push_token: profile.push_token,
-        avatar: profile.avatar,
-        national_id_url: profile.national_id_url,
-        passport_url: profile.passport_url,
-        is_invited: profile.is_invited,
-        updated_at: now,
-      })
-      .eq('id', profile.id);
-
-    if (profileError) {
-      return {
-        status: 'account not updated',
-        message: 'account updated failed',
-        error: profileError,
-        data: null,
-      };
-    }
-    return {
-      status: 'account updated',
-      message: 'account updated successfully',
-      error: null,
-      data: profile,
-    };
   }
 
   async updateFCM(profile: Profile) {

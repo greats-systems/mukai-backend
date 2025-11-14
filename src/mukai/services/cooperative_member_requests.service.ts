@@ -38,6 +38,7 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error checking member who already joined', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member exists:\n${JSON.stringify(data)}`);
         return true;
@@ -66,6 +67,7 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error checking existing member request', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member request exists:\n${JSON.stringify(data)}`);
         return true;

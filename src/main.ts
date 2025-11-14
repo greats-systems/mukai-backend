@@ -51,7 +51,9 @@ async function bootstrap() {
   // );
 
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0', () => {
-    console.log('server connected');
+    console.log(
+      `server connected, running on port ${process.env.PORT ?? 3001}`,
+    );
   });
 }
 void bootstrap();

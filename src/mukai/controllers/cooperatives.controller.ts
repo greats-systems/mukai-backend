@@ -13,7 +13,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
-import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import {
+  CreateCooperativeDto,
+  FiletrCooperativesDto,
+} from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import {
   ApiTags,
@@ -28,6 +31,7 @@ import {
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 
 @ApiTags('Cooperatives')
 @UseGuards(JwtAuthGuard)
@@ -77,6 +81,30 @@ export class CooperativesController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Post('search')
+  @ApiOperation({ summary: 'Filter cooperatives' })
+  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered cooperatives fetched successfully',
+    type: Cooperative,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async filterCooperatives(@Body() fcDto: FiletrCooperativesDto) {
+    const response = await this.cooperativesService.filterCooperatives(fcDto);
+    if (response instanceof GeneralErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }

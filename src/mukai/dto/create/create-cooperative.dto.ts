@@ -40,6 +40,26 @@ export class FiletrCooperativesDto {
   city?: string;
 }
 
+export class FiletrCooperativesLikeDto {
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Profile ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  profile_id?: string;
+
+  @ApiProperty({
+    example: 'Cre',
+    description: 'Coop search term (name, category, city)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  search_term?: string;
+}
+
 export class CreateCooperativeDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',

@@ -9,6 +9,7 @@ import { PostgresRest } from 'src/common/postgresrest';
 import {
   CreateCooperativeDto,
   FiletrCooperativesDto,
+  FiletrCooperativesLikeDto,
 } from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import { Cooperative } from '../entities/cooperative.entity';
@@ -584,6 +585,78 @@ export class CooperativesService {
           coopsList.push(coop);
         }
       }
+
+      return new SuccessResponseDto(
+        200,
+        'Filtered cooperatives fetched successfully',
+        coopsList as object[],
+      );
+    } catch (e) {
+      this.logger.error('filterCooperatives error', e);
+      return new GeneralErrorResponseDto(500, 'filterCooperatives error', e);
+    }
+  }
+
+  async filterCooperativesLike(
+    fclDto: FiletrCooperativesLikeDto,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug(`fclDto: ${JSON.stringify(fclDto)}`);
+      const coopsList: Cooperative[] = [];
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .or(`category.ilike.%${fclDto.search_term}%,name.ilike.%${fclDto.search_term}%,city.ilike.%${fclDto.search_term}%`)
+        .order('name', { ascending: true });
+      if (error) {
+        this.logger.error('Failed to filer cooperatives', error);
+      }
+      this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+      
+      const coops = data as Cooperative[];
+      for (const coop of coops) {
+        // Check if the member is already active in a coop
+        this.logger.warn(coop.name);
+        const { data: active, error: activeError } = await this.postgresrest
+          .from('group_members')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (activeError && activeError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch group members', activeError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch group members',
+            activeError,
+          );
+        }
+        this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+        const { data: request, error: requestError } = await this.postgresrest
+          .from('cooperative_member_requests')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (requestError && requestError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch coop request', requestError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch coop request',
+            requestError,
+          );
+        }
+        this.logger.debug(
+          `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+        );
+        // Append the list if the user is not in the specified group, and does not have a request to join said group
+        if (!active && !request) {
+          coopsList.push(coop);
+        }
+      }
+      
 
       return new SuccessResponseDto(
         200,

@@ -15,6 +15,7 @@ import {
 import { CooperativesService } from '../services/cooperatives.service';
 import {
   CreateCooperativeDto,
+  FiletrCooperativesLikeDto,
   FiletrCooperativesDto,
 } from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
@@ -34,8 +35,8 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 
 @ApiTags('Cooperatives')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @ApiHeader({
   name: 'apikey',
   description: 'API key for authentication (insert access token)',
@@ -103,6 +104,30 @@ export class CooperativesController {
   })
   async filterCooperatives(@Body() fcDto: FiletrCooperativesDto) {
     const response = await this.cooperativesService.filterCooperatives(fcDto);
+    if (response instanceof GeneralErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
+  @Post('search/like')
+  @ApiOperation({ summary: 'Search cooperatives suggestions by category, name or city' })
+  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered cooperatives fetched successfully',
+    type: Cooperative,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async filterCooperativesLike(@Body() fclDto: FiletrCooperativesLikeDto) {
+    const response = await this.cooperativesService.filterCooperativesLike(fclDto);
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
     }

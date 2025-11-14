@@ -863,7 +863,7 @@ export class AuthService {
         );
         return new ErrorResponseDto(422, 'Email already in use');
         }
-        */
+        
       
       if (existingPhoneNumber.data) {
         this.logger.debug(
@@ -879,6 +879,7 @@ export class AuthService {
         );
         return new ErrorResponseDto(422, 'National ID already in use');
       }
+      */
 
 
       // 2. Hash password for auth AND encrypt for profiles

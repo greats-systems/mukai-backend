@@ -384,6 +384,7 @@ export class CooperativeMemberRequestsService {
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.debug(updateCooperativeMemberRequestDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
@@ -395,7 +396,10 @@ export class CooperativeMemberRequestsService {
       }
 
       // If the user's status is active, update the coop size
-      if (updateCooperativeMemberRequestDto.status === 'active') {
+      if (
+        updateCooperativeMemberRequestDto.cooperative_id != null &&
+        updateCooperativeMemberRequestDto.status === 'active'
+      ) {
         // Add member and coop IDs to group_members
         const gmService = new GroupMemberService(this.postgresrest);
         const gmDto = new CreateGroupMemberDto();
@@ -418,6 +422,11 @@ export class CooperativeMemberRequestsService {
         if (userResponse instanceof ErrorResponseDto) {
           return userResponse;
         }
+      } else {
+        return new ErrorResponseDto(
+          400,
+          'Failed to add member. Check the cooperative ID',
+        );
       }
       return {
         statusCode: 200,

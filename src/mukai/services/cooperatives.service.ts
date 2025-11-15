@@ -606,13 +606,15 @@ export class CooperativesService {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select()
-        .or(`category.ilike.%${fclDto.search_term}%,name.ilike.%${fclDto.search_term}%,city.ilike.%${fclDto.search_term}%`)
+        .or(
+          `category.ilike.%${fclDto.search_term}%,name.ilike.%${fclDto.search_term}%,city.ilike.%${fclDto.search_term}%`,
+        )
         .order('name', { ascending: true });
       if (error) {
         this.logger.error('Failed to filer cooperatives', error);
       }
       this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
-      
+
       const coops = data as Cooperative[];
       for (const coop of coops) {
         // Check if the member is already active in a coop
@@ -656,7 +658,6 @@ export class CooperativesService {
           coopsList.push(coop);
         }
       }
-      
 
       return new SuccessResponseDto(
         200,

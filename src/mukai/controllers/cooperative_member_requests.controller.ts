@@ -8,7 +8,6 @@ import {
   Delete,
   HttpException,
   HttpStatus,
-  UseGuards,
 } from '@nestjs/common';
 import { CooperativeMemberRequestsService } from '../services/cooperative_member_requests.service';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
@@ -20,11 +19,9 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
-  ApiBearerAuth,
   ApiHeader,
 } from '@nestjs/swagger';
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperative Member Requests')
 // @UseGuards(JwtAuthGuard)

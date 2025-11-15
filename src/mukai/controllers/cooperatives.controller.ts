@@ -9,7 +9,6 @@ import {
   Delete,
   HttpException,
   HttpStatus,
-  UseGuards,
   Query,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
@@ -25,13 +24,11 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
-  ApiBearerAuth,
   ApiHeader,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 
 @ApiTags('Cooperatives')
@@ -111,7 +108,9 @@ export class CooperativesController {
   }
 
   @Post('search/like')
-  @ApiOperation({ summary: 'Search cooperatives suggestions by category, name or city' })
+  @ApiOperation({
+    summary: 'Search cooperatives suggestions by category, name or city',
+  })
   @ApiBody({ type: FiletrCooperativesDto })
   @ApiResponse({
     status: 200,
@@ -127,7 +126,8 @@ export class CooperativesController {
     description: 'Internal server error',
   })
   async filterCooperativesLike(@Body() fclDto: FiletrCooperativesLikeDto) {
-    const response = await this.cooperativesService.filterCooperativesLike(fclDto);
+    const response =
+      await this.cooperativesService.filterCooperativesLike(fclDto);
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
     }

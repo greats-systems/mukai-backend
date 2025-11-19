@@ -21,6 +21,7 @@ import {
   ApiBearerAuth,
   ApiTags,
   ApiHeader,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
@@ -235,6 +236,7 @@ export class CooperativeMemberApprovalsController {
     return response;
   }
 
+  @ApiExcludeEndpoint()
   @Patch('coop/:coop_id')
   @ApiOperation({ summary: 'Update a poll by cooperative ID' })
   @ApiParam({

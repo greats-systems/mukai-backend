@@ -453,6 +453,7 @@ export class CooperativeMemberApprovalsService {
       updateLoanDto.status = 'disbursed';
       updateLoanDto.is_approved = true;
       updateLoanDto.updated_at = DateTime.now().toISO();
+      updateLoanDto.date_disbursed = DateTime.now().toISO();
       updateLoanDto.remaining_balance = parseFloat(
         updateCooperativeMemberApprovalsDto.additional_info,
       );

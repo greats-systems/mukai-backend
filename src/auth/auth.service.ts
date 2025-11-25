@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -1205,6 +1205,36 @@ export class AuthService {
       .select('*')
       .neq('id', plDto.id)
       .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch profiles: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data as Profile[];
+  } catch (error) {
+    console.error('Error in getProfiles:', error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred while fetching profiles',
+    );
+  }
+}
+
+async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
+  try {
+    // const searchTerm = plDto.first_name; 
+    
+    const { data, error } = await this.postgresRest
+      .from('profiles')
+      .select('*')
+      .neq('id', psDto.id)
+      .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%`)
       .order('created_at', { ascending: false });
 
     if (error) {

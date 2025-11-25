@@ -62,7 +62,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   // @IsArray()
   @IsOptional()
-  supporting_votes?: string;
+  supporting_votes?: string[];
 
   @ApiProperty({
     example: [
@@ -74,7 +74,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsArray()
   @IsOptional()
-  opposing_votes?: string;
+  opposing_votes?: string[];
 
   @ApiProperty({
     example: 'Annual leadership election',

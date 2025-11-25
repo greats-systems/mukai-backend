@@ -24,6 +24,7 @@ import {
   LoginDto,
   OtpDto,
   ProfilesLikeDto,
+  ProfileSuggestionsDto,
   SecurityQuestionsDto,
 } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -64,10 +65,15 @@ export class AuthController {
     return this.authService.getProfilesExcept(id);
   }
 
-  @ApiExcludeEndpoint()
+  // @ApiExcludeEndpoint()
   @Post('profiles/like/except')
   async getProfilesLikeExcept(@Body() plDto: ProfilesLikeDto) {
     return this.authService.getProfilesLikeExcept(plDto);
+  }
+
+  @Post('profiles/suggestions')
+  async getProfileSuggestions(@Body() psDto: ProfileSuggestionsDto) {
+    return this.authService.getProfileSuggestions(psDto);
   }
 
   @ApiTags('Authentication')

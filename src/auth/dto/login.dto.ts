@@ -177,3 +177,22 @@ export class ProfilesLikeDto {
   @IsOptional()
   phone?: string;
 }
+
+export class ProfileSuggestionsDto {
+  @ApiProperty({
+    description: 'User ID to exclude from results',
+    example: '3cc4101d-7120-4765-8161-fa457d211c97',
+  })
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @ApiProperty({
+    description: 'Search term',
+    example: 'Jo',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  search_term?: string;
+}

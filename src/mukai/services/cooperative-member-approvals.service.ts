@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
@@ -23,6 +24,8 @@ import { SignupDto } from 'src/auth/dto/signup.dto';
 import { UserService } from 'src/user/user.service';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
+import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
@@ -237,7 +240,23 @@ export class CooperativeMemberApprovalsService {
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
       this.logger.log(updateCooperativeMemberApprovalsDto);
-      // const approval = await this.viewCooperativeMemberApprovals(u)
+      // Fetch coop data
+      const { data: coop, error: coopError } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .eq('id', updateCooperativeMemberApprovalsDto.group_id)
+        .limit(1)
+        .single();
+      if (coopError) {
+        this.logger.error('Faield to fetch coop', coopError);
+        return new ErrorResponseDto(400, 'Failed to fetch coop', coopError);
+      }
+      const coopData = coop as CreateCooperativeDto;
+      updateCooperativeMemberApprovalsDto.consensus_reached =
+        updateCooperativeMemberApprovalsDto.supporting_votes!.length /
+          coopData.no_of_members >=
+        0.75;
+
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .update({
@@ -264,11 +283,18 @@ export class CooperativeMemberApprovalsService {
         );
         return new ErrorResponseDto(400, error.details);
       }
+      const everyoneVoted =
+        updateCooperativeMemberApprovalsDto.supporting_votes!.length +
+          updateCooperativeMemberApprovalsDto.opposing_votes!.length ==
+        coopData.no_of_members - 1;
       this.logger.debug(
         `Poll description: ${updateCooperativeMemberApprovalsDto.poll_description}`,
       );
       this.logger.debug(
         `Consensus reached? ${updateCooperativeMemberApprovalsDto.consensus_reached}`,
+      );
+      this.logger.debug(
+        `Everyone has voted? ${everyoneVoted}\nsupporting: ${updateCooperativeMemberApprovalsDto.supporting_votes!.length}\nopposing: ${updateCooperativeMemberApprovalsDto.opposing_votes!.length}\ncoop size: ${coopData.no_of_members - 1}`,
       );
       if (updateCooperativeMemberApprovalsDto.consensus_reached) {
         // updateCooperativeMemberApprovalsDto.consensus_reached = true;
@@ -312,6 +338,24 @@ export class CooperativeMemberApprovalsService {
             return new ErrorResponseDto(400, 'Failed to update member role');
           }
         }
+      } else if (
+        everyoneVoted &&
+        !updateCooperativeMemberApprovalsDto.consensus_reached
+      ) {
+        const { data, error } = await this.postgresrest
+          .from('cooperative_member_approvals')
+          .update({
+            consensus_reached: true,
+          })
+          .eq('id', id);
+        if (error) {
+          this.logger.error('Failed to update poll', error);
+          return new ErrorResponseDto(400, 'Failed to update poll', error);
+        }
+        return new SuccessResponseDto(
+          200,
+          `${updateCooperativeMemberApprovalsDto.poll_description} has been opposed`,
+        );
       } else {
         this.logger.debug('Consensus not yet reached');
       }

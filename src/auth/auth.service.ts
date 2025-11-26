@@ -1234,7 +1234,7 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
       .from('profiles')
       .select('*')
       .neq('id', psDto.id)
-      .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%`)
+      .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%,email.ilike.%${psDto.search_term}%`)
       .order('created_at', { ascending: false });
 
     if (error) {

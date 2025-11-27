@@ -6,7 +6,11 @@
 import { Logger, Injectable } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
-import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import {
+  CreateCooperativeDto,
+  FiletrCooperativesDto,
+  FiletrCooperativesLikeDto,
+} from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import { Cooperative } from '../entities/cooperative.entity';
 import { GroupMemberService } from './group-members.service';
@@ -45,7 +49,7 @@ export class CooperativesService {
       this.logger.debug(createCooperativeDto);
 
       // 1. Check for existing coop and user in parallel
-      /*
+
       const [existingCoopResult, existingUserResult] = await Promise.all([
         this.postgresrest
           .from('cooperatives')
@@ -96,6 +100,7 @@ export class CooperativesService {
       }
 
       // Check if user profile exists for the phone number
+      /*
       if (existingUserResult.data.length > 0) {
         this.logger.debug(
           `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
@@ -117,8 +122,9 @@ export class CooperativesService {
           `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
         );
         return new GeneralErrorResponseDto(
-          400,
-          JSON.stringify(existingUserResult.data),
+          422,
+          'User already exists',
+          existingUserResult.data,
           // existingUserResult.error,
         );
       }
@@ -133,6 +139,7 @@ export class CooperativesService {
         );
       }
       */
+
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =
         await this.postgresrest
@@ -262,6 +269,8 @@ export class CooperativesService {
         return new ErrorResponseDto(400, JSON.stringify(updateError));
       }
 
+      this.logger.debug(`Update response: ${JSON.stringify(updateResponse)}`);
+
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -287,7 +296,7 @@ export class CooperativesService {
     }
   }
 
-  async findAllCooperatives(): Promise<Cooperative[] | ErrorResponseDto> {
+  async findAllCooperatives(): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -298,7 +307,7 @@ export class CooperativesService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      return data as Cooperative[];
+      return data;
     } catch (error) {
       this.logger.error('Exception in findAllCooperatives', error);
       return new ErrorResponseDto(500, error);
@@ -481,6 +490,7 @@ export class CooperativesService {
         .select()
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
         .is('cooperative_id', null)
         .order('created_at', { ascending: false })
         .order('first_name', { ascending: true });
@@ -491,6 +501,198 @@ export class CooperativesService {
       }
 
       // this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
+
+      if (!data || data.length === 0) {
+        return new ErrorResponseDto(404, `Members not found`);
+      }
+
+      // Extract profiles from the data
+      const profiles = data.flatMap((item) => item.profiles);
+
+      if (profiles.length === 0) {
+        return new ErrorResponseDto(404, `No member profiles found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error(`Exception in viewAvailableMembers`, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async filterCooperatives(
+    fcDto: FiletrCooperativesDto,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
+      const coopsList: Cooperative[] = [];
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .match({
+          category: fcDto.category,
+        })
+        .or(`province_state.eq.${fcDto.province},city.eq.${fcDto.city}`)
+        .order('name', { ascending: true });
+      if (error) {
+        this.logger.error('Failed to filer cooperatives', error);
+      }
+      // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+      const coops = data as Cooperative[];
+      for (const coop of coops) {
+        // Check if the member is already active in a coop
+        this.logger.warn(coop.name);
+        const { data: active, error: activeError } = await this.postgresrest
+          .from('group_members')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fcDto.profile_id)
+          .limit(1)
+          .single();
+        if (activeError && activeError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch group members', activeError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch group members',
+            activeError,
+          );
+        }
+        this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+        const { data: request, error: requestError } = await this.postgresrest
+          .from('cooperative_member_requests')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fcDto.profile_id)
+          .limit(1)
+          .single();
+        if (requestError && requestError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch coop request', requestError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch coop request',
+            requestError,
+          );
+        }
+        this.logger.debug(
+          `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+        );
+        // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
+        if (!active && !request) {
+          coopsList.push(coop);
+        }
+      }
+
+      return new SuccessResponseDto(
+        200,
+        'Filtered cooperatives fetched successfully',
+        coopsList as object[],
+      );
+    } catch (e) {
+      this.logger.error('filterCooperatives error', e);
+      return new GeneralErrorResponseDto(500, 'filterCooperatives error', e);
+    }
+  }
+
+  async filterCooperativesLike(
+    fclDto: FiletrCooperativesLikeDto,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      this.logger.debug(`fclDto: ${JSON.stringify(fclDto)}`);
+      const coopsList: Cooperative[] = [];
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .or(
+          `category.ilike.%${fclDto.search_term}%,name.ilike.%${fclDto.search_term}%,city.ilike.%${fclDto.search_term}%`,
+        )
+        .order('name', { ascending: true });
+      if (error) {
+        this.logger.error('Failed to filer cooperatives', error);
+      }
+      this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+      const coops = data as Cooperative[];
+      for (const coop of coops) {
+        // Check if the member is already active in a coop
+        this.logger.warn(coop.name);
+        const { data: active, error: activeError } = await this.postgresrest
+          .from('group_members')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (activeError && activeError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch group members', activeError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch group members',
+            activeError,
+          );
+        }
+        this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+        const { data: request, error: requestError } = await this.postgresrest
+          .from('cooperative_member_requests')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (requestError && requestError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch coop request', requestError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch coop request',
+            requestError,
+          );
+        }
+        this.logger.debug(
+          `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+        );
+        // Append the list if the user is not in the specified group, and does not have a request to join said group
+        if (!active && !request) {
+          coopsList.push(coop);
+        }
+      }
+
+      return new SuccessResponseDto(
+        200,
+        'Filtered cooperatives fetched successfully',
+        coopsList as object[],
+      );
+    } catch (e) {
+      this.logger.error('filterCooperatives error', e);
+      return new GeneralErrorResponseDto(500, 'filterCooperatives error', e);
+    }
+  }
+
+  async viewAvailableMembersLike(
+    searchTerm: string,
+  ): Promise<Profile[] | Profile | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('profiles')
+        .select()
+        .ilike('account_type', '%member%')
+        .or(
+          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
+        )
+        .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
+        .is('cooperative_id', null)
+        .order('created_at', { ascending: false })
+        .order('first_name', { ascending: true });
+
+      if (error) {
+        this.logger.error(`Error fetching available members`, error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
 
       if (!data || data.length === 0) {
         return new ErrorResponseDto(404, `Members not found`);

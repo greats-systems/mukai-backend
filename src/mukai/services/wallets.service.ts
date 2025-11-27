@@ -221,7 +221,7 @@ export class WalletsService {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
-      // this.logger.log("Wallet data:", JSON.stringify(data));
+      this.logger.debug(`Wallet data:, ${JSON.stringify(data[0]['wallets_profile_id_fkey'])}`);
       
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
@@ -265,7 +265,7 @@ export class WalletsService {
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
-        data: data as Wallet[],
+        data,
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
@@ -292,7 +292,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
+      // this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
       const walletPhone = data?.coop_phone;
       const balanceEnquiryParams = {
         transactorMobile: walletPhone,

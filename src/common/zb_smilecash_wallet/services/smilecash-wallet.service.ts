@@ -44,6 +44,7 @@ import {
 import { plainToInstance } from 'class-transformer';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
+import { MunicipalityBillRequest } from '../requests/municipality-bill.request';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -337,7 +338,7 @@ export class SmileCashWalletService {
         TransactionResponsePayment,
         payResponse.data,
       );
-      console.debug(`Balance enquiry successful:`, paymentData);
+      // console.debug(`Balance enquiry successful:`, paymentData);
       if (!paymentData?.data) {
         return new GeneralErrorResponseDto(
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -346,7 +347,7 @@ export class SmileCashWalletService {
         );
       }
       const formattedResponse = this.parseTransactionDescription(paymentData);
-      console.debug(`Formatted response:`, formattedResponse);
+      // console.debug(`Formatted response:`, formattedResponse);
       return new SuccessResponseDto(
         HttpStatus.OK,
         'Balance enquiry successful',
@@ -443,7 +444,7 @@ export class SmileCashWalletService {
     request: WalletToWalletTransferRequest,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
-      console.debug(`Base URL: ${this.baseUrl}`);
+      this.logger.debug(`Base URL: ${this.baseUrl}`);
       // Always start with an auth request
       request.channel = 'USSD';
       request.currency = request.currency.toUpperCase();
@@ -522,36 +523,7 @@ export class SmileCashWalletService {
         'Parsed transaction description:',
         JSON.stringify(loggedResponse.data.parsedDetails),
       );
-      /**
-       * create table public.transaction_logs (
-            id uuid not null default gen_random_uuid (),
-            created_at timestamp with time zone not null default now(),
-            response_code text null,
-            response_description text null,
-            transaction_id text null,
-            reference text null,
-            currency text null,
-            product text null,
-            amount numeric null,
-            transactor_id text null,
-            transactor_name text null,
-            source text null,
-            destination text null,
-            transaction_date text null,
-            channel text null,
-            description text null,
-            transaction_status text null,
-            type_of_transaction text null,
-            auth_response text null,
-            biller_response text null,
-            additional_data text null,
-            transaction_state_description text null,
-            date text null,
-            balance numeric null,
-            constraint transaction_logs_pkey primary key (id)
-          ) TABLESPACE pg_default;
-       
-      */
+
       await this.postgresrest.from('transaction_logs').insert({
         response_code: loggedResponse.responseCode,
         response_description: loggedResponse.responseDescription,
@@ -585,11 +557,11 @@ export class SmileCashWalletService {
         paymentData,
       );
     } catch (error) {
-      this.logger.error(`walletToWallet error: ${JSON.stringify(error)}`);
+      this.logger.error(`walletToWallet error: ${error}`);
       return new GeneralErrorResponseDto(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'walletToWallet error',
-        error.response?.data.toString() || error,
+        error.response?.toString() || error,
       );
     }
   }
@@ -606,7 +578,10 @@ export class SmileCashWalletService {
       );
       const authError = plainToInstance(TransactionError, authResponse.data);
       console.debug('Auth response:', authResponse.data);
-      if (authError?.responseCode === '304') {
+      if (
+        authError?.responseCode === '304' ||
+        authError?.responseCode === '842'
+      ) {
         console.debug(
           `walletToOwnBank auth error: ${JSON.stringify(authResponse.data)}`,
         );
@@ -633,7 +608,8 @@ export class SmileCashWalletService {
 
       // Then call the payment request
       const authData = authResponse.data as TransactionResponseAuth;
-      request.transactionId = authData.data.authResponse.transactionId;
+      this.logger.debug(`${JSON.stringify(authData.data.id)}`);
+      request.transactionId = authData.data.id;
       const payResponse = await axios.post(
         `${this.baseUrl}/transactions/subscriber/wallet-to-bank/payment`,
         request,
@@ -923,6 +899,46 @@ export class SmileCashWalletService {
         statusCode: 500,
         message: error,
       };
+    }
+  }
+
+  async payMunicipalityBill(
+    mbRequest: MunicipalityBillRequest,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      // 1. Transfer customer's US$ funds to agent account (wallet-to-wallet)
+      const w2wResponse = await this.walletToWallet(
+        mbRequest.w2wTransferRequest,
+      );
+      if (w2wResponse instanceof GeneralErrorResponseDto) {
+        return w2wResponse;
+      }
+
+      // 2. Convert US$ funds into ZWG. The incoming request should provide the agent's transactor mobile, and the municipality's
+      // destination bank account number
+      mbRequest.w2obTransferRequest.bankAccount = '411300074182200';
+      mbRequest.w2obTransferRequest.amount =
+        mbRequest.w2wTransferRequest.amount * 28;
+      mbRequest.w2obTransferRequest.channel = 'USSD';
+      mbRequest.w2obTransferRequest.currency = 'ZWG';
+      mbRequest.w2obTransferRequest.subscriberMobile = '263780032799';
+      const w2obResponse = await this.walletToOwnBank(
+        mbRequest.w2obTransferRequest,
+      );
+      if (w2obResponse instanceof GeneralErrorResponseDto) {
+        return w2obResponse;
+      }
+
+      // 3. Return a success message
+      this.logger.log('Payment successful!');
+      return new SuccessResponseDto(
+        201,
+        'Payment successful!',
+        w2obResponse.data,
+      );
+    } catch (e) {
+      this.logger.error(`payMunicipalityBill error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'payMunicipalityBill error', e);
     }
   }
 }

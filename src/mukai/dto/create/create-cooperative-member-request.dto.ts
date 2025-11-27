@@ -102,4 +102,13 @@ export class CreateCooperativeMemberRequestDto {
   @IsBoolean()
   @IsOptional()
   is_invited?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Flag to indicate if a member has requested to join a coop',
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  has_requested?: boolean;
 }

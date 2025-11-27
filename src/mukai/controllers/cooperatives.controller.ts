@@ -9,11 +9,14 @@ import {
   Delete,
   HttpException,
   HttpStatus,
-  UseGuards,
   Query,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
-import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import {
+  CreateCooperativeDto,
+  FiletrCooperativesLikeDto,
+  FiletrCooperativesDto,
+} from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import {
   ApiTags,
@@ -21,13 +24,12 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
-  ApiBearerAuth,
   ApiHeader,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 
 @ApiTags('Cooperatives')
 // @UseGuards(JwtAuthGuard)
@@ -77,6 +79,57 @@ export class CooperativesController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Post('search')
+  @ApiOperation({ summary: 'Filter cooperatives' })
+  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered cooperatives fetched successfully',
+    type: Cooperative,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async filterCooperatives(@Body() fcDto: FiletrCooperativesDto) {
+    const response = await this.cooperativesService.filterCooperatives(fcDto);
+    if (response instanceof GeneralErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
+  @Post('search/like')
+  @ApiOperation({
+    summary: 'Search cooperatives suggestions by category, name or city',
+  })
+  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Filtered cooperatives fetched successfully',
+    type: Cooperative,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async filterCooperativesLike(@Body() fclDto: FiletrCooperativesLikeDto) {
+    const response =
+      await this.cooperativesService.filterCooperativesLike(fclDto);
+    if (response instanceof GeneralErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }
@@ -157,6 +210,42 @@ export class CooperativesController {
   })
   async viewAvailableMembers() {
     const response = await this.cooperativesService.viewAvailableMembers();
+    // console.log(`viewAvailableMembers response: ${JSON.stringify(response)}`);
+    // if (response['statusCode'] === 400) {
+    //   throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
+    // }
+    // if (response['statusCode'] === 500) {
+    //   throw new HttpException(
+    //     response['message'],
+    //     HttpStatus.INTERNAL_SERVER_ERROR,
+    //   );
+    // }
+    return response;
+  }
+
+  @Get('members/available/like/:searchTerm')
+  @ApiParam({
+    name: 'searchTerm',
+    example: 'john',
+    description: 'Search term to filter members by name, email, or phone',
+  })
+  @ApiOperation({ summary: 'List all members that do not have a cooperative' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of profiles',
+    type: [Profile],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async viewAvailableMembersLike(@Param('searchTerm') searchTerm: string) {
+    const response =
+      await this.cooperativesService.viewAvailableMembersLike(searchTerm);
     // console.log(`viewAvailableMembers response: ${JSON.stringify(response)}`);
     // if (response['statusCode'] === 400) {
     //   throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

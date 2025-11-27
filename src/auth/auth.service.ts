@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -107,9 +107,9 @@ export class AuthService {
       const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
       const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
       const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
-      this.logger.debug(
-        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
-      );
+      // this.logger.debug(
+      //   `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      // );
       const otpBody = {
         sender: '0777757603',
         scheduled_time: 'unknown',
@@ -117,7 +117,8 @@ export class AuthService {
       };
 
       // Send OTP
-      await nts.sendSms(otpBody);
+      const ntsResponse = await nts.sendSms(otpBody);
+      this.logger.debug(`SMS response: ${JSON.stringify(ntsResponse)}`);
 
       // Insert into database (useful when verifying)
       const { data, error } = await this.postgresRest
@@ -621,6 +622,157 @@ export class AuthService {
     }
   }
 
+  async loginWithPhone2(loginDto: LoginDto): Promise<object | ErrorResponseDto> {
+    // this.logger.log(JSON.stringify(loginDto));
+    try {
+      this.logger.debug(JSON.stringify(loginDto))
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('email')
+        .eq('phone', loginDto.phone)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Profile fetch error:', error);
+        return new ErrorResponseDto(400, 'Profile fetch error', error);
+      }
+
+      this.logger.debug(`User data: ${JSON.stringify(data)}`);
+
+      // Continue with login logic...
+      const {
+        data: { user, session },
+        error: authError,
+      } = await this.supabaseAdmin.auth.signInWithPassword({
+        email: data.email,
+        password: loginDto.password,
+      });
+
+      if (authError || !user) {
+        this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
+        return {
+          status: 'failed',
+          message: 'Invalid credentials',
+          statusCode: 401,
+        } as AuthErrorResponse;
+      }
+
+      // 2. Get essential profile data only
+      const { data: profileData, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select('id, wallet_id, phone, first_name, last_name, account_type')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+      }
+
+      // 3. Parallel balance enquiries with timeout
+      const scwService = new SmileCashWalletService(this.postgresRest);
+      const walletPhone = profileData?.phone;
+
+      const balancePromises: Promise<SuccessResponseDto | null>[] = [];
+      if (walletPhone) {
+        const balanceParamsUSD: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'USD',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        const balanceParamsZWG: BalanceEnquiryRequest = {
+          transactorMobile: walletPhone,
+          currency: 'ZWG',
+          channel: 'USSD',
+          transactionId: '',
+        };
+
+        // Execute balance enquiries in parallel with timeout
+        balancePromises.push(
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsUSD),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+          Promise.race<SuccessResponseDto | null>([
+            scwService.balanceEnquiry(balanceParamsZWG),
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), 5000),
+            ), // 5s timeout
+          ]),
+        );
+      }
+
+      const [balanceUSD, balanceZWG] =
+        await Promise.allSettled(balancePromises);
+
+      if (
+        balanceUSD.status === 'fulfilled' &&
+        balanceUSD.value instanceof SuccessResponseDto &&
+        balanceZWG.status === 'fulfilled' &&
+        balanceZWG.value instanceof SuccessResponseDto
+      ) {
+        this.logger.log(
+          `balanceUSD: ${JSON.stringify(balanceUSD.value.data.data.billerResponse.balance)}`,
+        );
+        const updateDto = new UpdateWalletDto();
+        updateDto.id = profileData!.wallet_id;
+        updateDto.balance = balanceUSD.value.data.data.billerResponse.balance;
+        updateDto.balance_zwg =
+          balanceZWG.value.data.data.billerResponse.balance;
+        const walletService = new WalletsService(this.postgresRest);
+        const walletResponse = await walletService.updateWallet(
+          updateDto.id!,
+          updateDto,
+        );
+        this.logger.log(`walletResponse: ${JSON.stringify(walletResponse)}`);
+      }
+
+      // 4. Build minimal response
+      // const user = await this.validateUser(loginDto);
+      // const session = await this.createSession(user.id);
+
+      const response: AuthLoginSuccessResponse = {
+        status: 'account authenticated',
+        statusCode: 200,
+        message: 'account authenticated successfully',
+        access_token: this.jwtService.sign({
+          email: user.email,
+          sub: user.id,
+          role: user.role || 'authenticated',
+        }),
+        refresh_token: session?.refresh_token,
+        token_type: 'bearer',
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: profileData?.phone || null,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          account_type: profileData?.account_type || 'authenticated',
+          wallet_id: profileData?.wallet_id,
+          role: user.role || 'authenticated',
+        },
+        data: undefined, // Explicitly set as undefined
+        // error: null
+      };
+
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        status: 'failed',
+        message: 'Login failed. Please try again.',
+        statusCode: 500,
+      };
+    }
+  }
+
   async resetPassword(
     resetPasswordDto: LoginDto,
   ): Promise<object | ErrorResponseDto> {
@@ -648,7 +800,29 @@ export class AuthService {
       this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
       return new ErrorResponseDto(400, error.details);
     }
-    this.logger.log(`Password reset response: ${JSON.stringify(data)}`);
+
+    // Update profile
+    const plainText = resetPasswordDto.password;
+    const secretKey = process.env.SECRET_KEY || 'No secret key';
+    const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+    const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+    const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+    this.logger.debug(
+      `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+    );
+    const { data: update, error: updateError } = await this.postgresRest
+    .from('profiles')
+    .update({ 'password': cipherText })
+    .eq('id', userData.id)
+    .select()
+    .single();
+
+    if (updateError) {
+      this.logger.error(`Error updating profile, ${JSON.stringify(updateError)}`);
+      return new ErrorResponseDto(400, updateError.details);
+    }
+
+    this.logger.log(`Password reset response: ${JSON.stringify(update)}`);
     return data as object;
   }
 
@@ -682,20 +856,30 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-
-
+        /*
+        if(existingUser){
+          this.logger.debug(
+          `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
+        );
+        return new ErrorResponseDto(422, 'Email already in use');
+        }
+        
+      
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
+      
+      
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
         return new ErrorResponseDto(422, 'National ID already in use');
       }
+      */
 
 
       // 2. Hash password for auth AND encrypt for profiles
@@ -704,9 +888,9 @@ export class AuthService {
       const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
       const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
       const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
-      this.logger.debug(
-        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
-      );
+      // this.logger.debug(
+      //   `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      // );
       // const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
       const now = new Date().toISOString();
@@ -1012,6 +1196,66 @@ export class AuthService {
     }
   }
 
+  async getProfilesLikeExcept(plDto: ProfilesLikeDto): Promise<Profile[]> {
+  try {
+    const searchTerm = plDto.first_name; // Since all fields use the same search term
+    
+    const { data, error } = await this.postgresRest
+      .from('profiles')
+      .select('*')
+      .neq('id', plDto.id)
+      .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch profiles: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data as Profile[];
+  } catch (error) {
+    console.error('Error in getProfiles:', error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred while fetching profiles',
+    );
+  }
+}
+
+async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
+  try {
+    // const searchTerm = plDto.first_name; 
+    
+    const { data, error } = await this.postgresRest
+      .from('profiles')
+      .select('*')
+      .neq('id', psDto.id)
+      .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%,email.ilike.%${psDto.search_term}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch profiles: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data as Profile[];
+  } catch (error) {
+    console.error('Error in getProfiles:', error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred while fetching profiles',
+    );
+  }
+}
+
   async getProfile(profile_id: string): Promise<Profile> {
     try {
       const { data, error } = await this.postgresRest
@@ -1037,7 +1281,12 @@ export class AuthService {
 
   async submitSecurityQuestions(sqDto: SecurityQuestionsDto): Promise<boolean | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresRest.from('security_questions').insert(sqDto).select().single();
+      this.logger.debug(JSON.stringify(sqDto));
+      const { data, error } = await this.postgresRest
+      .from('security_questions')
+      .insert(sqDto)
+      .select()
+      .single();
       if (error) {
         return new ErrorResponseDto(400, 'Error creating security questions', error);
       }

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDate, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateLoanDto {
@@ -178,4 +178,10 @@ export class CreateLoanDto {
   @IsString()
   @IsOptional()
   is_approved?: boolean;
+
+  @ApiPropertyOptional({
+    example: '2025-18-11T13:12:13.078411',
+    description: 'Timestamp of disbursement',
+  })
+  date_disbursed?: string;
 }

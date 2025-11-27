@@ -110,6 +110,7 @@ import { NotifyTextModule } from './messagings/notify-text.module';
     SmileCashWalletModule,
     SmilePayModule,
     NotifyTextModule,
+    // MunicipalitiesModule,
     // PostmanModule,
   ],
   controllers: [

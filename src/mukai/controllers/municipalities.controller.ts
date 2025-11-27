@@ -11,9 +11,6 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import { CreateLoanDto } from '../dto/create/create-loan.dto';
-import { UpdateLoanDto } from '../dto/update/update-loan.dto';
-import { LoanService } from '../services/loan.service';
 import {
   ApiTags,
   ApiOperation,
@@ -22,24 +19,24 @@ import {
   ApiParam,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { Loan } from '../entities/loan.entity';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { MunicipalitiesService } from '../services/pay-municipality.service';
 
-@ApiTags('Loans')
+@ApiTags('Municipalities')
 // @UseGuards(JwtAuthGuard)
 // @ApiBearerAuth()
-@Controller('loans')
-export class LoanController {
-  constructor(private readonly loanService: LoanService) {}
+@Controller('municipality')
+export class MunicipalitiesController {
+  constructor(private readonly municipalityService: MunicipalitiesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new loan' })
-  @ApiBody({ type: CreateLoanDto })
+  @ApiOperation({ summary: 'Create a new municipality' })
+  @ApiBody({ type: Object })
   @ApiResponse({
     status: 201,
-    description: 'Loan created successfully',
-    type: Loan,
+    description: 'Municipalities created successfully',
+    type: Object,
   })
   @ApiResponse({
     status: 400,
@@ -49,8 +46,10 @@ export class LoanController {
     status: 500,
     description: 'Internal server error',
   })
-  async create(@Body() createLoanDto: CreateLoanDto) {
-    const response = await this.loanService.createLoan(createLoanDto);
+  async create(@Body() createMunicipalitiesDto: object) {
+    const response = await this.municipalityService.createMunicipality(
+      createMunicipalitiesDto,
+    );
     if (response instanceof ErrorResponseDto) {
       if (response.statusCode === 400) {
         throw new HttpException(
@@ -73,7 +72,6 @@ export class LoanController {
   @ApiResponse({
     status: 200,
     description: 'Array of loans',
-    type: [Loan],
   })
   @ApiResponse({
     status: 400,
@@ -84,7 +82,7 @@ export class LoanController {
     description: 'Internal server error',
   })
   async findAll() {
-    const response = await this.loanService.findAllLoans();
+    const response = await this.municipalityService.findAllMunicipalities();
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -98,16 +96,16 @@ export class LoanController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get loan details' })
+  @ApiOperation({ summary: 'Get municipality details' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Loan ID',
+    description: 'Municipalities ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Loan details',
-    type: Loan,
+    description: 'Municipalities details',
+    type: Object,
   })
   @ApiResponse({
     status: 400,
@@ -115,14 +113,14 @@ export class LoanController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Loan not found',
+    description: 'Municipalities not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
   async findOne(@Param('id') id: string) {
-    const response = await this.loanService.viewLoan(id);
+    const response = await this.municipalityService.viewMunicipality(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -135,17 +133,17 @@ export class LoanController {
     return response;
   }
 
-  @Get('profile/:profile_id')
-  @ApiOperation({ summary: 'Get profile loan details' })
+  @Get('name/:name')
+  @ApiOperation({ summary: 'Get municipality details by name' })
   @ApiParam({
-    name: 'profile_id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Profile ID',
+    name: 'name',
+    example: 'Harare',
+    description: 'Municipality name',
   })
   @ApiResponse({
     status: 200,
-    description: 'Loan details',
-    type: Loan,
+    description: 'Municipalities details',
+    type: Object,
   })
   @ApiResponse({
     status: 400,
@@ -153,56 +151,15 @@ export class LoanController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Loan not found',
+    description: 'Municipalities not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
-  async viewProfileLoans(@Param('profile_id') profile_id: string) {
-    const response = await this.loanService.viewProfileLoans(profile_id);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
-  }
-
-  @Get('cooperative/:cooperative_id')
-  @ApiOperation({ summary: 'Get list of coop loans' })
-  @ApiParam({
-    name: 'cooperative_id',
-    example: '7d97dad4-9f19-4f76-b8e4-93e110bf293d',
-    description: 'Cooperative ID',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Loan details',
-    type: Loan,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid ID format',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Loan not found',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  async viewCoopLoans(
-    @Param('cooperative_id') cooperative_id,
-    @Body() profileBody: object,
-  ) {
-    console.debug(`viewCoopLoans cooperative_id: ${cooperative_id}`);
-    const response = await this.loanService.viewCoopLoans(cooperative_id);
+  async viewMunicipalityByName(@Param('name') name: string) {
+    const response =
+      await this.municipalityService.viewMunicipalityByName(name);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -216,17 +173,17 @@ export class LoanController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a loan' })
+  @ApiOperation({ summary: 'Update municipality' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Loan ID',
+    description: 'Municipalities ID',
   })
-  @ApiBody({ type: UpdateLoanDto })
+  @ApiBody({ type: Object })
   @ApiResponse({
     status: 200,
-    description: 'Updated loan details',
-    type: Loan,
+    description: 'Updated municipality details',
+    type: Object,
   })
   @ApiResponse({
     status: 400,
@@ -234,56 +191,20 @@ export class LoanController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Loan not found',
+    description: 'Municipalities not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
-  async update(@Param('id') id: string, @Body() updateLoanDto: UpdateLoanDto) {
-    const response = await this.loanService.updateLoan(id, updateLoanDto);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    return response;
-  }
-
-  @Patch('coop/:id')
-  @ApiOperation({ summary: 'Update coop loan' })
-  @ApiParam({
-    name: 'id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Loan ID',
-  })
-  @ApiBody({ type: UpdateLoanDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Updated loan details',
-    type: Loan,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input data',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Loan not found',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal server error',
-  })
-  async updateCoop(
+  async update(
     @Param('id') id: string,
-    @Body() updateLoanDto: UpdateLoanDto,
+    @Body() updateMunicipalitiesDto: object,
   ) {
-    const response = await this.loanService.updateCoop(id, updateLoanDto);
+    const response = await this.municipalityService.updateMunicipality(
+      id,
+      updateMunicipalitiesDto,
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -297,16 +218,16 @@ export class LoanController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a loan' })
+  @ApiOperation({ summary: 'Delete municipality' })
   @ApiParam({
     name: 'id',
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Loan ID',
+    description: 'Municipalities ID',
   })
   @ApiResponse({
     status: 200,
-    description: 'Loan deleted successfully',
-    type: Loan,
+    description: 'Municipalities deleted successfully',
+    type: Object,
   })
   @ApiResponse({
     status: 400,
@@ -314,14 +235,14 @@ export class LoanController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Loan not found',
+    description: 'Municipalities not found',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
   })
   async delete(@Param('id') id: string) {
-    const response = await this.loanService.deleteLoan(id);
+    const response = await this.municipalityService.deleteMunicipality(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

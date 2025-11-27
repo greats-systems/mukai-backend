@@ -38,6 +38,7 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error checking member who already joined', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member exists:\n${JSON.stringify(data)}`);
         return true;
@@ -66,6 +67,7 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error checking existing member request', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member request exists:\n${JSON.stringify(data)}`);
         return true;
@@ -131,12 +133,13 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error creating cooperative member request', error);
         return new ErrorResponseDto(400, error.details);
       }
+      const profileService = new UserService(this.postgresrest);
+      const updateDto = new SignupDto();
       if (createCooperativeMemberRequestDto.is_invited) {
         this.logger.debug(
           `Updating is_invited for user ${createCooperativeMemberRequestDto.member_id}`,
         );
-        const profileService = new UserService(this.postgresrest);
-        const updateDto = new SignupDto();
+
         updateDto.is_invited = createCooperativeMemberRequestDto.is_invited;
         this.logger.log(
           `Updating invitation status for ${createCooperativeMemberRequestDto.member_id!}`,
@@ -149,6 +152,27 @@ export class CooperativeMemberRequestsService {
           return new ErrorResponseDto(
             400,
             'Failed to update user invitation status',
+            updateResponse.errorObject,
+          );
+        }
+      } else {
+        this.logger.debug(
+          `Updating has_requested for user ${createCooperativeMemberRequestDto.member_id}`,
+        );
+
+        updateDto.has_requested =
+          createCooperativeMemberRequestDto.has_requested ?? false;
+        this.logger.log(
+          `Updating request status for ${createCooperativeMemberRequestDto.member_id!}`,
+        );
+        const updateResponse = await profileService.updateUser(
+          createCooperativeMemberRequestDto.member_id!,
+          updateDto,
+        );
+        if (updateResponse instanceof ErrorResponseDto) {
+          return new ErrorResponseDto(
+            400,
+            'Failed to update user request status',
             updateResponse.errorObject,
           );
         }
@@ -268,7 +292,7 @@ export class CooperativeMemberRequestsService {
           'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
         )
         .eq('member_id', member_id)
-        .eq('status', 'unresolved');
+        .or('status.eq.unresolved,status.eq.pending');
 
       if (error) {
         this.logger.error('Error fetching coop invitations', error);
@@ -371,7 +395,10 @@ export class CooperativeMemberRequestsService {
       }
 
       // If the user's status is active, update the coop size
-      if (updateCooperativeMemberRequestDto.status === 'active') {
+      if (
+        updateCooperativeMemberRequestDto.cooperative_id != null &&
+        updateCooperativeMemberRequestDto.status === 'active'
+      ) {
         // Add member and coop IDs to group_members
         const gmService = new GroupMemberService(this.postgresrest);
         const gmDto = new CreateGroupMemberDto();
@@ -394,6 +421,11 @@ export class CooperativeMemberRequestsService {
         if (userResponse instanceof ErrorResponseDto) {
           return userResponse;
         }
+      } else {
+        return new ErrorResponseDto(
+          400,
+          'Failed to add member. Check the cooperative ID',
+        );
       }
       return {
         statusCode: 200,

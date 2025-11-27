@@ -25,6 +25,7 @@ import {
 } from '@nestjs/swagger';
 import { SuccessResponseDto } from '../../dto/success-response.dto';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { MunicipalityBillRequest } from '../requests/municipality-bill.request';
 // import { GeneralErrorResponseDto } from '../../common/dto/general-error-response.dto';
 
 @ApiTags('SmileCash Wallet')
@@ -487,6 +488,38 @@ export class SmileCashWalletController {
       bankToOtherWalletTransferRequest,
     );
     if (response.statusCode !== 200) {
+      throw new HttpException(response.message!, response.statusCode);
+    }
+    return response;
+  }
+
+  @ApiExcludeEndpoint()
+  @Post('pay/municipality')
+  @ApiOperation({ summary: 'Pay municipality' })
+  @ApiBody({ type: MunicipalityBillRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment successful',
+    type: SuccessResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Failed to authorize transfer',
+    type: GeneralErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 405,
+    description: 'Insufficient funds',
+    type: GeneralErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: GeneralErrorResponseDto,
+  })
+  async payMunicipalityBill(@Body() mbrDto: MunicipalityBillRequest) {
+    const response = await this.scWallet.payMunicipalityBill(mbrDto);
+    if (response instanceof GeneralErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
     }
     return response;

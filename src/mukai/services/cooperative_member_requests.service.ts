@@ -106,12 +106,12 @@ export class CooperativeMemberRequestsService {
           'You have already joined this cooperative',
         );
       }
-      if (hasAlreadyRequested) {
-        return new ErrorResponseDto(
-          409,
-          'You have already requsted to join this cooperative',
-        );
-      }
+      // if (hasAlreadyRequested) {
+      //   return new ErrorResponseDto(
+      //     409,
+      //     'You have already requsted to join this cooperative',
+      //   );
+      // }
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -383,8 +383,7 @@ export class CooperativeMemberRequestsService {
   async updateCooperativeMemberRequest(
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    try {
-      this.logger.debug(updateCooperativeMemberRequestDto);
+    try {this.logger.debug(updateCooperativeMemberRequestDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)

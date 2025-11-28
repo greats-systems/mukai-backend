@@ -529,60 +529,115 @@ export class CooperativesService {
     try {
       this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
       const coopsList: Cooperative[] = [];
-      const { data, error } = await this.postgresrest
-        .from('cooperatives')
-        .select()
-        .match({
-          category: fcDto.category,
-        })
-        .or(`province_state.eq.${fcDto.province},city.eq.${fcDto.city}`)
-        .order('name', { ascending: true });
-      if (error) {
-        this.logger.error('Failed to filer cooperatives', error);
-      }
-      // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+      if (!fcDto.category || !fcDto.city || !fcDto.province) {
+        const { data, error } = await this.postgresrest
+          .from('cooperatives')
+          .select()
+          .order('name', { ascending: true });
+        if (error) {
+          this.logger.error('Failed to filer cooperatives', error);
+        }
+        // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
 
-      const coops = data as Cooperative[];
-      for (const coop of coops) {
-        // Check if the member is already active in a coop
-        this.logger.warn(coop.name);
-        const { data: active, error: activeError } = await this.postgresrest
-          .from('group_members')
-          .select()
-          .eq('cooperative_id', coop.id)
-          .eq('member_id', fcDto.profile_id)
-          .limit(1)
-          .single();
-        if (activeError && activeError.code != 'PGRST116') {
-          this.logger.error('Failed to fetch group members', activeError);
-          return new GeneralErrorResponseDto(
-            400,
-            'Failed to fetch group members',
-            activeError,
+        const coops = data as Cooperative[];
+        for (const coop of coops) {
+          // Check if the member is already active in a coop
+          this.logger.warn(coop.name);
+          const { data: active, error: activeError } = await this.postgresrest
+            .from('group_members')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (activeError && activeError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch group members', activeError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch group members',
+              activeError,
+            );
+          }
+          this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+          const { data: request, error: requestError } = await this.postgresrest
+            .from('cooperative_member_requests')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (requestError && requestError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch coop request', requestError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch coop request',
+              requestError,
+            );
+          }
+          this.logger.debug(
+            `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
           );
+          // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
+          if (!active && !request) {
+            coopsList.push(coop);
+          }
         }
-        this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
-        const { data: request, error: requestError } = await this.postgresrest
-          .from('cooperative_member_requests')
+      } else {
+        const { data, error } = await this.postgresrest
+          .from('cooperatives')
           .select()
-          .eq('cooperative_id', coop.id)
-          .eq('member_id', fcDto.profile_id)
-          .limit(1)
-          .single();
-        if (requestError && requestError.code != 'PGRST116') {
-          this.logger.error('Failed to fetch coop request', requestError);
-          return new GeneralErrorResponseDto(
-            400,
-            'Failed to fetch coop request',
-            requestError,
-          );
+          .match({
+            category: fcDto.category,
+          })
+          .or(`province_state.eq.${fcDto.province},city.eq.${fcDto.city}`)
+          .order('name', { ascending: true });
+        if (error) {
+          this.logger.error('Failed to filer cooperatives', error);
         }
-        this.logger.debug(
-          `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
-        );
-        // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
-        if (!active && !request) {
-          coopsList.push(coop);
+        // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+        const coops = data as Cooperative[];
+        for (const coop of coops) {
+          // Check if the member is already active in a coop
+          this.logger.warn(coop.name);
+          const { data: active, error: activeError } = await this.postgresrest
+            .from('group_members')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (activeError && activeError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch group members', activeError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch group members',
+              activeError,
+            );
+          }
+          this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+          const { data: request, error: requestError } = await this.postgresrest
+            .from('cooperative_member_requests')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (requestError && requestError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch coop request', requestError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch coop request',
+              requestError,
+            );
+          }
+          this.logger.debug(
+            `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+          );
+          // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
+          if (!active && !request) {
+            coopsList.push(coop);
+          }
         }
       }
 

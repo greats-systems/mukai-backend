@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -9,6 +13,7 @@ import {
   HttpException,
   // HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
@@ -77,7 +82,9 @@ export class CooperativeMemberApprovalsController {
   async create(
     @Body()
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
+    @Req() req,
   ) {
+    createCooperativeMemberApprovalsDto.logged_in_user_id = req.user.sub;
     const response =
       await this.cooperativeMemberApprovalsService.createCooperativeMemberApprovals(
         createCooperativeMemberApprovalsDto,
@@ -105,9 +112,9 @@ export class CooperativeMemberApprovalsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll() {
+  async findAll(@Req() req) {
     const response =
-      await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals();
+      await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals(req.user.sub);
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
     }

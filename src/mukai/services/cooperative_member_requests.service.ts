@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -12,6 +14,7 @@ import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -20,7 +23,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CooperativeMemberRequestsService {
   private readonly logger = initLogger(CooperativeMemberRequestsService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async hasAlreadyJoinedCoop(
     coop_id: string,
@@ -83,6 +86,7 @@ export class CooperativeMemberRequestsService {
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
       // Check if user has already joined the cooperative
       this.logger.debug('Checking if they have joined the coop');
       const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
@@ -101,12 +105,56 @@ export class CooperativeMemberRequestsService {
         return hasAlreadyRequested;
       }
       if (hasAlreadyJoined) {
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 409,
+          message: 'You have already joined this cooperative',
+          error: null,
+        };
+        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(
           409,
           'You have already joined this cooperative',
         );
       }
       if (hasAlreadyRequested) {
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 409,
+          message: 'You have already requested to join this cooperative',
+          error: null,
+        };
+        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(
           409,
           'You have already requsted to join this cooperative',
@@ -131,6 +179,24 @@ export class CooperativeMemberRequestsService {
         .single();
       if (error) {
         this.logger.error('Error creating cooperative member request', error);
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = error;
+        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(400, error.details);
       }
       const profileService = new UserService(this.postgresrest);
@@ -155,6 +221,29 @@ export class CooperativeMemberRequestsService {
             updateResponse.errorObject,
           );
         }
+
+        slDto.action = 'invite a member to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 201,
+          message: 'Cooperative member request created successfully',
+        };
+        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
+        slDto.cooperative_member_request_id = data.id;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
       } else {
         this.logger.debug(
           `Updating has_requested for user ${createCooperativeMemberRequestDto.member_id}`,
@@ -176,6 +265,29 @@ export class CooperativeMemberRequestsService {
             updateResponse.errorObject,
           );
         }
+
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 201,
+          message: 'Cooperative member request created successfully',
+        };
+        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
+        slDto.cooperative_member_request_id = data.id;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
       }
       return {
         statusCode: 201,
@@ -188,10 +300,11 @@ export class CooperativeMemberRequestsService {
     }
   }
 
-  async findAllCooperativeMemberRequests(): Promise<
+  async findAllCooperativeMemberRequests(logged_in_user_id: string): Promise<
     SuccessResponseDto | ErrorResponseDto
   > {
     try {
+      const slDto = new CreateSystemLogDto();
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select();
@@ -200,6 +313,24 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error fetching CooperativeMemberRequests', error);
         return new ErrorResponseDto(400, error.details);
       }
+
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view all polls';
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative member requests fetched successfully',
+      };
+      const {data: log, error: logError} = await this.postgresrest
+      .from('system_logs')
+      .insert(slDto)
+      .select()
+      .single();
+
+      if(logError){
+        return new ErrorResponseDto(400, logError.details);
+      }
+
+      this.logger.warn('Log created', log);
 
       return {
         statusCode: 200,
@@ -384,12 +515,14 @@ export class CooperativeMemberRequestsService {
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
       this.logger.debug(updateCooperativeMemberRequestDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
         .eq('member_id', updateCooperativeMemberRequestDto.member_id)
-        .select();
+        .select()
+        .single();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error);
         return new ErrorResponseDto(400, error.details);
@@ -428,6 +561,29 @@ export class CooperativeMemberRequestsService {
           'Failed to add member. Check the cooperative ID',
         );
       }
+      slDto.profile_id = updateCooperativeMemberRequestDto.logged_in_user_id;
+      slDto.action = 'accepted member into cooperative';
+      slDto.request = updateCooperativeMemberRequestDto;
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative member request updated successfully',
+      };
+      slDto.cooperative_id = updateCooperativeMemberRequestDto.cooperative_id;
+      slDto.cooperative_member_request_id = data.id;
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to insert system log record',
+          logError,
+        );
+      }
+      this.logger.warn('System log created', log);
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',

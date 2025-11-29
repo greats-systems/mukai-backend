@@ -22,6 +22,15 @@ export class CreateCooperativeMemberRequestDto {
 
   @ApiProperty({
     example: '6134402a-d8f6-4090-856e-fca4bbfc0f04',
+    description: 'Logged in user ID',
+    required: true,
+  })
+  @IsString()
+  @IsOptional()
+  logged_in_user_id?: string;
+
+  @ApiProperty({
+    example: '6134402a-d8f6-4090-856e-fca4bbfc0f04',
     description: 'Member ID',
     required: true,
   })

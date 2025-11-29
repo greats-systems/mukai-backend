@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -8,6 +12,8 @@ import {
   Delete,
   HttpException,
   HttpStatus,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { CooperativeMemberRequestsService } from '../services/cooperative_member_requests.service';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
@@ -20,12 +26,14 @@ import {
   ApiBody,
   ApiParam,
   ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperative Member Requests')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @ApiHeader({
   name: 'apikey',
   description: 'API key for authentication (insert access token)',
@@ -67,7 +75,9 @@ export class CooperativeMemberRequestsController {
   async create(
     @Body()
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
+    @Req() req,
   ) {
+    createCooperativeMemberRequestDto.logged_in_user_id = req.user.sub;
     const response =
       await this.cooperativeMemberRequestsService.createCooperativeMemberRequest(
         createCooperativeMemberRequestDto,
@@ -93,9 +103,9 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll() {
+  async findAll(@Req() req) {
     const response =
-      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests();
+      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests(req.user.sub);
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',

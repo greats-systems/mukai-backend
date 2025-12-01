@@ -80,6 +80,7 @@ export class AuthService {
   }
 
   async banUser(buDto: BanUserDto) {
+    this.logger.warn('ban user dto', buDto);
     try {
       const {
         data, error

@@ -137,10 +137,11 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findCooperativeInvitations(@Param('member_id') member_id: string) {
+  async findCooperativeInvitations(@Param('member_id') member_id: string, @Req() req) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeInvitations(
         member_id,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -175,10 +176,11 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async getPendingRequestDetails(@Param('member_id') member_id: string) {
+  async getPendingRequestDetails(@Param('member_id') member_id: string, @Req() req) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeRequests(
         member_id,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -302,10 +304,12 @@ export class CooperativeMemberRequestsController {
   async update(
     @Body()
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
+    @Req() req
   ) {
     const response =
       await this.cooperativeMemberRequestsService.updateCooperativeMemberRequest(
         updateCooperativeMemberRequestDto,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(

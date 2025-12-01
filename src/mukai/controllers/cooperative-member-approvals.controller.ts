@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -84,10 +83,10 @@ export class CooperativeMemberApprovalsController {
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
     @Req() req,
   ) {
-    createCooperativeMemberApprovalsDto.logged_in_user_id = req.user.sub;
     const response =
       await this.cooperativeMemberApprovalsService.createCooperativeMemberApprovals(
         createCooperativeMemberApprovalsDto,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
@@ -150,10 +149,12 @@ export class CooperativeMemberApprovalsController {
   })
   async viewCooperativeMemberApprovalsByCoop(
     @Param('group_id') group_id: string,
+    @Req() req
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
         group_id,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
@@ -231,11 +232,13 @@ export class CooperativeMemberApprovalsController {
     @Param('id') id: string,
     @Body()
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+    @Req() req
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovals(
         id,
         updateCooperativeMemberApprovalsDto,
+        req.user.sub
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);

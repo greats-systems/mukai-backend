@@ -17,6 +17,8 @@ import {
   HttpException,
   HttpStatus,
   Patch,
+  Headers,
+  Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -35,6 +37,7 @@ import { AuthErrorResponse } from 'src/common/dto/auth-responses.dto';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger();
   constructor(private readonly authService: AuthService) {}
 
   @ApiTags('Profiles')
@@ -76,7 +79,7 @@ export class AuthController {
     return this.authService.getProfileSuggestions(psDto);
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with phone number' })
   @ApiParam({
     name: 'phone',
@@ -114,7 +117,7 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('OTP')
+  // @ApiTags('OTP')
   @ApiOperation({ summary: 'Verify OTP' })
   @ApiBody({ type: OtpDto, description: 'OTP verification data' })
   @ApiResponse({ status: 200, description: 'OTP verified successfully' })
@@ -143,7 +146,7 @@ export class AuthController {
     return this.authService.getProfile(id);
   }
 
-  @ApiTags('User Registration')
+  // @ApiTags('User Registration')
   @ApiOperation({ summary: 'Create a new user account' })
   @ApiBody({ type: SignupDto })
   @ApiResponse({
@@ -202,7 +205,7 @@ export class AuthController {
     return this.authService.updateFCM(profile);
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with email and password' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -239,7 +242,12 @@ export class AuthController {
     description: 'Server error',
   })
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers() headers: Record<string, string>,
+  ) {
+    const platform = headers['x-platform'];
+    this.logger.warn(`platorm: ${platform}`);
     const response = await this.authService.login(loginDto);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
@@ -266,7 +274,7 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with phone number' })
   @ApiParam({
     name: 'phone',
@@ -304,7 +312,7 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('Password Management')
+  // @ApiTags('Password Management')
   @ApiOperation({ summary: 'Reset user password' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
@@ -380,7 +388,7 @@ export class AuthController {
     return await this.authService.submitSecurityQuestions(sqDto);
   }
 
-  @ApiTags('Security')
+  // @ApiTags('Security')
   @ApiOperation({ summary: 'Get security questions for phone number' })
   @ApiParam({
     name: 'phone',

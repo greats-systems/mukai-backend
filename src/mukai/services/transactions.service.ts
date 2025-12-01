@@ -18,6 +18,7 @@ import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.d
 import { WalletsService } from './wallets.service';
 import { Int32 } from 'typeorm';
 import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 // import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
@@ -206,8 +207,13 @@ export class TransactionsService {
 
   async createP2PTransaction(
     senderTransactionDto: CreateTransactionDto,
+    logged_in_user_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = `payment: ${senderTransactionDto.transaction_type}`;
+      slDto.request = senderTransactionDto;
       const scwService = new SmileCashWalletService(this.postgresrest);
       /*When a transaction is initiated, 4 steps should take place:
        1. the initiator's transaction is recorded in the transactions table
@@ -238,6 +244,20 @@ export class TransactionsService {
         this.logger.error(
           `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
         );
+        slDto.response = w2wResponse;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to insert log',
+            logError,
+          );
+        }
+        this.logger.warn('Log created', log);
         return w2wResponse;
       }
       this.logger.debug(
@@ -253,7 +273,24 @@ export class TransactionsService {
         this.logger.log(error);
         return new ErrorResponseDto(400, error.details);
       }
-
+      slDto.response = {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+      };
+      slDto.transaction_id = data.id;
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to insert log',
+          logError,
+        );
+      }
+      this.logger.warn('Log created', log);
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
 
       /**

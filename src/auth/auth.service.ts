@@ -319,7 +319,7 @@ export class AuthService {
         this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
         slDto.profile_email = loginDto.email;
         slDto.action = 'login';
-        slDto.request = {email: loginDto.email, password: '********'};
+        slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
         slDto.response = {
           status: 'failed',
           message: 'Invalid credentials',
@@ -447,7 +447,7 @@ export class AuthService {
       // Create a record in the system logs table
       slDto.profile_id = user.id;
       slDto.action = 'login';
-      slDto.request = {email: loginDto.email, password: '********'};
+      slDto.request = { email: loginDto.email, password: '********' };
       slDto.response = {
         status: 'account authenticated',
         statusCode: 200,
@@ -988,6 +988,8 @@ export class AuthService {
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
     const slDto = new CreateSystemLogDto();
+    slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
+    slDto.action = 'signup';
 
     try {
       this.logger.log('Creating transaction...', signupDto);
@@ -1019,8 +1021,7 @@ export class AuthService {
         this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
         );
-        slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
-        slDto.action = 'signup';
+        signupDto.password = '*'.repeat(signupDto.password.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate email found", data: existingUser.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1041,8 +1042,7 @@ export class AuthService {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
-        slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
-        slDto.action = 'signup';
+        signupDto.password = '*'.repeat(signupDto.password.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate phone number found", data: existingPhoneNumber.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1063,8 +1063,7 @@ export class AuthService {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
-        slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
-        slDto.action = 'signup';
+        signupDto.password = '*'.repeat(signupDto.password.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate national ID  found", data: existingNatID.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1109,9 +1108,6 @@ export class AuthService {
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
-        slDto.action = 'signup';
-        slDto.request = signupDto;
         slDto.response = authError;
         const { data: log, error: logError } = await this.postgresRest
           .from('system_logs')
@@ -1265,8 +1261,6 @@ export class AuthService {
 
       // Record the successful signup in system_logs
       slDto.profile_id = userId;
-      slDto.action = 'signup';
-      slDto.request = signupDto;
       slDto.response = {
         status: 'account created',
         statusCode: 201,

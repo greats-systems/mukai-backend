@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
@@ -9,10 +10,13 @@ import {
   HttpStatus,
   // UseGuards,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
 import {
+  ApiBearerAuth,
   // ApiBearerAuth,
   ApiBody,
   ApiExcludeEndpoint,
@@ -25,9 +29,10 @@ import {
 // import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('transactions')
 @ApiHeader({
   name: 'apikey',
@@ -138,13 +143,16 @@ export class TransactionsController {
     return response;
   }
 
-  @ApiExcludeEndpoint()
+  // @ApiExcludeEndpoint()
   @Post('p2p')
   async createP2PTransaction(
     @Body() createTransactionDto: CreateTransactionDto,
+    @Req() req,
   ) {
-    const response =
-      await this.transactionsService.createP2PTransaction(createTransactionDto);
+    const response = await this.transactionsService.createP2PTransaction(
+      createTransactionDto,
+      req.user.sub,
+    );
 
     if (response['statusCode'] === 400) {
       throw new HttpException(

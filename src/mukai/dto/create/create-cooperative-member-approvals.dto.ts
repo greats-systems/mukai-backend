@@ -42,7 +42,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   profile_id?: string;
-
+  /*
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Logged in user ID',
@@ -50,6 +50,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   logged_in_user_id?: string;
+  */
 
   // @ApiProperty({
   //   example: 150,

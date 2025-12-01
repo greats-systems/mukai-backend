@@ -122,4 +122,13 @@ export class CreateSystemLogDto {
   @IsUUID()
   @IsOptional()
   transaction_id?: string;
+
+  @ApiProperty({
+    description: 'Platform',
+    example: 'Android',
+    enum: ['Android', 'iOS', 'Web'],
+  })
+  @IsUUID()
+  @IsOptional()
+  platform?: string;
 }

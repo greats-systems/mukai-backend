@@ -27,6 +27,8 @@ import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -40,8 +42,13 @@ export class CooperativesService {
   ) {}
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
+    logged_in_user_id: string,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'create cooperative';
+      slDto.request = createCooperativeDto;
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const walletsService = new WalletsService(this.postgresrest);
       const scwService = new SmileCashWalletService(this.postgresrest);
@@ -92,6 +99,19 @@ export class CooperativesService {
         this.logger.log(
           `Coop already exists: ${JSON.stringify(existingCoopResult.data)}`,
         );
+        slDto.response = {
+          statusCode: 409,
+          message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to insert log', logError);
+        }
+        this.logger.warn('Log created', log);
         return new GeneralErrorResponseDto(
           409,
           `A cooperative with these details already exists`,
@@ -270,6 +290,19 @@ export class CooperativesService {
       }
 
       this.logger.debug(`Update response: ${JSON.stringify(updateResponse)}`);
+      slDto.response = {
+        statusCode: 201,
+        message: 'Cooperative created successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
 
       return createCooperativeResponse as Cooperative;
     } catch (error) {
@@ -279,8 +312,13 @@ export class CooperativesService {
 
   async initializeMembers(
     member_id: string,
+    logged_in_user_id: string,
   ): Promise<object[] | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch coops to which a user belongs';
+      slDto.request = member_id;
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select()
@@ -290,6 +328,19 @@ export class CooperativesService {
         return new ErrorResponseDto(400, 'Error initializing members', error);
       }
       this.logger.log(`initializeMembers data: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Faield to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
       return data;
     } catch (error) {
       return new ErrorResponseDto(500, 'Error initializing members', error);
@@ -336,7 +387,6 @@ export class CooperativesService {
       if (!data) {
         return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
       }
-      // this.logger.log(`Coop data: ${JSON.stringify(data)}`);
       return data as Cooperative;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
@@ -525,9 +575,14 @@ export class CooperativesService {
 
   async filterCooperatives(
     fcDto: FiletrCooperativesDto,
+    logged_in_user_id: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
-      this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'search for cooperatives to join';
+      slDto.request = fcDto;
+      // this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
       const coopsList: Cooperative[] = [];
       if (!fcDto.category || !fcDto.city || !fcDto.province) {
         const { data, error } = await this.postgresrest
@@ -641,6 +696,21 @@ export class CooperativesService {
         }
       }
 
+      slDto.response = {
+        statusCode: 200,
+        message: 'Filtered cooperatives fetched successfully',
+      };
+
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
+
       return new SuccessResponseDto(
         200,
         'Filtered cooperatives fetched successfully',
@@ -654,8 +724,13 @@ export class CooperativesService {
 
   async filterCooperativesLike(
     fclDto: FiletrCooperativesLikeDto,
+    logged_in_user_id: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = `filter cooperatives like ${fclDto.search_term}`;
+      slDto.request = fclDto;
       this.logger.debug(`fclDto: ${JSON.stringify(fclDto)}`);
       const coopsList: Cooperative[] = [];
       const { data, error } = await this.postgresrest
@@ -668,7 +743,7 @@ export class CooperativesService {
       if (error) {
         this.logger.error('Failed to filer cooperatives', error);
       }
-      this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+      // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
 
       const coops = data as Cooperative[];
       for (const coop of coops) {
@@ -713,6 +788,20 @@ export class CooperativesService {
           coopsList.push(coop);
         }
       }
+
+      slDto.response = {
+        statusCode: 200,
+        message: 'Filtered cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
 
       return new SuccessResponseDto(
         200,
@@ -772,8 +861,13 @@ export class CooperativesService {
 
   async viewCooperativesForMember(
     member_id: string,
+    logged_in_user_id: string,
   ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch cooperatives for member';
+      slDto.request = member_id;
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('*,coop_members_cooperative_id_fkey(*)')
@@ -782,9 +876,32 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error('Error fetching cooperative', error);
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to insert log', logError);
+        }
+        this.logger.warn('Log created', log);
         return new ErrorResponseDto(400, error.details);
       }
       // this.logger.debug(`Coops for ${member_id}: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
       return {
         statusCode: 200,
         message: 'Cooperatives fetched successfully',

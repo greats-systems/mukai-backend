@@ -65,9 +65,11 @@ export class CooperativeMemberApprovalsService {
 
   async createCooperativeMemberApprovals(
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
+    logged_in_user_id: string,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
       this.logger.debug(createCooperativeMemberApprovalsDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -94,8 +96,6 @@ export class CooperativeMemberApprovalsService {
         .single();
       if (error) {
         this.logger.log(error);
-        slDto.profile_id =
-          createCooperativeMemberApprovalsDto.logged_in_user_id;
         slDto.action = 'create a new poll';
         slDto.request = createCooperativeMemberApprovalsDto;
         slDto.response = error;
@@ -116,7 +116,6 @@ export class CooperativeMemberApprovalsService {
         this.logger.warn('System log created', log);
         return new ErrorResponseDto(400, error.details);
       }
-      slDto.profile_id = createCooperativeMemberApprovalsDto.logged_in_user_id;
       slDto.action = 'create a new poll';
       slDto.request = createCooperativeMemberApprovalsDto;
       slDto.response = {
@@ -204,12 +203,13 @@ export class CooperativeMemberApprovalsService {
 
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
-    // member_id: string,
+    logged_in_user_id: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
-      this.logger.log('Successfully updated group size');
-      // this.logger.warn(userJson);
-      // Fetch data from PostgreSQL
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view polls for group';
+      slDto.cooperative_id = group_id;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select(
@@ -223,6 +223,25 @@ export class CooperativeMemberApprovalsService {
 
       if (error) {
         this.logger.error(
+          `Error fetching approvals for group ${group_id}`,
+          error,
+        );
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert into system_logs',
+            error,
+          );
+        }
+        this.logger.warn('Log created', log);
+        return new ErrorResponseDto(
+          400,
           `Error fetching approvals for group ${group_id}`,
           error,
         );
@@ -272,6 +291,19 @@ export class CooperativeMemberApprovalsService {
       });
 
       // this.logger.log(approvals);
+      slDto.response = {
+        statusCode: 200,
+        message: 'Approvals fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to reate log', logError);
+      }
+      this.logger.warn('Log created', log);
       return {
         statusCode: 200,
         message: 'Approvals fetched successfully',
@@ -289,10 +321,17 @@ export class CooperativeMemberApprovalsService {
   async updateCooperativeMemberApprovals(
     id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+    logged_in_user_id: string,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
-      this.logger.log(updateCooperativeMemberApprovalsDto);
+      slDto.profile_id = logged_in_user_id;
+      slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
+      slDto.action = 'update a poll';
+      slDto.request = updateCooperativeMemberApprovalsDto;
+      slDto.poll_id = id;
+      slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
+
       // Fetch coop data
       const { data: coop, error: coopError } = await this.postgresrest
         .from('cooperatives')
@@ -301,12 +340,9 @@ export class CooperativeMemberApprovalsService {
         .limit(1)
         .single();
       if (coopError) {
-        this.logger.error('Faield to fetch coop', coopError);
-        slDto.profile_id = slDto.action = 'update a poll';
-        slDto.request = updateCooperativeMemberApprovalsDto;
+        this.logger.error('Failed to fetch coop', coopError);
         slDto.response = coopError;
-        slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-        // slDto.po = data.id;
+
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -353,11 +389,7 @@ export class CooperativeMemberApprovalsService {
           `Error updating cooperative_member_approvals ${id}`,
           error,
         );
-        slDto.profile_id = slDto.action = 'update a poll';
-        slDto.request = updateCooperativeMemberApprovalsDto;
         slDto.response = coopError;
-        slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-        slDto.poll_id = id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -404,11 +436,7 @@ export class CooperativeMemberApprovalsService {
             this.logger.error('Failed to update interest rate');
             return new ErrorResponseDto(500, 'Failed to update interest rate');
           }
-          slDto.profile_id = slDto.action = 'set interest rate';
-          slDto.request = updateCooperativeMemberApprovalsDto;
           slDto.response = coopError;
-          slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-          slDto.poll_id = id;
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
             .insert(slDto)
@@ -434,10 +462,8 @@ export class CooperativeMemberApprovalsService {
             this.logger.error('Failed to disburse loan');
             return new ErrorResponseDto(500, 'Failed to disburse loan');
           }
-          slDto.profile_id = slDto.action = 'disburse loan';
-          slDto.request = updateCooperativeMemberApprovalsDto;
+          slDto.action = 'disburse loan';
           slDto.response = coopError;
-          slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
           // slDto.po = data.id;
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
@@ -464,11 +490,8 @@ export class CooperativeMemberApprovalsService {
             // this.logger.error('Failed to update member role');
             return new ErrorResponseDto(400, 'Failed to update member role');
           }
-          slDto.profile_id = slDto.action = 'election';
-          slDto.request = updateCooperativeMemberApprovalsDto;
+          slDto.action = 'election';
           slDto.response = coopError;
-          slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-          slDto.poll_id = id;
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
             .insert(slDto)
@@ -497,17 +520,39 @@ export class CooperativeMemberApprovalsService {
           this.logger.error('Failed to update poll', error);
           return new ErrorResponseDto(400, 'Failed to update poll', error);
         }
-        slDto.profile_id = slDto.action = 'election';
-        slDto.request = updateCooperativeMemberApprovalsDto;
-        slDto.response = coopError;
-        slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
-        slDto.poll_id = id;
+        slDto.action = 'election';
+        slDto.response = {
+          statusCode: 200,
+          message: `${updateCooperativeMemberApprovalsDto.poll_description} has been opposed`,
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
         return new SuccessResponseDto(
           200,
           `${updateCooperativeMemberApprovalsDto.poll_description} has been opposed`,
         );
       } else {
         this.logger.debug('Consensus not yet reached');
+        slDto.response = {
+          statusCode: 200,
+          message: 'Poll updated successfully',
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
       }
       return data as CooperativeMemberApprovals;
     } catch (error) {

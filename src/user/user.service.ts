@@ -145,12 +145,6 @@ export class UserService {
     const plainText = signupDto.password;
     const secretKey = process.env.SECRET_KEY || 'No secret key';
     const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
-    // const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
-    // const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
-    // this.logger.debug(
-    //   `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
-    // );
-    // const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
     const now = new Date().toISOString();
 

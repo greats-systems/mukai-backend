@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, BanUserDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -48,6 +48,7 @@ import { MessagingsService } from 'src/messagings/messagings.service';
 import { NotifyTextService } from 'src/messagings/notify_text.service';
 import { messaging } from 'firebase-admin';
 import { CreateSystemLogDto } from 'src/mukai/dto/create/create-system-logs.dto';
+import { error } from 'console';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -76,6 +77,42 @@ export class AuthService {
         ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
         : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     );
+  }
+
+  async banUser(buDto: BanUserDto) {
+    try {
+      const {
+        data, error
+      } = await this.supabaseAdmin.auth.admin.updateUserById(buDto.id, { ban_duration: buDto.ban_duration });
+      if (error) {
+        this.logger.error('Failed to ban user');
+        return new ErrorResponseDto(400, 'Falied to ban user')
+      }
+      this.logger.warn(`User ${buDto.id} has been banned`)
+    }
+
+    catch (e) {
+      this.logger.error('banUser error', e);
+      return new ErrorResponseDto(500, 'banUser error', e);
+    }
+  }
+
+  async reinstateUser(userId: string) {
+    try {
+      const {
+        data, error
+      } = await this.supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: 'none' });
+      if (error) {
+        this.logger.error('Failed to ban user');
+        return new ErrorResponseDto(400, 'Falied to ban user')
+      }
+      this.logger.warn(`User ${userId} has been reinstated`)
+    }
+
+    catch (e) {
+      this.logger.error('unbanUser error', e);
+      return new ErrorResponseDto(500, 'banUser error', e);
+    }
   }
 
   async sendOtp(phone: string): Promise<boolean | GeneralErrorResponseDto> {

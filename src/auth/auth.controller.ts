@@ -25,6 +25,7 @@ import {
 import { AuthService } from './auth.service';
 import {
   AccessAccountDto,
+  BanUserDto,
   LoginDto,
   OtpDto,
   ProfilesLikeDto,
@@ -121,7 +122,33 @@ export class AuthController {
   }
 
   // @ApiTags('OTP')
-  @ApiOperation({ summary: 'Verify OTP' })
+  @ApiOperation({ summary: 'Ban user' })
+  @ApiBody({
+    type: BanUserDto,
+    description: 'Request body for user to be banned',
+  })
+  @ApiResponse({ status: 200, description: 'User banned successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to ban user' })
+  @Post('ban')
+  async banUser(@Body() buDto: BanUserDto) {
+    return await this.authService.banUser(buDto);
+  }
+
+  @ApiOperation({ summary: 'Reinstate user' })
+  /*
+  @ApiParam({
+    name: 'User ID',
+    description: 'User ID to reinstate',
+    example: 'a1709875-3629-47c3-be4f-84a3791abb02',
+  })
+  */
+  @ApiResponse({ status: 200, description: 'User reinstated successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to reinstate user' })
+  @Post('reinstate/:id')
+  async reinstateUser(@Param('id') id: string) {
+    return await this.authService.reinstateUser(id);
+  }
+
   @ApiBody({ type: OtpDto, description: 'OTP verification data' })
   @ApiResponse({ status: 200, description: 'OTP verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid OTP' })

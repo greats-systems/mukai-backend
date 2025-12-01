@@ -178,6 +178,25 @@ export class ProfilesLikeDto {
   phone?: string;
 }
 
+export class BanUserDto {
+  @ApiProperty({
+    description: 'User ID to ban',
+    example: '3cc4101d-7120-4765-8161-fa457d211c97',
+  })
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @ApiProperty({
+    description: 'Ban duration',
+    example: '10s',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  ban_duration?: string;
+}
+
 export class ProfileSuggestionsDto {
   @ApiProperty({
     description: 'User ID to exclude from results',

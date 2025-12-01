@@ -66,10 +66,15 @@ export class CooperativeMemberApprovalsService {
   async createCooperativeMemberApprovals(
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<CooperativeMemberApprovals | object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'create a new poll';
+      slDto.request = createCooperativeMemberApprovalsDto;
+      slDto.cooperative_id = createCooperativeMemberApprovalsDto.group_id;
       this.logger.debug(createCooperativeMemberApprovalsDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -96,10 +101,7 @@ export class CooperativeMemberApprovalsService {
         .single();
       if (error) {
         this.logger.log(error);
-        slDto.action = 'create a new poll';
-        slDto.request = createCooperativeMemberApprovalsDto;
         slDto.response = error;
-        slDto.cooperative_id = createCooperativeMemberApprovalsDto.group_id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -122,7 +124,6 @@ export class CooperativeMemberApprovalsService {
         statusCode: 201,
         message: 'Poll created successfully',
       };
-      slDto.cooperative_id = createCooperativeMemberApprovalsDto.group_id;
       slDto.poll_id = data.id;
       const { data: log, error: logError } = await this.postgresrest
         .from('system_logs')
@@ -146,9 +147,13 @@ export class CooperativeMemberApprovalsService {
 
   async findAllCooperativeMemberApprovals(
     logged_in_user_id: string,
+    platform: string,
   ): Promise<CooperativeMemberApprovals[] | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view all polls';
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select()
@@ -158,9 +163,6 @@ export class CooperativeMemberApprovalsService {
         this.logger.error('Error fetching cooperative_member_approvals', error);
         return new ErrorResponseDto(400, error.details);
       }
-
-      slDto.profile_id = logged_in_user_id;
-      slDto.action = 'view all polls';
       slDto.response = {
         statusCode: 200,
         message: 'Polls fetched successfully',
@@ -204,12 +206,14 @@ export class CooperativeMemberApprovalsService {
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'view polls for group';
       slDto.cooperative_id = group_id;
+      slDto.platform = platform;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select(
@@ -322,6 +326,7 @@ export class CooperativeMemberApprovalsService {
     id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
@@ -331,6 +336,7 @@ export class CooperativeMemberApprovalsService {
       slDto.request = updateCooperativeMemberApprovalsDto;
       slDto.poll_id = id;
       slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
+      slDto.platform = platform;
 
       // Fetch coop data
       const { data: coop, error: coopError } = await this.postgresrest

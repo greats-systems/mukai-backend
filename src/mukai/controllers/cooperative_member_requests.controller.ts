@@ -14,6 +14,7 @@ import {
   HttpStatus,
   UseGuards,
   Req,
+  Headers,
 } from '@nestjs/common';
 import { CooperativeMemberRequestsService } from '../services/cooperative_member_requests.service';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
@@ -76,11 +77,14 @@ export class CooperativeMemberRequestsController {
     @Body()
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
     @Req() req,
+    @Headers() headers,
   ) {
-    createCooperativeMemberRequestDto.logged_in_user_id = req.user.sub;
+    const platform = headers['x-platform'];
     const response =
       await this.cooperativeMemberRequestsService.createCooperativeMemberRequest(
         createCooperativeMemberRequestDto,
+        req.user.sub,
+        platform
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -103,9 +107,9 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll(@Req() req) {
+  async findAll(@Req() req, @Headers() headers) {
     const response =
-      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests(req.user.sub);
+      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests(req.user.sub, headers['x-platform']);
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',
@@ -137,11 +141,12 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findCooperativeInvitations(@Param('member_id') member_id: string, @Req() req) {
+  async findCooperativeInvitations(@Param('member_id') member_id: string, @Req() req, @Headers() headers) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeInvitations(
         member_id,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -176,11 +181,12 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async getPendingRequestDetails(@Param('member_id') member_id: string, @Req() req) {
+  async getPendingRequestDetails(@Param('member_id') member_id: string, @Req() req, @Headers() headers) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeRequests(
         member_id,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -304,12 +310,14 @@ export class CooperativeMemberRequestsController {
   async update(
     @Body()
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
-    @Req() req
+    @Req() req,
+    @Headers() headers
   ) {
     const response =
       await this.cooperativeMemberRequestsService.updateCooperativeMemberRequest(
         updateCooperativeMemberRequestDto,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(

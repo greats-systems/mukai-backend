@@ -10,7 +10,7 @@ import {
 import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 
-@Controller('super-user')
+@Controller('user')
 // @ApiExcludeController()
 export class UserController {
   constructor(private readonly userService: UserService) {}

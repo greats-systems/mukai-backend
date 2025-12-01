@@ -84,9 +84,15 @@ export class CooperativeMemberRequestsService {
 
   async createCooperativeMemberRequest(
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'request to join a cooperative';
+      slDto.request = createCooperativeMemberRequestDto;
       // Check if user has already joined the cooperative
       this.logger.debug('Checking if they have joined the coop');
       const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
@@ -105,8 +111,6 @@ export class CooperativeMemberRequestsService {
         return hasAlreadyRequested;
       }
       if (hasAlreadyJoined) {
-        slDto.action = 'request to join a cooperative';
-        slDto.request = createCooperativeMemberRequestDto;
         slDto.response = {
           statusCode: 409,
           message: 'You have already joined this cooperative',
@@ -133,14 +137,11 @@ export class CooperativeMemberRequestsService {
         );
       }
       if (hasAlreadyRequested) {
-        slDto.action = 'request to join a cooperative';
-        slDto.request = createCooperativeMemberRequestDto;
         slDto.response = {
           statusCode: 409,
           message: 'You have already requested to join this cooperative',
           error: null,
         };
-        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -300,11 +301,14 @@ export class CooperativeMemberRequestsService {
     }
   }
 
-  async findAllCooperativeMemberRequests(logged_in_user_id: string): Promise<
+  async findAllCooperativeMemberRequests(logged_in_user_id: string, platform: string): Promise<
     SuccessResponseDto | ErrorResponseDto
   > {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view all polls';
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select();
@@ -314,8 +318,6 @@ export class CooperativeMemberRequestsService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      slDto.profile_id = logged_in_user_id;
-      slDto.action = 'view all polls';
       slDto.response = {
         statusCode: 200,
         message: 'Cooperative member requests fetched successfully',
@@ -380,12 +382,14 @@ export class CooperativeMemberRequestsService {
   async findCooperativeInvitations(
     member_id: string,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'view invitations from cooperatives';
       slDto.request = member_id;
+      slDto.platform = platform;
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -442,11 +446,13 @@ export class CooperativeMemberRequestsService {
 
   async findCooperativeRequests(
     member_id: string,
-    logged_in_user_id: string
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     const slDto = new CreateSystemLogDto();
     slDto.profile_id = logged_in_user_id;
     slDto.action = 'view cooperative requests';
+    slDto.platform = platform;
     slDto.request = member_id;
     try {
       const { data, error } = await this.postgresrest
@@ -546,11 +552,14 @@ export class CooperativeMemberRequestsService {
   async updateCooperativeMemberRequest(
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
-      this.logger.debug(updateCooperativeMemberRequestDto);
+      slDto.platform = platform;
+      slDto.request = updateCooperativeMemberRequestDto;
+      // this.logger.debug(updateCooperativeMemberRequestDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
@@ -568,6 +577,8 @@ export class CooperativeMemberRequestsService {
         updateCooperativeMemberRequestDto.status === 'active'
       ) {
         // Add member and coop IDs to group_members
+        slDto.action = 'accepted member into cooperative';
+
         const gmService = new GroupMemberService(this.postgresrest);
         const gmDto = new CreateGroupMemberDto();
         gmDto.member_id = updateCooperativeMemberRequestDto.member_id!;
@@ -589,14 +600,31 @@ export class CooperativeMemberRequestsService {
         if (userResponse instanceof ErrorResponseDto) {
           return userResponse;
         }
+        slDto.response = {
+          statusCode: 200,
+          message: 'Cooperative member request updated successfully',
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('Log created', log);
       } else {
         return new ErrorResponseDto(
           400,
           'Failed to add member. Check the cooperative ID',
         );
       }
-      slDto.action = 'accepted member into cooperative';
-      slDto.request = updateCooperativeMemberRequestDto;
+      slDto.action = 'declined member request';
       slDto.response = {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',

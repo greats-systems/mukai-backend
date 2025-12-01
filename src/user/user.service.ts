@@ -232,7 +232,8 @@ export class UserService {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error('Error fetching users', error);

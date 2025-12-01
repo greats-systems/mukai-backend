@@ -683,11 +683,15 @@ export class AuthService {
     }
   }
 
-  async loginWithPhone2(loginDto: LoginDto): Promise<object | ErrorResponseDto> {
+  async loginWithPhone2(loginDto: LoginDto, platform: string): Promise<object | ErrorResponseDto> {
     // this.logger.log(JSON.stringify(loginDto));
     try {
       const slDto = new CreateSystemLogDto();
-      this.logger.debug(JSON.stringify(loginDto))
+      slDto.platform = platform;
+      slDto.profile_phone = loginDto.phone;
+      slDto.action = 'login with phone';
+      slDto.request = loginDto;
+      this.logger.debug(JSON.stringify(loginDto));
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -699,9 +703,6 @@ export class AuthService {
 
       if (error) {
         this.logger.error('Profile fetch error:', error);
-        slDto.profile_phone = loginDto.phone;
-        slDto.action = 'login with phone';
-        slDto.request = loginDto;
         slDto.response = error;
         const { data: log, error: logError } = await this.postgresRest
           .from('system_logs')
@@ -985,13 +986,14 @@ export class AuthService {
     return data as object;
   }
 
-  async signup(signupDto: SignupDto): Promise<object | undefined> {
+  async signup(signupDto: SignupDto, platform: string): Promise<object | undefined> {
     const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
     const slDto = new CreateSystemLogDto();
     slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
     slDto.action = 'signup';
+    slDto.platform = platform;
 
     try {
       this.logger.log('Creating transaction...', signupDto);

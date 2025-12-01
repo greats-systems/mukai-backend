@@ -13,6 +13,7 @@ import {
   // HttpStatus,
   UseGuards,
   Req,
+  Headers,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
@@ -82,11 +83,13 @@ export class CooperativeMemberApprovalsController {
     @Body()
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
     @Req() req,
+    @Headers() headers,
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.createCooperativeMemberApprovals(
         createCooperativeMemberApprovalsDto,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform'],
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
@@ -111,9 +114,9 @@ export class CooperativeMemberApprovalsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll(@Req() req) {
+  async findAll(@Req() req,@Headers() headers,) {
     const response =
-      await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals(req.user.sub);
+      await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals(req.user.sub, headers['x-platform']);
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
     }
@@ -149,12 +152,14 @@ export class CooperativeMemberApprovalsController {
   })
   async viewCooperativeMemberApprovalsByCoop(
     @Param('group_id') group_id: string,
-    @Req() req
+    @Req() req,
+    @Headers() headers,
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.viewCooperativeMemberApprovalsByCoop(
         group_id,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
@@ -232,13 +237,15 @@ export class CooperativeMemberApprovalsController {
     @Param('id') id: string,
     @Body()
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
-    @Req() req
+    @Req() req,
+    @Headers() headers
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.updateCooperativeMemberApprovals(
         id,
         updateCooperativeMemberApprovalsDto,
-        req.user.sub
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);

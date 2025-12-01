@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   ApiTags,
@@ -90,8 +92,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid phone number' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login/phone')
-  async loginWithPhone2(@Body() loginDto: LoginDto) {
-    const response = await this.authService.loginWithPhone2(loginDto);
+  async loginWithPhone2(@Body() loginDto: LoginDto, @Headers() headers) {
+    const platform = headers['x-platform'];
+    const response = await this.authService.loginWithPhone2(loginDto, platform);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
         throw new HttpException(
@@ -189,8 +192,9 @@ export class AuthController {
     description: 'Server error',
   })
   @Post('create-account')
-  async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto);
+  async signup(@Body() signupDto: SignupDto, @Headers() headers) {
+    const platform = headers['x-platform'];
+    return this.authService.signup(signupDto, platform);
   }
 
   @ApiExcludeEndpoint()

@@ -8,6 +8,7 @@ import {
   ApiBody,
   ApiParam,
   ApiExcludeEndpoint,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   Controller,
@@ -21,21 +22,25 @@ import {
   Patch,
   Headers,
   Logger,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   AccessAccountDto,
-  BanUserDto,
+  BannedProfileDto,
   LoginDto,
   OtpDto,
   ProfilesLikeDto,
   ProfileSuggestionsDto,
+  ReinstateProfileDto,
   SecurityQuestionsDto,
 } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { AuthErrorResponse } from 'src/common/dto/auth-responses.dto';
+import { JwtAuthGuard } from './guards/jwt.auth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -121,32 +126,26 @@ export class AuthController {
     return response;
   }
 
-  // @ApiTags('OTP')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Ban user' })
   @ApiBody({
-    type: BanUserDto,
+    type: BannedProfileDto,
     description: 'Request body for user to be banned',
   })
   @ApiResponse({ status: 200, description: 'User banned successfully' })
   @ApiResponse({ status: 400, description: 'Failed to ban user' })
   @Post('ban')
-  async banUser(@Body() buDto: BanUserDto) {
-    return await this.authService.banUser(buDto);
+  async banUser(@Body() bpDto: BannedProfileDto, @Req() req) {
+    return await this.authService.banUser(bpDto, req.user.sub);
   }
 
   @ApiOperation({ summary: 'Reinstate user' })
-  /*
-  @ApiParam({
-    name: 'User ID',
-    description: 'User ID to reinstate',
-    example: 'a1709875-3629-47c3-be4f-84a3791abb02',
-  })
-  */
   @ApiResponse({ status: 200, description: 'User reinstated successfully' })
   @ApiResponse({ status: 400, description: 'Failed to reinstate user' })
-  @Post('reinstate/:id')
-  async reinstateUser(@Param('id') id: string) {
-    return await this.authService.reinstateUser(id);
+  @Post('reinstate')
+  async reinstateUser(@Body() rpDto: ReinstateProfileDto, @Req() req) {
+    return await this.authService.reinstateUser(rpDto, req.user.sub);
   }
 
   @ApiBody({ type: OtpDto, description: 'OTP verification data' })

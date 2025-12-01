@@ -4,6 +4,7 @@ import {
   IsString,
   MinLength,
   IsOptional,
+  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 
@@ -178,6 +179,110 @@ export class ProfilesLikeDto {
   phone?: string;
 }
 
+export class BannedProfileDto {
+  /*
+  @ApiProperty({
+    description: 'Unique identifier for the banned profile record',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @ApiProperty({
+    description: 'Timestamp of creation',
+    example: '2025-08-21 12:58:15.357772+00',
+  })
+  @IsString()
+  @IsOptional()
+  created_at?: string;
+
+  @ApiProperty({
+    description: 'Timestamp of last update',
+    example: '2025-08-21 12:58:15.357772+00',
+  })
+  @IsString()
+  @IsOptional()
+  updated_at?: string;
+  */
+
+  @ApiProperty({
+    description: 'Profile ID UUID that is being banned',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsUUID()
+  @IsOptional()
+  profile_id?: string;
+
+  @ApiProperty({
+    description: 'Reason for banning the profile',
+    example: 'Violation of terms of service',
+  })
+  @IsString()
+  @IsOptional()
+  reason_for_ban?: string;
+
+  @ApiProperty({
+    description: 'Profile ID UUID of the administrator who banned the profile',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsUUID()
+  @IsOptional()
+  banned_by?: string;
+}
+
+export class ReinstateProfileDto {
+  @ApiProperty({
+    description: 'Unique identifier for the banned profile record',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsString()
+  @IsOptional()
+  id?: string;
+  /*
+  @ApiProperty({
+    description: 'Timestamp of creation',
+    example: '2025-08-21 12:58:15.357772+00',
+  })
+  @IsString()
+  @IsOptional()
+  created_at?: string;
+
+  @ApiProperty({
+    description: 'Timestamp of last update',
+    example: '2025-08-21 12:58:15.357772+00',
+  })
+  @IsString()
+  @IsOptional()
+  updated_at?: string;
+  */
+
+  @ApiProperty({
+    description: 'Profile ID UUID that is being banned',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsUUID()
+  @IsOptional()
+  profile_id?: string;
+
+  @ApiProperty({
+    description: 'Reason for reinstating the profile',
+    example: 'Violation of terms of service resolved',
+  })
+  @IsString()
+  @IsOptional()
+  reason_for_reinstating?: string;
+
+  @ApiProperty({
+    description:
+      'Profile ID UUID of the administrator who einstated the profile',
+    example: '380ca6bc-cae9-4486-a543-056029aaba1c',
+  })
+  @IsUUID()
+  @IsOptional()
+  reinstated_by?: string;
+}
+
 export class BanUserDto {
   @ApiProperty({
     description: 'User ID to ban',
@@ -185,7 +290,7 @@ export class BanUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  id: string;
+  profile_id: string;
 
   @ApiProperty({
     description: 'Ban duration',
@@ -195,6 +300,15 @@ export class BanUserDto {
   @IsString()
   @IsOptional()
   ban_duration?: string;
+
+  @ApiProperty({
+    description: 'Ban reason',
+    example: 'Fraudulent transactions',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  reason?: string;
 }
 
 export class ProfileSuggestionsDto {

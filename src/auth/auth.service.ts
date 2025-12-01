@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, BanUserDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, BannedProfileDto, BanUserDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, ReinstateProfileDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -79,17 +79,58 @@ export class AuthService {
     );
   }
 
-  async banUser(buDto: BanUserDto) {
-    this.logger.warn('ban user dto', buDto);
+  async banUser(bpDto: BannedProfileDto, logged_in_user_id: string) {
+    this.logger.warn('ban user dto', bpDto);
     try {
+      // Insert into banned_profiles
+      bpDto.banned_by = logged_in_user_id;
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles')
+        .insert(bpDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error('Faield to insert into banned_profiles', error);
+        return new ErrorResponseDto(400, 'Failed to insert into banned_profiles');
+      }
+      this.logger.log('Banned profile record created', data);
+
+      // Update profile
+      const { data: update, error: updateError } = await this.postgresRest.from('profiles').update(
+        { status: 'banned' }
+      )
+        .select()
+        .single();
+      if (updateError) {
+        this.logger.error('Failed to update profile', updateError);
+        return new ErrorResponseDto(400, 'Failed to update profile', updateError);
+      }
+      this.logger.log('Updated profile', update);
+      return new SuccessResponseDto(200, 'User banned successfully', data);
+      /*
       const {
         data, error
-      } = await this.supabaseAdmin.auth.admin.updateUserById(buDto.id, { ban_duration: buDto.ban_duration });
+      } = await this.supabaseAdmin.auth.admin.updateUserById(buDto.profile_id, { ban_duration: buDto.ban_duration });
       if (error) {
         this.logger.error('Failed to ban user');
         return new ErrorResponseDto(400, 'Falied to ban user')
       }
-      this.logger.warn(`User ${buDto.id} has been banned`)
+      
+      const {data: profileUpdate, error: profileError} = await this.postgresRest
+      .from('profiles')
+      .update({
+        status: 'banned'
+      })
+      .eq('id', buDto.profile_id)
+      .select()
+      .single();
+      if(profileError){
+        this.logger.error('Failed to update user', profileError);
+        return new ErrorResponseDto(400, 'Failed to update user', profileError);
+      }
+      this.logger.warn('Profile updated', profileUpdate);
+      this.logger.warn(`User ${buDto.profile_id} has been banned`);
+      */
     }
 
     catch (e) {
@@ -98,8 +139,40 @@ export class AuthService {
     }
   }
 
-  async reinstateUser(userId: string) {
+  async reinstateUser(rpDto: ReinstateProfileDto, logged_in_user_id: string) {
+    this.logger.warn('Reinstate profile dto', rpDto);
     try {
+      // Update banned_profiles
+      const {data, error} = await this.postgresRest
+      .from('banned_profiles')
+      .update(rpDto)
+      .eq('id', rpDto.id)
+      .select()
+      .single();
+
+      if(error){
+        this.logger.error('Failed to update banned profile', error);
+        return new ErrorResponseDto(400, 'Failed to update banned profile', error);
+      }
+      this.logger.log('Updated banned profile', data);
+
+      // Update profiles
+      const {data: update, error: updateError} = await this.postgresRest
+      .from('profiles')
+      .update({
+        status: 'active'
+      })
+      .eq('id', rpDto.profile_id)
+      .select()
+      .single();
+
+      if(updateError){
+        this.logger.error('Failed to update profiles', updateError);
+        return new ErrorResponseDto(400, 'Failed to update profiles', updateError);
+      }
+      this.logger.log('Profile updated', update);
+
+      /*
       const {
         data, error
       } = await this.supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: 'none' });
@@ -108,6 +181,8 @@ export class AuthService {
         return new ErrorResponseDto(400, 'Falied to ban user')
       }
       this.logger.warn(`User ${userId} has been reinstated`)
+      */
+     return new SuccessResponseDto(200, 'User reinstated successfully', data);
     }
 
     catch (e) {
@@ -385,7 +460,7 @@ export class AuthService {
       // 2. Get essential profile data only
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles')
-        .select('id, wallet_id, phone, first_name, last_name, account_type')
+        .select('id, wallet_id, phone, first_name, last_name, account_type, status')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -460,7 +535,7 @@ export class AuthService {
       // const session = await this.createSession(user.id);
 
       const response: AuthLoginSuccessResponse = {
-        status: 'account authenticated',
+        status: profileData?.status,
         statusCode: 200,
         message: 'account authenticated successfully',
         access_token: this.jwtService.sign({
@@ -485,11 +560,12 @@ export class AuthService {
       };
 
       // Create a record in the system logs table
+      this.logger.warn('User status: ', profileData?.status);
       slDto.profile_id = user.id;
       slDto.action = 'login';
-      slDto.request = { email: loginDto.email, password: '********' };
+      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
       slDto.response = {
-        status: 'account authenticated',
+        status: profileData?.status,
         statusCode: 200,
         message: 'account authenticated successfully',
         access_token: this.jwtService.sign({
@@ -1181,6 +1257,7 @@ export class AuthService {
         phone: signupDto.phone,
         first_name: signupDto.first_name,
         last_name: signupDto.last_name,
+        status: signupDto.status,
         account_type: signupDto.account_type,
         dob: signupDto.dob,
         gender: signupDto.gender,

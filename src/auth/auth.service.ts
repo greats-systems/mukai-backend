@@ -1017,7 +1017,7 @@ export class AuthService {
             .maybeSingle(),
         ]);
 
-      if (existingUser) {
+      if (existingUser.data) {
         this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
         );

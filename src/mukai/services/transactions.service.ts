@@ -696,7 +696,7 @@ export class TransactionsService {
   async findAllTransactions(): Promise<Transaction[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('transactions')
+        .from('super_admin_transactions')
         .select();
 
       if (error) {

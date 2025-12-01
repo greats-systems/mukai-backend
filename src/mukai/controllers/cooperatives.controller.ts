@@ -166,8 +166,10 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async findAll() {
-    const response = await this.cooperativesService.findAllCooperatives();
+  async findAll(@Req() req) {
+    const response = await this.cooperativesService.findAllCooperatives(
+      req.user.sub,
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

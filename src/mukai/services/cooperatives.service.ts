@@ -347,17 +347,45 @@ export class CooperativesService {
     }
   }
 
-  async findAllCooperatives(): Promise<object | ErrorResponseDto> {
+  async findAllCooperatives(
+    logged_in_user_id: string,
+  ): Promise<object | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch all cooperatives';
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select('*, cooperatives_admin_id_fkey(*)');
 
       if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Faield to create log', logError);
+        }
+        this.logger.warn('Log created', log);
         this.logger.error('Error fetching Cooperatives', error);
         return new ErrorResponseDto(400, error.details);
       }
-      this.logger.log(`Coop data: ${JSON.stringify(data)}`);
+      // this.logger.log(`Coop data: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: ' Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Faield to create log', logError);
+      }
+      this.logger.warn('Log created', log);
       return data;
     } catch (error) {
       this.logger.error('Exception in findAllCooperatives', error);

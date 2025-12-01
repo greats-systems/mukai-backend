@@ -302,10 +302,14 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, platform: string) {
     this.logger.log(JSON.stringify(loginDto));
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.profile_email = loginDto.email;
+      slDto.action = 'login';
+      slDto.platform = platform
+      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
       // 1. Authenticate user
       const {
         data: { user, session },
@@ -317,9 +321,7 @@ export class AuthService {
 
       if (authError || !user) {
         this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
-        slDto.profile_email = loginDto.email;
-        slDto.action = 'login';
-        slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
+
         slDto.response = {
           status: 'failed',
           message: 'Invalid credentials',

@@ -127,7 +127,9 @@ export class WalletsService {
   async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug("Fetching all wallets");
-      const { data, error } = await this.postgresrest.from("wallets").select();
+      const { data, error } = await this.postgresrest
+      .from("wallets")
+      .select('*,profile_id(*)');
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
@@ -280,7 +282,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("group_id", coop_id)
         .single();
 
@@ -338,7 +340,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("profile_id", profile_id)
         .eq("is_group_wallet", false);
 
@@ -484,7 +486,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("id", wallet_id)
         .single();
 

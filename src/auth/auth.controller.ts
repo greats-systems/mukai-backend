@@ -248,7 +248,7 @@ export class AuthController {
   ) {
     const platform = headers['x-platform'];
     this.logger.warn(`platorm: ${platform}`);
-    const response = await this.authService.login(loginDto);
+    const response = await this.authService.login(loginDto, platform);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
         throw new HttpException(

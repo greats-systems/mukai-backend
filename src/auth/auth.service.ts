@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { AccessAccountDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, SecurityQuestionsDto } from './dto/login.dto';
+import { AccessAccountDto, BannedProfileDto, BanUserDto, LoginDto, OtpDto, ProfilesLikeDto, ProfileSuggestionsDto, ReinstateProfileDto, SecurityQuestionsDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { Profile } from 'src/user/entities/user.entity';
@@ -47,6 +47,8 @@ import { MessagingController } from 'src/messagings/messaging.controller';
 import { MessagingsService } from 'src/messagings/messagings.service';
 import { NotifyTextService } from 'src/messagings/notify_text.service';
 import { messaging } from 'firebase-admin';
+import { CreateSystemLogDto } from 'src/mukai/dto/create/create-system-logs.dto';
+import { error } from 'console';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -75,6 +77,213 @@ export class AuthService {
         ? process.env.LOCAL_SERVICE_ROLE_KEY || ''
         : process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     );
+  }
+
+  async banUser(bpDto: BannedProfileDto, logged_in_user_id: string) {
+    this.logger.warn('ban user dto', bpDto);
+    try {
+      // Insert into banned_profiles
+      bpDto.banned_by = logged_in_user_id;
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles')
+        .insert(bpDto)
+        .select()
+        .single();
+      if (error) {
+        this.logger.error('Faield to insert into banned_profiles', error);
+        return new ErrorResponseDto(400, 'Failed to insert into banned_profiles');
+      }
+      this.logger.log('Banned profile record created', data);
+
+      // Update profile
+      const { data: update, error: updateError } = await this.postgresRest
+        .from('profiles')
+        .update(
+          { status: 'banned' }
+        )
+        .eq('id', bpDto.profile_id)
+        .select()
+        .single();
+      if (updateError) {
+        this.logger.error('Failed to update profile', updateError);
+        return new ErrorResponseDto(400, 'Failed to update profile', updateError);
+      }
+      this.logger.log('Updated profile', update);
+      return new SuccessResponseDto(200, 'User banned successfully', data);
+      /*
+      const {
+        data, error
+      } = await this.supabaseAdmin.auth.admin.updateUserById(buDto.profile_id, { ban_duration: buDto.ban_duration });
+      if (error) {
+        this.logger.error('Failed to ban user');
+        return new ErrorResponseDto(400, 'Falied to ban user')
+      }
+      
+      const {data: profileUpdate, error: profileError} = await this.postgresRest
+      .from('profiles')
+      .update({
+        status: 'banned'
+      })
+      .eq('id', buDto.profile_id)
+      .select()
+      .single();
+      if(profileError){
+        this.logger.error('Failed to update user', profileError);
+        return new ErrorResponseDto(400, 'Failed to update user', profileError);
+      }
+      this.logger.warn('Profile updated', profileUpdate);
+      this.logger.warn(`User ${buDto.profile_id} has been banned`);
+      */
+    }
+
+    catch (e) {
+      this.logger.error('banUser error', e);
+      return new ErrorResponseDto(500, 'banUser error', e);
+    }
+  }
+
+  async getBannedUsers(logged_in_user_id: string, platform: string): Promise<object [] | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch banned users';
+      slDto.platform = platform;
+
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles_view')
+        .select()
+        .order('created_at', { ascending: false });
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log', logError);
+        }
+        this.logger.warn('System log created', log);
+        this.logger.error('Failed to fetch banned users', error);
+        return new ErrorResponseDto(400, 'Failed to fetch banned users', error);
+      }
+      slDto.response = { statusCode: 200, message: 'Banned users fetched successfully' };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to create log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log', logError);
+      }
+      this.logger.warn('System log created', log);
+      return data as object[];
+    }
+    catch (e) {
+      this.logger.error('getBannedUsers error', e);
+      return new ErrorResponseDto(500, 'getBannedUsers error', e)
+    }
+  }
+
+  async getBannedUser(id: string, logged_in_user_id: string, platform: string): Promise<object | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch banned users';
+      slDto.platform = platform;
+      slDto.request = id;
+
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles_view')
+        .select()
+        .eq('id', id)
+        .single();
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log', logError);
+        }
+        this.logger.warn('System log created', log);
+        this.logger.error('Failed to fetch banned users', error);
+        return new ErrorResponseDto(400, 'Failed to fetch banned users', error);
+      }
+      slDto.response = { statusCode: 200, message: 'Banned users fetched successfully' };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to create log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log', logError);
+      }
+      this.logger.warn('System log created', log);
+      return data as object;
+    }
+    catch (e) {
+      this.logger.error('getBannedUser error', e);
+      return new ErrorResponseDto(500, 'getBannedUser error', e);
+    }
+  }
+
+  async reinstateUser(rpDto: ReinstateProfileDto, logged_in_user_id: string) {
+    this.logger.warn('Reinstate profile dto', rpDto);
+    try {
+      // Update banned_profiles
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles')
+        .update(rpDto)
+        .eq('id', rpDto.id)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Failed to update banned profile', error);
+        return new ErrorResponseDto(400, 'Failed to update banned profile', error);
+      }
+      this.logger.log('Updated banned profile', data);
+
+      // Update profiles
+      const { data: update, error: updateError } = await this.postgresRest
+        .from('profiles')
+        .update({
+          status: 'active'
+        })
+        .eq('id', rpDto.profile_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        this.logger.error('Failed to update profiles', updateError);
+        return new ErrorResponseDto(400, 'Failed to update profiles', updateError);
+      }
+      this.logger.log('Profile updated', update);
+
+      /*
+      const {
+        data, error
+      } = await this.supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: 'none' });
+      if (error) {
+        this.logger.error('Failed to ban user');
+        return new ErrorResponseDto(400, 'Falied to ban user')
+      }
+      this.logger.warn(`User ${userId} has been reinstated`)
+      */
+      return new SuccessResponseDto(200, 'User reinstated successfully', data);
+    }
+
+    catch (e) {
+      this.logger.error('unbanUser error', e);
+      return new ErrorResponseDto(500, 'banUser error', e);
+    }
   }
 
   async sendOtp(phone: string): Promise<boolean | GeneralErrorResponseDto> {
@@ -301,9 +510,14 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, platform: string) {
     this.logger.log(JSON.stringify(loginDto));
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_email = loginDto.email;
+      slDto.action = 'login';
+      slDto.platform = platform
+      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
       // 1. Authenticate user
       const {
         data: { user, session },
@@ -315,6 +529,22 @@ export class AuthService {
 
       if (authError || !user) {
         this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
+
+        slDto.response = {
+          status: 'failed',
+          message: 'Invalid credentials',
+          statusCode: 401,
+        }
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+        }
+        this.logger.warn('System log created', log);
         return {
           status: 'failed',
           message: 'Invalid credentials',
@@ -325,7 +555,7 @@ export class AuthService {
       // 2. Get essential profile data only
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles')
-        .select('id, wallet_id, phone, first_name, last_name, account_type')
+        .select('id, wallet_id, phone, first_name, last_name, account_type, status')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -400,7 +630,7 @@ export class AuthService {
       // const session = await this.createSession(user.id);
 
       const response: AuthLoginSuccessResponse = {
-        status: 'account authenticated',
+        status: profileData?.status,
         statusCode: 200,
         message: 'account authenticated successfully',
         access_token: this.jwtService.sign({
@@ -423,6 +653,46 @@ export class AuthService {
         data: undefined, // Explicitly set as undefined
         // error: null
       };
+
+      // Create a record in the system logs table
+      this.logger.warn('User status: ', profileData?.status);
+      slDto.profile_id = user.id;
+      slDto.action = 'login';
+      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
+      slDto.response = {
+        status: profileData?.status,
+        statusCode: 200,
+        message: 'account authenticated successfully',
+        access_token: this.jwtService.sign({
+          email: user.email,
+          sub: user.id,
+          role: user.role || 'authenticated',
+        }),
+        refresh_token: session?.refresh_token,
+        token_type: 'bearer',
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: profileData?.phone || null,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          account_type: profileData?.account_type || 'authenticated',
+          wallet_id: profileData?.wallet_id,
+          role: user.role || 'authenticated',
+        },
+        data: undefined, // Explicitly set as undefined
+        // error: null
+      };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to create system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+      }
+      this.logger.warn('System log created', log);
 
       return response;
     } catch (error) {
@@ -622,10 +892,15 @@ export class AuthService {
     }
   }
 
-  async loginWithPhone2(loginDto: LoginDto): Promise<object | ErrorResponseDto> {
+  async loginWithPhone2(loginDto: LoginDto, platform: string): Promise<object | ErrorResponseDto> {
     // this.logger.log(JSON.stringify(loginDto));
     try {
-      this.logger.debug(JSON.stringify(loginDto))
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_phone = loginDto.phone;
+      slDto.action = 'login with phone';
+      slDto.request = loginDto;
+      this.logger.debug(JSON.stringify(loginDto));
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const { data, error } = await this.postgresRest
         .from('profiles')
@@ -637,6 +912,17 @@ export class AuthService {
 
       if (error) {
         this.logger.error('Profile fetch error:', error);
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(400, 'Profile fetch error', error);
       }
 
@@ -653,6 +939,20 @@ export class AuthService {
 
       if (authError || !user) {
         this.logger.log(`No user found: ${JSON.stringify(authError)} ${!user}`);
+        slDto.profile_phone = loginDto.phone;
+        slDto.action = 'login with phone';
+        slDto.request = loginDto;
+        slDto.response = authError;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
         return {
           status: 'failed',
           message: 'Invalid credentials',
@@ -762,6 +1062,44 @@ export class AuthService {
         // error: null
       };
 
+      slDto.profile_id = user.id;
+      slDto.action = 'login with phone';
+      slDto.request = loginDto;
+      slDto.response = {
+        status: 'account authenticated',
+        statusCode: 200,
+        message: 'account authenticated successfully',
+        access_token: this.jwtService.sign({
+          email: user.email,
+          sub: user.id,
+          role: user.role || 'authenticated',
+        }),
+        refresh_token: session?.refresh_token,
+        token_type: 'bearer',
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: profileData?.phone || null,
+          first_name: profileData?.first_name || '',
+          last_name: profileData?.last_name || '',
+          account_type: profileData?.account_type || 'authenticated',
+          wallet_id: profileData?.wallet_id,
+          role: user.role || 'authenticated',
+        },
+        data: undefined, // Explicitly set as undefined
+        // error: null
+      };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
+
       return response;
     } catch (error) {
       console.error('Login error:', error);
@@ -776,6 +1114,8 @@ export class AuthService {
   async resetPassword(
     resetPasswordDto: LoginDto,
   ): Promise<object | ErrorResponseDto> {
+    const slDto = new CreateSystemLogDto();
+
     // Locate user ID given their email
     this.logger.debug(`Resetting password using: ${JSON.stringify(resetPasswordDto)}`);
     const { data: userData, error: userError } = await this.postgresRest
@@ -790,6 +1130,20 @@ export class AuthService {
       this.logger.error(
         `Error fetching email for password reset: ${JSON.stringify(userError)}`,
       );
+      slDto.profile_email = resetPasswordDto.email;
+      slDto.action = 'reset password';
+      slDto.request = resetPasswordDto;
+      slDto.response = userError;
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
       return new ErrorResponseDto(400, userError.details);
     }
     const { data, error } = await this.supabaseAdmin.auth.admin.updateUserById(
@@ -811,11 +1165,11 @@ export class AuthService {
       `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
     );
     const { data: update, error: updateError } = await this.postgresRest
-    .from('profiles')
-    .update({ 'password': cipherText })
-    .eq('id', userData.id)
-    .select()
-    .single();
+      .from('profiles')
+      .update({ 'password': cipherText })
+      .eq('id', userData.id)
+      .select()
+      .single();
 
     if (updateError) {
       this.logger.error(`Error updating profile, ${JSON.stringify(updateError)}`);
@@ -823,13 +1177,32 @@ export class AuthService {
     }
 
     this.logger.log(`Password reset response: ${JSON.stringify(update)}`);
+
+    slDto.profile_id = userData.id;
+    slDto.action = 'reset password';
+    slDto.request = resetPasswordDto;
+    slDto.response = data;
+    const { data: log, error: logError } = await this.postgresRest
+      .from('system_logs')
+      .insert(slDto)
+      .select()
+      .single();
+    if (logError) {
+      this.logger.error('Failed to insert system log record', logError);
+      return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+    }
+    this.logger.warn('System log record created', log);
     return data as object;
   }
 
-  async signup(signupDto: SignupDto): Promise<object | undefined> {
+  async signup(signupDto: SignupDto, platform: string): Promise<object | undefined> {
     const walletsService = new WalletsService(this.postgresRest);
     const scwService = new SmileCashWalletService(this.postgresRest);
     const createWalletDto = new CreateWalletDto();
+    const slDto = new CreateSystemLogDto();
+    slDto.profile_name = `${signupDto.first_name} ${signupDto.last_name}`
+    slDto.action = 'signup';
+    slDto.platform = platform;
 
     try {
       this.logger.log('Creating transaction...', signupDto);
@@ -856,30 +1229,68 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-        /*
-        if(existingUser){
-          this.logger.debug(
+
+      if (existingUser.data) {
+        this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
         );
-        return new ErrorResponseDto(422, 'Email already in use');
+        signupDto.password = '*'.repeat(signupDto.password.length);
+        slDto.request = signupDto;
+        slDto.response = { message: "Duplicate email found", data: existingUser.data };
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
         }
-        
-      
+        this.logger.warn('System log created', log);
+        return new ErrorResponseDto(422, 'Email already in use');
+      }
+
+
       if (existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
+        signupDto.password = '*'.repeat(signupDto.password.length);
+        slDto.request = signupDto;
+        slDto.response = { message: "Duplicate phone number found", data: existingPhoneNumber.data };
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+        }
+        this.logger.warn('System log created', log);
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
-      
-      
+
+
       if (existingNatID.data) {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
+        signupDto.password = '*'.repeat(signupDto.password.length);
+        slDto.request = signupDto;
+        slDto.response = { message: "Duplicate national ID  found", data: existingNatID.data };
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+        }
+        this.logger.warn('System log created', log);
         return new ErrorResponseDto(422, 'National ID already in use');
       }
-      */
 
 
       // 2. Hash password for auth AND encrypt for profiles
@@ -910,6 +1321,17 @@ export class AuthService {
 
       if (authError) {
         console.error('Auth creation error:', authError);
+        slDto.response = authError;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+        }
+        this.logger.warn('System log created', log);
         return new ErrorResponseDto(400, 'User creation failed', authError);
       }
 
@@ -922,19 +1344,6 @@ export class AuthService {
 
       const userId = newAuthUser.user.id;
 
-      // 4. Encrypt password for storage in profiles table
-      /*
-      const { data: encryptedPassword, error: encryptError } = await this.postgresRest
-        .rpc('encrypt_user_password', { plain_text: signupDto.password });
-
-      if (encryptError) {
-        this.logger.error('Password encryption failed:', encryptError);
-        // Clean up auth user since we can't create profile properly
-        await this.supabaseAdmin.auth.admin.deleteUser(userId);
-        return new ErrorResponseDto(500, 'Password encryption failed', encryptError);
-      }
-      */
-
       // 5. Prepare profile data with encrypted password
       const profileData = {
         id: userId,
@@ -943,6 +1352,7 @@ export class AuthService {
         phone: signupDto.phone,
         first_name: signupDto.first_name,
         last_name: signupDto.last_name,
+        status: 'active',
         account_type: signupDto.account_type,
         dob: signupDto.dob,
         gender: signupDto.gender,
@@ -1063,6 +1473,44 @@ export class AuthService {
         role: newAuthUser.user.role,
       };
 
+      // Record the successful signup in system_logs
+      slDto.profile_id = userId;
+      slDto.response = {
+        status: 'account created',
+        statusCode: 201,
+        message: 'account created successfully',
+        access_token: this.jwtService.sign(payload),
+        user: {
+          id: userId,
+          email: newAuthUser.user.email,
+          first_name: signupDto.first_name,
+          last_name: signupDto.last_name,
+          account_type: signupDto.account_type,
+          dob: signupDto.dob,
+          gender: signupDto.gender,
+          wallet_id: walletResponse['data']['id'],
+          business_id: signupDto.business_id,
+          coop_account_id: signupDto.coop_account_id,
+          push_token: signupDto.push_token,
+          avatar: signupDto.avatar,
+          national_id_url: signupDto.national_id_url,
+          passport_url: signupDto.passport_url,
+          role: newAuthUser.user.role,
+        },
+        data: this.jwtService.sign(payload),
+        error: null,
+      };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
+
       return {
         status: 'account created',
         statusCode: 201,
@@ -1146,7 +1594,7 @@ export class AuthService {
       const { data, error } = await this.postgresRest
         .from('profiles')
         .select('*')
-        // .ilike('id', `%${suffix}`)
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1197,64 +1645,94 @@ export class AuthService {
   }
 
   async getProfilesLikeExcept(plDto: ProfilesLikeDto): Promise<Profile[]> {
-  try {
-    const searchTerm = plDto.first_name; // Since all fields use the same search term
-    
-    const { data, error } = await this.postgresRest
-      .from('profiles')
-      .select('*')
-      .neq('id', plDto.id)
-      .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
-      .order('created_at', { ascending: false });
+    try {
+      const searchTerm = plDto.first_name; // Since all fields use the same search term
 
-    if (error) {
-      throw new Error(`Failed to fetch profiles: ${error.message}`);
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .neq('id', plDto.id)
+        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
     }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data as Profile[];
-  } catch (error) {
-    console.error('Error in getProfiles:', error);
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'An unexpected error occurred while fetching profiles',
-    );
   }
-}
 
-async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
-  try {
-    // const searchTerm = plDto.first_name; 
-    
-    const { data, error } = await this.postgresRest
-      .from('profiles')
-      .select('*')
-      .neq('id', psDto.id)
-      .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%,email.ilike.%${psDto.search_term}%`)
-      .order('created_at', { ascending: false });
+  async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      const { data, error } = await this.postgresRest
+        .from('profiles')
+        .select('*')
+        .neq('id', psDto.id)
+        .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%,email.ilike.%${psDto.search_term}%`)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch profiles: ${error.message}`);
+      if (error) {
+        slDto.profile_id = psDto.id;
+        slDto.action = 'search for wallet-to-wallet recipients';
+        slDto.request = psDto;
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return [];
+          // return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
+        throw new Error(`Failed to fetch profiles: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      slDto.profile_id = psDto.id;
+      slDto.action = 'search for wallet-to-wallet recipients';
+      slDto.request = psDto;
+      slDto.response = { statusCode: 200, message: "Profiles suggestions fetched successfully" };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return [];
+        // return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
+
+      return data as Profile[];
+    } catch (error) {
+      console.error('Error in getProfiles:', error);
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred while fetching profiles',
+      );
     }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data as Profile[];
-  } catch (error) {
-    console.error('Error in getProfiles:', error);
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'An unexpected error occurred while fetching profiles',
-    );
   }
-}
 
   async getProfile(profile_id: string): Promise<Profile> {
     try {
@@ -1282,15 +1760,45 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
   async submitSecurityQuestions(sqDto: SecurityQuestionsDto): Promise<boolean | ErrorResponseDto> {
     try {
       this.logger.debug(JSON.stringify(sqDto));
+      const slDto = new CreateSystemLogDto();
       const { data, error } = await this.postgresRest
-      .from('security_questions')
-      .insert(sqDto)
-      .select()
-      .single();
+        .from('security_questions')
+        .insert(sqDto)
+        .select()
+        .single();
       if (error) {
+        slDto.profile_id = sqDto.profile;
+        slDto.action = 'submit security questions';
+        slDto.request = sqDto;
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
+
         return new ErrorResponseDto(400, 'Error creating security questions', error);
       }
       this.logger.debug(`Record created: ${JSON.stringify(data)}`);
+      slDto.profile_id = sqDto.profile;
+      slDto.action = 'submit security questions';
+      slDto.request = sqDto;
+      slDto.response = { statusCode: 201, message: "Security answers submitted successfully", data: data };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
       return true;
     }
     catch (e) {
@@ -1310,6 +1818,7 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
 
   async getSecurityQuestions(phone: string): Promise<object | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
       // Get the profile ID first
       const { data: profile, error: profileError } = await this.postgresRest
         .from('profiles')
@@ -1320,10 +1829,38 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
         .single();
 
       if (profileError) {
+        slDto.profile_phone = phone;
+        slDto.action = 'fetch security questions';
+        slDto.request = phone;
+        slDto.response = profileError;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(400, 'Failed to fetch profile ID for security questions', profileError);
       }
 
       if (!profile || !profile.id) {
+        slDto.profile_phone = phone;
+        slDto.action = 'fetch security questions';
+        slDto.request = phone;
+        slDto.response = { statusCode: 404, message: `Profile not found for phone number ${phone}` };
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(404, 'Profile not found for provided phone number');
       }
       const { data, error } = await this.postgresRest
@@ -1332,10 +1869,37 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
         .eq('profile_id', profile.id)
         .maybeSingle();
       if (error) {
+        slDto.profile_id = profile.id;
+        slDto.action = 'fetch security questions';
+        slDto.request = phone;
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(400, 'Error fetching security questions', error);
       }
-      // this.logger.debug(`Record created: ${JSON.stringify(data)}`);
       this.logger.debug(`Security questions: ${JSON.stringify(data)}`);
+      slDto.profile_phone = phone;
+      slDto.action = 'fetch security questions';
+      slDto.request = phone;
+      slDto.response = { statusCode: 200, message: "Security questions fetched successfully" };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
       return data as object;
     }
     catch (e) {
@@ -1510,6 +2074,7 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
 
   async logout(userId: string) {
     try {
+      const slDto = new CreateSystemLogDto();
       // 1. Validate the user ID format
       if (!this.isValidUuid(userId)) {
         throw new BadRequestException('Invalid user ID format');
@@ -1540,6 +2105,25 @@ async getProfileSuggestions(psDto: ProfileSuggestionsDto): Promise<Profile[]> {
         .from('profiles')
         .update({ push_token: null, updated_at: now })
         .eq('id', userId);
+
+      slDto.profile_id = userId;
+      slDto.action = 'logout';
+      slDto.request = userId;
+      slDto.response = {
+        status: 'success',
+        message: 'Logged out successfully',
+        error: null,
+      };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(400, 'Failed to insert system log record', logError);
+      }
+      this.logger.warn('System log record created', log);
 
       return {
         status: 'success',

@@ -4,7 +4,7 @@ import { UUID } from 'crypto';
 
 export class FiletrCooperativesDto {
   @ApiProperty({
-    example: '987e6543-e21b-43d2-b456-426614174000',
+    example: '8e8bf5e9-0702-4ebf-bd39-98d020f6da3f',
     description: 'Profile ID',
     required: false,
   })

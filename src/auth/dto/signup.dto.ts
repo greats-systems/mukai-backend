@@ -73,6 +73,15 @@ export class SignupDto {
   account_type: string;
 
   @ApiProperty({
+    example: 'active',
+    description: 'Status of account',
+    required: true,
+  })
+  @IsString()
+  @MinLength(2)
+  status: string;
+
+  @ApiProperty({
     example: 'secretary',
     description: 'User role in a cooperative (chairman, secretary, financier)',
     required: true,

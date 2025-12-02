@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
@@ -10,6 +11,10 @@ import {
   HttpException,
   HttpStatus,
   Query,
+  Req,
+  Logger,
+  UseGuards,
+  Headers,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
 import {
@@ -26,30 +31,33 @@ import {
   ApiParam,
   ApiHeader,
   ApiExcludeEndpoint,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperatives')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
-// @ApiHeader({
-//   name: 'apikey',
-//   description: 'API key for authentication (insert access token)',
-//   required: true, // Set to true if the header is mandatory
-//   example:
-//     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
-// })
-// @ApiHeader({
-//   name: 'Authorization',
-//   description: 'Bearer token for authentication (insert access token)',
-//   required: true, // Set to true if the header is mandatory
-//   example:
-//     'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
-// })
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiHeader({
+  name: 'apikey',
+  description: 'API key for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
+@ApiHeader({
+  name: 'Authorization',
+  description: 'Bearer token for authentication (insert access token)',
+  required: true, // Set to true if the header is mandatory
+  example:
+    'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
+})
 @Controller('cooperatives')
 export class CooperativesController {
+  private readonly logger = new Logger(CooperativesController.name);
   constructor(private readonly cooperativesService: CooperativesService) {}
 
   @Post()
@@ -68,9 +76,16 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async create(@Body() createCooperativeDto: CreateCooperativeDto) {
-    const response =
-      await this.cooperativesService.createCooperative(createCooperativeDto);
+  async create(
+    @Body() createCooperativeDto: CreateCooperativeDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.createCooperative(
+      createCooperativeDto,
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -99,8 +114,16 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async filterCooperatives(@Body() fcDto: FiletrCooperativesDto) {
-    const response = await this.cooperativesService.filterCooperatives(fcDto);
+  async filterCooperatives(
+    @Body() fcDto: FiletrCooperativesDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.filterCooperatives(
+      fcDto,
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
     }
@@ -125,9 +148,16 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async filterCooperativesLike(@Body() fclDto: FiletrCooperativesLikeDto) {
-    const response =
-      await this.cooperativesService.filterCooperativesLike(fclDto);
+  async filterCooperativesLike(
+    @Body() fclDto: FiletrCooperativesLikeDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.filterCooperativesLike(
+      fclDto,
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
     }
@@ -149,8 +179,11 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async findAll() {
-    const response = await this.cooperativesService.findAllCooperatives();
+  async findAll(@Req() req, @Headers() headers) {
+    const response = await this.cooperativesService.findAllCooperatives(
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -178,9 +211,16 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async initializeMembers(@Param('member_id') member_id: string) {
-    const response =
-      await this.cooperativesService.initializeMembers(member_id);
+  async initializeMembers(
+    @Param('member_id') member_id: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.initializeMembers(
+      member_id,
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }
@@ -368,7 +408,7 @@ export class CooperativesController {
     return response;
   }
 
-  @ApiExcludeEndpoint()
+  // @ApiExcludeEndpoint()
   @Get(':member_id/active')
   @ApiOperation({ summary: 'Get cooperatives for a specific member' })
   @ApiParam({
@@ -393,9 +433,16 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async viewCooperativesForMember(@Param('member_id') member_id: string) {
-    const response =
-      await this.cooperativesService.viewCooperativesForMember(member_id);
+  async viewCooperativesForMember(
+    @Param('member_id') member_id: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.viewCooperativesForMember(
+      member_id,
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response['statusCode'] === 400) {
       throw new HttpException(
         response['message'] ?? 'Bad request',
@@ -508,6 +555,7 @@ export class CooperativesController {
     description: 'Internal server error',
   })
   async findOne(@Param('id') id: string) {
+    this.logger.log('Opening coop');
     const response = await this.cooperativesService.viewCooperative(id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);

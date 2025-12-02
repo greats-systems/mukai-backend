@@ -58,6 +58,7 @@ export class LoanService {
         return hasActiveLoan;
       }
       */
+      this.logger.warn('Create loan dto', createLoanDto);
       const { data: loanResponse, error } = await this.postgresrest
         .from('loans')
         .insert(createLoanDto)

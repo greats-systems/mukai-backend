@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   ApiTags,
@@ -6,6 +8,7 @@ import {
   ApiBody,
   ApiParam,
   ApiExcludeEndpoint,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
   Controller,
@@ -17,24 +20,32 @@ import {
   HttpException,
   HttpStatus,
   Patch,
+  Headers,
+  Logger,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   AccessAccountDto,
+  BannedProfileDto,
   LoginDto,
   OtpDto,
   ProfilesLikeDto,
   ProfileSuggestionsDto,
+  ReinstateProfileDto,
   SecurityQuestionsDto,
 } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { Profile } from 'src/user/entities/user.entity';
 import { MukaiProfile } from 'src/user/entities/mukai-user.entity';
 import { AuthErrorResponse } from 'src/common/dto/auth-responses.dto';
+import { JwtAuthGuard } from './guards/jwt.auth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger();
   constructor(private readonly authService: AuthService) {}
 
   @ApiTags('Profiles')
@@ -76,7 +87,7 @@ export class AuthController {
     return this.authService.getProfileSuggestions(psDto);
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with phone number' })
   @ApiParam({
     name: 'phone',
@@ -87,8 +98,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid phone number' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login/phone')
-  async loginWithPhone2(@Body() loginDto: LoginDto) {
-    const response = await this.authService.loginWithPhone2(loginDto);
+  async loginWithPhone2(@Body() loginDto: LoginDto, @Headers() headers) {
+    const platform = headers['x-platform'];
+    const response = await this.authService.loginWithPhone2(loginDto, platform);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
         throw new HttpException(
@@ -114,8 +126,30 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('OTP')
-  @ApiOperation({ summary: 'Verify OTP' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Ban user' })
+  @ApiBody({
+    type: BannedProfileDto,
+    description: 'Request body for user to be banned',
+  })
+  @ApiResponse({ status: 200, description: 'User banned successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to ban user' })
+  @Post('ban')
+  async banUser(@Body() bpDto: BannedProfileDto, @Req() req) {
+    return await this.authService.banUser(bpDto, req.user.sub);
+  }
+
+  @ApiOperation({ summary: 'Reinstate user' })
+  @ApiResponse({ status: 200, description: 'User reinstated successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to reinstate user' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('reinstate')
+  async reinstateUser(@Body() rpDto: ReinstateProfileDto, @Req() req) {
+    return await this.authService.reinstateUser(rpDto, req.user.sub);
+  }
+
   @ApiBody({ type: OtpDto, description: 'OTP verification data' })
   @ApiResponse({ status: 200, description: 'OTP verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid OTP' })
@@ -143,7 +177,46 @@ export class AuthController {
     return this.authService.getProfile(id);
   }
 
-  @ApiTags('User Registration')
+  @ApiOperation({ summary: 'Fetch all banned users' })
+  @Get('banned-users')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Banned users fetched successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No banned users found',
+  })
+  @ApiBearerAuth()
+  async getBannedUsers(@Req() req, @Headers() headers) {
+    return this.authService.getBannedUsers(req.user.sub, headers['x-platform']);
+  }
+
+  @ApiOperation({ summary: 'Fetch one banned user by id' })
+  @Get('banned-users/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Banned user fetched successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No banned user found',
+  })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getBannedUser(@Param('id') id: string, @Req() req, @Headers() headers) {
+    return this.authService.getBannedUser(
+      id,
+      req.user.sub,
+      headers['x-platform'],
+    );
+  }
+
+  // @ApiTags('User Registration')
   @ApiOperation({ summary: 'Create a new user account' })
   @ApiBody({ type: SignupDto })
   @ApiResponse({
@@ -186,8 +259,9 @@ export class AuthController {
     description: 'Server error',
   })
   @Post('create-account')
-  async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto);
+  async signup(@Body() signupDto: SignupDto, @Headers() headers) {
+    const platform = headers['x-platform'];
+    return this.authService.signup(signupDto, platform);
   }
 
   @ApiExcludeEndpoint()
@@ -202,7 +276,7 @@ export class AuthController {
     return this.authService.updateFCM(profile);
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with email and password' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -239,8 +313,13 @@ export class AuthController {
     description: 'Server error',
   })
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    const response = await this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Headers() headers: Record<string, string>,
+  ) {
+    const platform = headers['x-platform'];
+    this.logger.warn(`platorm: ${platform}`);
+    const response = await this.authService.login(loginDto, platform);
     if (response != null && response['error'] !== null) {
       if (response instanceof AuthErrorResponse) {
         throw new HttpException(
@@ -266,7 +345,7 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('Authentication')
+  // @ApiTags('Authentication')
   @ApiOperation({ summary: 'User login with phone number' })
   @ApiParam({
     name: 'phone',
@@ -304,7 +383,7 @@ export class AuthController {
     return response;
   }
 
-  @ApiTags('Password Management')
+  // @ApiTags('Password Management')
   @ApiOperation({ summary: 'Reset user password' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
@@ -380,7 +459,7 @@ export class AuthController {
     return await this.authService.submitSecurityQuestions(sqDto);
   }
 
-  @ApiTags('Security')
+  // @ApiTags('Security')
   @ApiOperation({ summary: 'Get security questions for phone number' })
   @ApiParam({
     name: 'phone',

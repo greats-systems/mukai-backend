@@ -127,7 +127,9 @@ export class WalletsService {
   async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug("Fetching all wallets");
-      const { data, error } = await this.postgresrest.from("wallets").select();
+      const { data, error } = await this.postgresrest
+      .from("wallets")
+      .select('*,profile_id(*)');
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
@@ -221,7 +223,7 @@ export class WalletsService {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
-      this.logger.debug(`Wallet data:, ${JSON.stringify(data[0]['wallets_profile_id_fkey'])}`);
+      // this.logger.debug(`Wallet data:, ${JSON.stringify(data[0]['wallets_profile_id_fkey'])}`);
       
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
@@ -280,7 +282,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("group_id", coop_id)
         .single();
 
@@ -338,7 +340,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("profile_id", profile_id)
         .eq("is_group_wallet", false);
 
@@ -484,7 +486,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("id", wallet_id)
         .single();
 

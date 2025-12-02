@@ -1352,7 +1352,7 @@ export class AuthService {
         phone: signupDto.phone,
         first_name: signupDto.first_name,
         last_name: signupDto.last_name,
-        status: signupDto.status,
+        status: 'active',
         account_type: signupDto.account_type,
         dob: signupDto.dob,
         gender: signupDto.gender,
@@ -1594,7 +1594,7 @@ export class AuthService {
       const { data, error } = await this.postgresRest
         .from('profiles')
         .select('*')
-        // .ilike('id', `%${suffix}`)
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) {

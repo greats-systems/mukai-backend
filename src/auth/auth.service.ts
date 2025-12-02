@@ -230,7 +230,7 @@ export class AuthService {
     }
     catch (e) {
       this.logger.error('getBannedUser error', e);
-      return new ErrorResponseDto(500, 'getBannedUser error', e)
+      return new ErrorResponseDto(500, 'getBannedUser error', e);
     }
   }
 

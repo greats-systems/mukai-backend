@@ -177,6 +177,44 @@ export class AuthController {
     return this.authService.getProfile(id);
   }
 
+  @ApiOperation({ summary: 'Fetch all banned users' })
+  @Get('banned-users')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Banned users fetched successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No banned users found',
+  })
+  @ApiBearerAuth()
+  async getBannedUsers(@Req() req, @Headers() headers) {
+    return this.authService.getBannedUsers(req.user.sub, headers['x-platform']);
+  }
+
+  @ApiOperation({ summary: 'Fetch one banned user by id' })
+  @Get('banned-users/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Banned user fetched successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No banned user found',
+  })
+  @ApiBearerAuth()
+  async getBannedUser(@Param('id') id: string, @Req() req, @Headers() headers) {
+    return this.authService.getBannedUser(
+      id,
+      req.user.sub,
+      headers['x-platform'],
+    );
+  }
+
   // @ApiTags('User Registration')
   @ApiOperation({ summary: 'Create a new user account' })
   @ApiBody({ type: SignupDto })

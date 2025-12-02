@@ -97,10 +97,10 @@ export class AuthService {
 
       // Update profile
       const { data: update, error: updateError } = await this.postgresRest
-      .from('profiles')
-      .update(
-        { status: 'banned' }
-      )
+        .from('profiles')
+        .update(
+          { status: 'banned' }
+        )
         .eq('id', bpDto.profile_id)
         .select()
         .single();
@@ -139,6 +139,96 @@ export class AuthService {
     catch (e) {
       this.logger.error('banUser error', e);
       return new ErrorResponseDto(500, 'banUser error', e);
+    }
+  }
+
+  async getBannedUsers(logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch banned users';
+      slDto.platform = platform;
+
+      const { data, error } = await this.postgresRest
+        .from('banned_users')
+        .select()
+        .order('created_at', { ascending: false });
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log', logError);
+        }
+        this.logger.warn('System log created', log);
+        this.logger.error('Failed to fetch banned users', error);
+        return new ErrorResponseDto(400, 'Failed to fetch banned users', error);
+      }
+      slDto.response = { statusCode: 200, message: 'Banned users fetched successfully' };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to create log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log', logError);
+      }
+      this.logger.warn('System log created', log);
+    }
+    catch (e) {
+      this.logger.error('getBannedUsers error', e);
+      return new ErrorResponseDto(500, 'getBannedUsers error', e)
+    }
+  }
+
+  async getBannedUser(id: string, logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch banned users';
+      slDto.platform = platform;
+      slDto.request = id;
+
+      const { data, error } = await this.postgresRest
+        .from('banned_users')
+        .select()
+        .eq('id', id)
+        .single();
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log', logError);
+        }
+        this.logger.warn('System log created', log);
+        this.logger.error('Failed to fetch banned users', error);
+        return new ErrorResponseDto(400, 'Failed to fetch banned users', error);
+      }
+      slDto.response = { statusCode: 200, message: 'Banned users fetched successfully' };
+      const { data: log, error: logError } = await this.postgresRest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to create log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log', logError);
+      }
+      this.logger.warn('System log created', log);
+    }
+    catch (e) {
+      this.logger.error('getBannedUser error', e);
+      return new ErrorResponseDto(500, 'getBannedUser error', e)
     }
   }
 

@@ -206,6 +206,7 @@ export class AuthController {
     status: 404,
     description: 'No banned user found',
   })
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   async getBannedUser(@Param('id') id: string, @Req() req, @Headers() headers) {
     return this.authService.getBannedUser(

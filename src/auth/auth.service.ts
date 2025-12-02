@@ -150,7 +150,7 @@ export class AuthService {
       slDto.platform = platform;
 
       const { data, error } = await this.postgresRest
-        .from('banned_users')
+        .from('banned_profiles')
         .select()
         .order('created_at', { ascending: false });
       if (error) {
@@ -196,7 +196,7 @@ export class AuthService {
       slDto.request = id;
 
       const { data, error } = await this.postgresRest
-        .from('banned_users')
+        .from('banned_profiles')
         .select()
         .eq('id', id)
         .single();

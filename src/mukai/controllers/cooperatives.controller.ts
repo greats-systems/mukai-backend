@@ -14,6 +14,7 @@ import {
   Req,
   Logger,
   UseGuards,
+  Headers,
 } from '@nestjs/common';
 import { CooperativesService } from '../services/cooperatives.service';
 import {
@@ -75,10 +76,15 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async create(@Body() createCooperativeDto: CreateCooperativeDto, @Req() req) {
+  async create(
+    @Body() createCooperativeDto: CreateCooperativeDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
     const response = await this.cooperativesService.createCooperative(
       createCooperativeDto,
       req.user.sub,
+      headers['x-platform'],
     );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
@@ -108,10 +114,15 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async filterCooperatives(@Body() fcDto: FiletrCooperativesDto, @Req() req) {
+  async filterCooperatives(
+    @Body() fcDto: FiletrCooperativesDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
     const response = await this.cooperativesService.filterCooperatives(
       fcDto,
       req.user.sub,
+      headers['x-platform'],
     );
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
@@ -140,10 +151,12 @@ export class CooperativesController {
   async filterCooperativesLike(
     @Body() fclDto: FiletrCooperativesLikeDto,
     @Req() req,
+    @Headers() headers,
   ) {
     const response = await this.cooperativesService.filterCooperativesLike(
       fclDto,
       req.user.sub,
+      headers['x-platform'],
     );
     if (response instanceof GeneralErrorResponseDto) {
       return new HttpException(response, response.statusCode);
@@ -166,9 +179,10 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async findAll(@Req() req) {
+  async findAll(@Req() req, @Headers() headers) {
     const response = await this.cooperativesService.findAllCooperatives(
       req.user.sub,
+      headers['x-platform'],
     );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
@@ -197,10 +211,15 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async initializeMembers(@Param('member_id') member_id: string, @Req() req) {
+  async initializeMembers(
+    @Param('member_id') member_id: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
     const response = await this.cooperativesService.initializeMembers(
       member_id,
       req.user.sub,
+      headers['x-platform'],
     );
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
@@ -417,10 +436,12 @@ export class CooperativesController {
   async viewCooperativesForMember(
     @Param('member_id') member_id: string,
     @Req() req,
+    @Headers() headers,
   ) {
     const response = await this.cooperativesService.viewCooperativesForMember(
       member_id,
       req.user.sub,
+      headers['x-platform'],
     );
     if (response['statusCode'] === 400) {
       throw new HttpException(

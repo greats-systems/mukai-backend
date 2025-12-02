@@ -43,9 +43,11 @@ export class CooperativesService {
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'create cooperative';
       slDto.request = createCooperativeDto;
@@ -313,10 +315,12 @@ export class CooperativesService {
   async initializeMembers(
     member_id: string,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<object[] | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
       slDto.action = 'fetch coops to which a user belongs';
       slDto.request = member_id;
       const { data, error } = await this.postgresrest
@@ -349,9 +353,11 @@ export class CooperativesService {
 
   async findAllCooperatives(
     logged_in_user_id: string,
+    platform: string,
   ): Promise<object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'fetch all cooperatives';
       const { data, error } = await this.postgresrest
@@ -604,12 +610,14 @@ export class CooperativesService {
   async filterCooperatives(
     fcDto: FiletrCooperativesDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'search for cooperatives to join';
       slDto.request = fcDto;
+      slDto.platform = platform;
       // this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
       const coopsList: Cooperative[] = [];
       if (!fcDto.category || !fcDto.city || !fcDto.province) {
@@ -753,10 +761,12 @@ export class CooperativesService {
   async filterCooperativesLike(
     fclDto: FiletrCooperativesLikeDto,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
       slDto.action = `filter cooperatives like ${fclDto.search_term}`;
       slDto.request = fclDto;
       this.logger.debug(`fclDto: ${JSON.stringify(fclDto)}`);
@@ -890,10 +900,12 @@ export class CooperativesService {
   async viewCooperativesForMember(
     member_id: string,
     logged_in_user_id: string,
+    platform: string,
   ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
       slDto.action = 'fetch cooperatives for member';
       slDto.request = member_id;
       const { data, error } = await this.postgresrest

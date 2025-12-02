@@ -53,7 +53,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 export class CooperativeMemberRequestsController {
   constructor(
     private readonly cooperativeMemberRequestsService: CooperativeMemberRequestsService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new member request' })

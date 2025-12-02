@@ -102,7 +102,7 @@ export class GroupMemberService {
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
-        .select()
+        .select('*, cooperative_id(*)')
         .eq('member_id', member_id)
         .order('created_at', { ascending: false });
 

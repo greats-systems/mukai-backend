@@ -560,6 +560,7 @@ export class CooperativeMemberRequestsService {
       slDto.platform = platform;
       slDto.request = updateCooperativeMemberRequestDto;
       // this.logger.debug(updateCooperativeMemberRequestDto);
+
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)

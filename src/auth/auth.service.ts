@@ -96,9 +96,12 @@ export class AuthService {
       this.logger.log('Banned profile record created', data);
 
       // Update profile
-      const { data: update, error: updateError } = await this.postgresRest.from('profiles').update(
+      const { data: update, error: updateError } = await this.postgresRest
+      .from('profiles')
+      .update(
         { status: 'banned' }
       )
+        .eq('id', bpDto.profile_id)
         .select()
         .single();
       if (updateError) {
@@ -143,30 +146,30 @@ export class AuthService {
     this.logger.warn('Reinstate profile dto', rpDto);
     try {
       // Update banned_profiles
-      const {data, error} = await this.postgresRest
-      .from('banned_profiles')
-      .update(rpDto)
-      .eq('id', rpDto.id)
-      .select()
-      .single();
+      const { data, error } = await this.postgresRest
+        .from('banned_profiles')
+        .update(rpDto)
+        .eq('id', rpDto.id)
+        .select()
+        .single();
 
-      if(error){
+      if (error) {
         this.logger.error('Failed to update banned profile', error);
         return new ErrorResponseDto(400, 'Failed to update banned profile', error);
       }
       this.logger.log('Updated banned profile', data);
 
       // Update profiles
-      const {data: update, error: updateError} = await this.postgresRest
-      .from('profiles')
-      .update({
-        status: 'active'
-      })
-      .eq('id', rpDto.profile_id)
-      .select()
-      .single();
+      const { data: update, error: updateError } = await this.postgresRest
+        .from('profiles')
+        .update({
+          status: 'active'
+        })
+        .eq('id', rpDto.profile_id)
+        .select()
+        .single();
 
-      if(updateError){
+      if (updateError) {
         this.logger.error('Failed to update profiles', updateError);
         return new ErrorResponseDto(400, 'Failed to update profiles', updateError);
       }
@@ -182,7 +185,7 @@ export class AuthService {
       }
       this.logger.warn(`User ${userId} has been reinstated`)
       */
-     return new SuccessResponseDto(200, 'User reinstated successfully', data);
+      return new SuccessResponseDto(200, 'User reinstated successfully', data);
     }
 
     catch (e) {

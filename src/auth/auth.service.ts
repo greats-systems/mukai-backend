@@ -142,7 +142,7 @@ export class AuthService {
     }
   }
 
-  async getBannedUsers(logged_in_user_id: string, platform: string) {
+  async getBannedUsers(logged_in_user_id: string, platform: string): Promise<object [] | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
@@ -179,6 +179,7 @@ export class AuthService {
         return new ErrorResponseDto(400, 'Failed to create log', logError);
       }
       this.logger.warn('System log created', log);
+      return data as object[];
     }
     catch (e) {
       this.logger.error('getBannedUsers error', e);
@@ -186,7 +187,7 @@ export class AuthService {
     }
   }
 
-  async getBannedUser(id: string, logged_in_user_id: string, platform: string) {
+  async getBannedUser(id: string, logged_in_user_id: string, platform: string): Promise<object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
@@ -225,6 +226,7 @@ export class AuthService {
         return new ErrorResponseDto(400, 'Failed to create log', logError);
       }
       this.logger.warn('System log created', log);
+      return data as object;
     }
     catch (e) {
       this.logger.error('getBannedUser error', e);

@@ -145,7 +145,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Failed to reinstate user' })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @Post('reinstate')
+  @Patch('reinstate')
   async reinstateUser(@Body() rpDto: ReinstateProfileDto, @Req() req) {
     return await this.authService.reinstateUser(rpDto, req.user.sub);
   }

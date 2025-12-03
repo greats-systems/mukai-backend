@@ -9,9 +9,11 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SmileWalletService } from 'src/wallet/services/zb_digital_wallet.service';
 import { ToroGateway } from 'src/common/toronet/auth_wallets';
+import { MailModule } from 'src/common/mail/mail.module';
 
 @Module({
   imports: [
+    MailModule,
     PassportModule,
     ConfigModule,
     JwtModule.registerAsync({

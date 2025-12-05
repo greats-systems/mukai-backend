@@ -12,6 +12,7 @@ import {
   Query,
   Req,
   UseGuards,
+  Headers,
 } from '@nestjs/common';
 import { TransactionsService } from '../services/transactions.service';
 import { CreateTransactionDto } from '../dto/create/create-transaction.dto';
@@ -217,6 +218,45 @@ export class TransactionsController {
       throw new HttpException(
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return response;
+  }
+
+  @Get('individual/:wallet_id')
+  @ApiOperation({
+    summary: 'Get all user transactions',
+    description: 'Retrieves a list of all user transactions in the system',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of user transactions retrieved successfully',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async findUserTransactions(
+    @Param('wallet_id') wallet_id: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.transactionsService.findUserTransactions(
+      wallet_id,
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(
+        response.message ?? 'An error occurred',
+        response.statusCode,
       );
     }
     return response;

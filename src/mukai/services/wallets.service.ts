@@ -224,7 +224,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       // this.logger.debug(`Wallet data:, ${JSON.stringify(data[0]['wallets_profile_id_fkey'])}`);
-      
+      this.logger.warn('wiewWallet data', data);
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
         const scwService = new SmileCashWalletService(this.postgresrest);

@@ -317,6 +317,11 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
+      this.logger.warn(
+        'New sender balance',
+        scSenderResponse.data.data.billerResponse.balance,
+      );
+      this.logger.debug('Updating sender wallet');
       const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
         scSenderResponse.data.data.billerResponse.balance,
@@ -343,6 +348,11 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
+      this.logger.warn(
+        'New receiver balance',
+        scSenderResponse.data.data.billerResponse.balance,
+      );
+      this.logger.debug('Updating receiver wallet');
       const receiverResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
         scReceiverResponse.data.data.billerResponse.balance,

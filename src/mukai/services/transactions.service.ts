@@ -711,6 +711,134 @@ export class TransactionsService {
     }
   }
 
+  async findUserTransactions(
+    wallet_id: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch user transactions';
+      slDto.request = wallet_id;
+
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_user_transactions',
+        { p_wallet_id: wallet_id },
+      );
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+
+        if (logError) {
+          this.logger.error('Failed to create system log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
+        this.logger.error('Failed to fetch user transactions', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch user transactions',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'User transactions fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (logError) {
+        this.logger.error('Failed to create system log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log');
+      }
+      this.logger.warn('Log created', log);
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data,
+      );
+    } catch (e) {
+      this.logger.error('findUserTransactions error', e);
+      return new ErrorResponseDto(500, 'findUserTransactions error', e);
+    }
+  }
+
+  async fetchUserSubsAndContributions(
+    member_wallet_id: string,
+    coop_wallet_id,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch member subs and contributions';
+      slDto.request = `?member_wallet_id=${member_wallet_id}&coop_wallet_id=${coop_wallet_id}`;
+
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_user_subs_and_contributions',
+        {
+          p_member_wallet_id: member_wallet_id,
+          p_coop_wallet_id: coop_wallet_id,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+
+        if (logError) {
+          this.logger.error('Failed to create system log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
+        this.logger.error('Failed to fetch user transactions', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch user transactions',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'User transactions fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (logError) {
+        this.logger.error('Failed to create system log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log');
+      }
+      this.logger.warn('Log created', log);
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data,
+      );
+    } catch (e) {
+      this.logger.error('findUserTransactions error', e);
+      return new ErrorResponseDto(500, 'findUserTransactions error', e);
+    }
+  }
+
   async fetchMostRecentSenderTransaction(
     sending_wallet: string,
   ): Promise<object | ErrorResponseDto> {

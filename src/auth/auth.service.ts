@@ -556,7 +556,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, platform: string) {
-    this.logger.log(JSON.stringify(loginDto));
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_email = loginDto.email;
@@ -1250,7 +1249,6 @@ export class AuthService {
     slDto.platform = platform;
 
     try {
-      this.logger.log('Creating transaction...', signupDto);
 
       // 1. Check for existing users in parallel
       const [existingUser, existingPhoneNumber, existingNatID] =

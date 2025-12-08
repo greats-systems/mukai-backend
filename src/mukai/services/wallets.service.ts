@@ -128,8 +128,8 @@ export class WalletsService {
     try {
       this.logger.debug("Fetching all wallets");
       const { data, error } = await this.postgresrest
-      .from("wallets")
-      .select('*,profile_id(*)');
+        .from("wallets")
+        .select('*,profile_id(*)');
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
@@ -255,7 +255,7 @@ export class WalletsService {
         } else {
           data[0].balance_zwg = 0.0;
         }
-        
+
 
         this.logger.log({
           statusCode: 200,
@@ -614,7 +614,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      this.logger.log("Updating SmileCash balance");
+      this.logger.debug("Updating SmileCash balance", { balance: balance, currency: currency });
       if (currency == 'USD') {
         const { data: updateData, error: updateError } = await this.postgresrest
           .from("wallets")

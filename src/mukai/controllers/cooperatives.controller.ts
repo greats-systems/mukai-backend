@@ -409,7 +409,7 @@ export class CooperativesController {
     return response;
   }
 
-  @Get('exchange-rate')
+  @Post('exchange-rate')
   @ApiOperation({ summary: 'Set an exchange rate' })
   @ApiResponse({
     status: 200,

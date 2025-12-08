@@ -897,6 +897,50 @@ export class CooperativesService {
     }
   }
 
+  async setCoopExchangeRate(
+    cooperative_id: string,
+    exchange_rate: number,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'set exchange rate';
+      slDto.platform = platform;
+      slDto.request = `?cooperative_id=${cooperative_id}&exchange_rate=${exchange_rate}`;
+
+      const { data, error } = await this.postgresrest
+        .from('coop_exchange_rates')
+        .insert({
+          cooperative_id: cooperative_id,
+          exchange_rate: exchange_rate,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to set exchange rate', error);
+        return new ErrorResponseDto(400, 'Failed to set exchange rate', error);
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Exchange rate updated successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('setExchangeRate error', error);
+      return new ErrorResponseDto(500, 'setExchangeRate error', error);
+    }
+  }
+
   async viewCooperativesForMember(
     member_id: string,
     logged_in_user_id: string,

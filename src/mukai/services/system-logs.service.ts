@@ -33,11 +33,14 @@ export class SystemLogsService {
     }
   }
 
-  async findAllSystemLogs(): Promise<object[] | ErrorResponseDto> {
+  async findAllSystemLogs(
+    logged_in_user_id: string,
+  ): Promise<object[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('logs')
         .select()
+        .neq('profile_id', logged_in_user_id)
         .order('created_at', { ascending: false });
 
       if (error) {

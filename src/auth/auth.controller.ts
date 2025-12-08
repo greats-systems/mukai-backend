@@ -70,6 +70,19 @@ export class AuthController {
     return await this.authService.sendOtp(phone);
   }
 
+  @ApiOperation({ summary: 'Send OTP to email address' })
+  @ApiParam({
+    name: 'email',
+    description: 'Email to send OTP to',
+    example: 'moyongqaa@gmail.com',
+  })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid email' })
+  @Post('send-otp/email/:email')
+  async sendOtpViaEmail(@Param('email') email: string) {
+    return await this.authService.sendOtpViaEmail(email);
+  }
+
   @ApiExcludeEndpoint()
   @Get('profiles/except/:id')
   async getProfilesExcept(@Param('id') id: string) {

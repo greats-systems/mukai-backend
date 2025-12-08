@@ -897,6 +897,78 @@ export class CooperativesService {
     }
   }
 
+  async setCoopExchangeRate(
+    cooperative_id: string,
+    exchange_rate: number,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'set exchange rate';
+      slDto.platform = platform;
+      slDto.request = `?cooperative_id=${cooperative_id}&exchange_rate=${exchange_rate}`;
+      // Insert into exchange rates table
+      const { data, error } = await this.postgresrest
+        .from('coop_exchange_rates')
+        .insert({
+          cooperative_id: cooperative_id,
+          exchange_rate: exchange_rate,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to set exchange rate', error);
+        return new ErrorResponseDto(400, 'Failed to set exchange rate', error);
+      }
+
+      this.logger.warn('Exchange rate created', data);
+
+      // Update cooperative
+      const { data: update, error: updateError } = await this.postgresrest
+        .from('cooperatives')
+        .update({
+          exchange_rate: exchange_rate,
+        })
+        .eq('id', cooperative_id)
+        .select()
+        .single();
+      if (updateError) {
+        slDto.response = updateError;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to update cooperatives', updateError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to update cooperative',
+          updateError,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      this.logger.debug('Exchange rate updated successfully');
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Exchange rate updated successfully',
+        update,
+      );
+    } catch (error) {
+      this.logger.error('setExchangeRate error', error);
+      return new ErrorResponseDto(500, 'setExchangeRate error', error);
+    }
+  }
+
   async viewCooperativesForMember(
     member_id: string,
     logged_in_user_id: string,

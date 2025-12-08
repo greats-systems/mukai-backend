@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   UseGuards,
@@ -7,6 +8,7 @@ import {
   HttpException,
   HttpStatus,
   Get,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -74,8 +76,8 @@ export class SystemLogsController {
     status: 500,
     description: 'Internal server error',
   })
-  async findAll() {
-    const response = await this.slService.findAllSystemLogs();
+  async findAll(@Req() req) {
+    const response = await this.slService.findAllSystemLogs(req.user.sub);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

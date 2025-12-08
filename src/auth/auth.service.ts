@@ -49,6 +49,7 @@ import { NotifyTextService } from 'src/messagings/notify_text.service';
 import { messaging } from 'firebase-admin';
 import { CreateSystemLogDto } from 'src/mukai/dto/create/create-system-logs.dto';
 import { error } from 'console';
+import { MailService, OtpEmailData } from 'src/common/mail/mail.service';
 // import gen from 'supabase/apps/docs/generator/api';
 
 function initLogger(funcname: Function): Logger {
@@ -68,6 +69,7 @@ export class AuthService {
     private readonly postgresRest: PostgresRest,
     private readonly jwtService: JwtService,
     private readonly toroGateway: ToroGateway,
+    private readonly mailService: MailService,
   ) {
     this.supabaseAdmin = createClient(
       process.env.ENV == 'local'
@@ -142,7 +144,7 @@ export class AuthService {
     }
   }
 
-  async getBannedUsers(logged_in_user_id: string, platform: string): Promise<object [] | ErrorResponseDto> {
+  async getBannedUsers(logged_in_user_id: string, platform: string): Promise<object[] | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
@@ -283,6 +285,49 @@ export class AuthService {
     catch (e) {
       this.logger.error('unbanUser error', e);
       return new ErrorResponseDto(500, 'banUser error', e);
+    }
+  }
+
+  async sendOtpViaEmail(email: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data: profile, error: profileError } = await this.postgresRest
+        .from('profiles')
+        .select()
+        .eq('email', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (profileError) {
+        return new ErrorResponseDto(400, 'Failed to fetch profile email for OTP', profileError);
+      }
+
+      if (!profile || !profile.id) {
+        return new ErrorResponseDto(404, 'Profile not found for provided email');
+      }
+
+      this.logger.debug('Sending OTP via email');
+      const now = new Date();
+      const futureDate = new Date(now);
+      futureDate.setMinutes(now.getMinutes() + 5); // Add 5 minutes
+      const expiresIn = futureDate.toISOString();
+      const plainText = generateRandom6DigitNumber().toString();
+      const secretKey = process.env.SECRET_KEY || 'No secret key';
+      const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+      const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+      const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+      this.logger.debug(
+        `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+      );
+      const duration = futureDate.getTime() - now.getTime();
+      const response = await this.mailService.sendOtpEmail(email, { otp: plainText, validity: duration });
+      if (response == true) {
+        return new SuccessResponseDto(200, 'OTP sent successfully');
+      }
+      return new ErrorResponseDto(400, 'Failed to send OTP')
+    }
+    catch (e) {
+      this.logger.error('sendOtpViaEmail error', e);
+      return new ErrorResponseDto(500, e);
     }
   }
 
@@ -511,7 +556,6 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, platform: string) {
-    this.logger.log(JSON.stringify(loginDto));
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_email = loginDto.email;
@@ -1205,7 +1249,6 @@ export class AuthService {
     slDto.platform = platform;
 
     try {
-      this.logger.log('Creating transaction...', signupDto);
 
       // 1. Check for existing users in parallel
       const [existingUser, existingPhoneNumber, existingNatID] =
@@ -1680,6 +1723,7 @@ export class AuthService {
       const { data, error } = await this.postgresRest
         .from('profiles')
         .select('*')
+        .eq('status', 'active')
         .neq('id', psDto.id)
         .or(`first_name.ilike.%${psDto.search_term}%,last_name.ilike.%${psDto.search_term}%,phone.ilike.%${psDto.search_term}%,email.ilike.%${psDto.search_term}%`)
         .order('created_at', { ascending: false });

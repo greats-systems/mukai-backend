@@ -265,7 +265,6 @@ export class TransactionsService {
       }
 
       transactionRecord = data;
-      slDto.transaction_id = data.id;
       slDto.response = {
         statusCode: 201,
         message: 'Transaction created successfully',

@@ -399,7 +399,7 @@ export class CooperativesService {
     }
   }
 
-  async viewCooperative(id: string): Promise<Cooperative | ErrorResponseDto> {
+  async viewCooperative(id: string): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -421,7 +421,7 @@ export class CooperativesService {
       if (!data) {
         return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
       }
-      return data as Cooperative;
+      return data;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
       return new ErrorResponseDto(

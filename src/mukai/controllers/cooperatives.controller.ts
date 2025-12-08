@@ -37,6 +37,7 @@ import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('Cooperatives')
 @UseGuards(JwtAuthGuard)
@@ -404,6 +405,38 @@ export class CooperativesController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Get('exchange-rate')
+  @ApiOperation({ summary: 'Set an exchange rate' })
+  @ApiResponse({
+    status: 200,
+    description: 'Exchange rate updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async setCoopExchangeRate(
+    @Query('cooperative_id') cooperative_id: string,
+    @Query('exchange_rate') exchange_rate: number,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.cooperativesService.setCoopExchangeRate(
+      cooperative_id,
+      exchange_rate,
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }

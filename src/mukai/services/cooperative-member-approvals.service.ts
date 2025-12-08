@@ -435,6 +435,7 @@ export class CooperativeMemberApprovalsService {
             'interest rate',
           )
         ) {
+          slDto.action = 'set interest rate';
           const setInterestReponse = await this.setInterestRate(
             updateCooperativeMemberApprovalsDto,
           );
@@ -442,7 +443,6 @@ export class CooperativeMemberApprovalsService {
             this.logger.error('Failed to update interest rate');
             return new ErrorResponseDto(500, 'Failed to update interest rate');
           }
-          slDto.response = coopError;
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
             .insert(slDto)
@@ -461,6 +461,7 @@ export class CooperativeMemberApprovalsService {
             'loan application',
           )
         ) {
+          slDto.action = 'disburse loan';
           const loanResponse = await this.disburseLoan(
             updateCooperativeMemberApprovalsDto,
           );
@@ -468,8 +469,7 @@ export class CooperativeMemberApprovalsService {
             this.logger.error('Failed to disburse loan');
             return new ErrorResponseDto(500, 'Failed to disburse loan');
           }
-          slDto.action = 'disburse loan';
-          slDto.response = coopError;
+
           // slDto.po = data.id;
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
@@ -489,6 +489,7 @@ export class CooperativeMemberApprovalsService {
             ?.toLowerCase()
             .includes('elect')
         ) {
+          slDto.action = 'election';
           const electionResponse = await this.updateMemberRole(
             updateCooperativeMemberApprovalsDto,
           );
@@ -496,8 +497,10 @@ export class CooperativeMemberApprovalsService {
             // this.logger.error('Failed to update member role');
             return new ErrorResponseDto(400, 'Failed to update member role');
           }
-          slDto.action = 'election';
-          slDto.response = coopError;
+          slDto.response = {
+            statusCode: 200,
+            message: 'Member role updated successfully',
+          };
           const { data: log, error: logError } = await this.postgresrest
             .from('system_logs')
             .insert(slDto)
@@ -511,6 +514,29 @@ export class CooperativeMemberApprovalsService {
               logError,
             );
           }
+        } else if (
+          updateCooperativeMemberApprovalsDto.poll_description
+            ?.toLowerCase()
+            .includes('exchange rate')
+        ) {
+          slDto.action = 'exchange rate';
+          const erResponse = await this.setExchangeRate(
+            updateCooperativeMemberApprovalsDto,
+          );
+          if (!erResponse) {
+            slDto.response = {
+              statusCode: 400,
+              message: 'Faield to update exchange rate',
+            };
+            await this.postgresrest.from('system_logs').insert(slDto);
+            this.logger.error('Failed to update exchange rate');
+            return new ErrorResponseDto(400, 'Failed to update exchange rate');
+          }
+          slDto.response = {
+            statusCode: 200,
+            message: 'Exchange rate updated successfully',
+          };
+          await this.postgresrest.from('system_logs').insert(slDto);
         }
       } else if (
         everyoneVoted &&
@@ -578,6 +604,29 @@ export class CooperativeMemberApprovalsService {
     const coopService = new CooperativesService(this.postgresrest);
     const updateCoopDto = new UpdateCooperativeDto();
     updateCoopDto.interest_rate =
+      updateCooperativeMemberApprovalsDto.additional_info;
+    updateCoopDto.id = updateCooperativeMemberApprovalsDto.group_id as UUID;
+    this.logger.debug(updateCoopDto);
+    const updateCoopResponse = await coopService.updateCooperativeAfterVoting(
+      updateCoopDto.id.toString(),
+      updateCoopDto,
+    );
+    this.logger.log(updateCoopResponse);
+    if (updateCoopResponse instanceof ErrorResponseDto) {
+      this.logger.error(`Failed to update coop: ${updateCoopResponse.message}`);
+      // return new ErrorResponseDto(400, updateCoopDto);
+      return false;
+    }
+
+    return true;
+  }
+
+  async setExchangeRate(
+    updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
+  ): Promise<boolean> {
+    const coopService = new CooperativesService(this.postgresrest);
+    const updateCoopDto = new UpdateCooperativeDto();
+    updateCoopDto.exchange_rate =
       updateCooperativeMemberApprovalsDto.additional_info;
     updateCoopDto.id = updateCooperativeMemberApprovalsDto.group_id as UUID;
     this.logger.debug(updateCoopDto);

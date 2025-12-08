@@ -212,4 +212,11 @@ export class CreateCooperativeDto {
   })
   @IsString()
   no_of_members: number;
+
+  @ApiProperty({
+    example: 10,
+    description: 'Exchange rate',
+  })
+  @IsString()
+  exchange_rate: number;
 }

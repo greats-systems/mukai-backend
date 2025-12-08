@@ -909,7 +909,7 @@ export class CooperativesService {
       slDto.action = 'set exchange rate';
       slDto.platform = platform;
       slDto.request = `?cooperative_id=${cooperative_id}&exchange_rate=${exchange_rate}`;
-
+      // Insert into exchange rates table
       const { data, error } = await this.postgresrest
         .from('coop_exchange_rates')
         .insert({
@@ -925,6 +925,34 @@ export class CooperativesService {
         this.logger.error('Failed to set exchange rate', error);
         return new ErrorResponseDto(400, 'Failed to set exchange rate', error);
       }
+
+      this.logger.warn('Exchange rate created', data);
+
+      // Update cooperative
+      const { data: update, error: updateError } = await this.postgresrest
+        .from('cooperatives')
+        .update({
+          exchange_rate: exchange_rate,
+        })
+        .eq('id', cooperative_id)
+        .select()
+        .single();
+      if (updateError) {
+        slDto.response = updateError;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to update cooperatives', updateError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to update cooperative',
+          updateError,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      this.logger.debug('Exchange rate updated successfully');
       slDto.response = {
         statusCode: 200,
         message: 'Exchange rate updated successfully',
@@ -933,7 +961,7 @@ export class CooperativesService {
       return new SuccessResponseDto(
         200,
         'Exchange rate updated successfully',
-        data,
+        update,
       );
     } catch (error) {
       this.logger.error('setExchangeRate error', error);

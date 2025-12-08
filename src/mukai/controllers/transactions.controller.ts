@@ -223,6 +223,55 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('subs-and-contributions')
+  @ApiOperation({
+    summary: 'Get member subs and contributions transactions',
+    description:
+      'Retrieves a list of all member subs and contributions transactions in the system',
+  })
+  @ApiQuery({
+    name: 'member_wallet_id',
+    description: 'Member wallet UUID',
+  })
+  @ApiQuery({
+    name: 'coop_wallet_id',
+    description: 'Cooperative wallet UUID',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'List of member subs and contributions transactions retrieved successfully',
+    type: Object,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async fetchUserSubsAndContributions(
+    @Query('coop_wallet_id') coop_wallet_id: string,
+    @Query('member_wallet_id') member_wallet_id: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response =
+      await this.transactionsService.fetchUserSubsAndContributions(
+        member_wallet_id,
+        coop_wallet_id,
+        req.user.sub,
+        headers['x-platform'],
+      );
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
   @Get('individual/:wallet_id')
   @ApiOperation({
     summary: 'Get all user transactions',

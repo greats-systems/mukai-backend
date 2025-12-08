@@ -94,6 +94,12 @@ export class Cooperative {
   interest_rate: number;
 
   @ApiProperty({
+    example: 0.05,
+    description: 'Coop exchange rate',
+  })
+  exchange_rate: number;
+
+  @ApiProperty({
     example: 20,
     description: 'Number of members in the cooperative',
   })

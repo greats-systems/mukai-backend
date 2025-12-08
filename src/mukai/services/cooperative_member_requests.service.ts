@@ -1,5 +1,4 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -116,7 +115,6 @@ export class CooperativeMemberRequestsService {
           message: 'You have already joined this cooperative',
           error: null,
         };
-        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -183,7 +181,6 @@ export class CooperativeMemberRequestsService {
         slDto.action = 'request to join a cooperative';
         slDto.request = createCooperativeMemberRequestDto;
         slDto.response = error;
-        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -229,8 +226,6 @@ export class CooperativeMemberRequestsService {
           statusCode: 201,
           message: 'Cooperative member request created successfully',
         };
-        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
-        slDto.cooperative_member_request_id = data.id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -273,8 +268,6 @@ export class CooperativeMemberRequestsService {
           statusCode: 201,
           message: 'Cooperative member request created successfully',
         };
-        slDto.cooperative_id = createCooperativeMemberRequestDto.cooperative_id;
-        slDto.cooperative_member_request_id = data.id;
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -629,8 +622,6 @@ export class CooperativeMemberRequestsService {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
       };
-      slDto.cooperative_id = updateCooperativeMemberRequestDto.cooperative_id;
-      slDto.cooperative_member_request_id = data.id;
       const { data: log, error: logError } = await this.postgresrest
         .from('system_logs')
         .insert(slDto)

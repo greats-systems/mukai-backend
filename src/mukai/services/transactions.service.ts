@@ -209,25 +209,17 @@ export class TransactionsService {
     senderTransactionDto: CreateTransactionDto,
     logged_in_user_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    let transactionRecord: any = null;
+    const slDto = new CreateSystemLogDto();
+    slDto.profile_id = logged_in_user_id;
+    slDto.action = `payment: ${senderTransactionDto.transaction_type}`;
+    slDto.request = senderTransactionDto;
+
     try {
-      const slDto = new CreateSystemLogDto();
-      slDto.profile_id = logged_in_user_id;
-      slDto.action = `payment: ${senderTransactionDto.transaction_type}`;
-      slDto.request = senderTransactionDto;
       const scwService = new SmileCashWalletService(this.postgresrest);
-      /*When a transaction is initiated, 4 steps should take place:
-       1. the initiator's transaction is recorded in the transactions table
-       2. the initiator's wallet is debited
-       3. the receiver's wallet is credited
-       4 the receiver's credit is recorded in the transactions table
+      const walletsService = new WalletsService(this.postgresrest);
 
-       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
-       */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
-
+      // Step 1: Initiate wallet-to-wallet transfer
       const request = {
         receiverMobile: senderTransactionDto.receiving_phone,
         senderPhone: senderTransactionDto.sending_phone,
@@ -236,146 +228,274 @@ export class TransactionsService {
         channel: senderTransactionDto.transfer_mode,
         narration: senderTransactionDto.transaction_type,
       };
+
       this.logger.warn('Initiating wallet to wallet transfer');
+      this.logger.debug('Starting walletToWallet transfer', request);
+
       const w2wResponse = await scwService.walletToWallet(
         request as WalletToWalletTransferRequest,
       );
+
+      // Handle wallet transfer failure
       if (w2wResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
         );
         slDto.response = w2wResponse;
-        const { data: log, error: logError } = await this.postgresrest
-          .from('system_logs')
-          .insert(slDto)
-          .select()
-          .single();
-        if (logError) {
-          return new GeneralErrorResponseDto(
-            400,
-            'Failed to insert log',
-            logError,
-          );
-        }
-        this.logger.warn('Log created', log);
+        await this.createSystemLog(slDto);
         return w2wResponse;
       }
+
       this.logger.debug(
         `Wallet to wallet transfer response: ${JSON.stringify(w2wResponse)}`,
       );
 
+      // Step 2: Record the transaction in database
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
         .select()
         .single();
+
       if (error) {
-        this.logger.log(error);
+        this.logger.error('Failed to insert transaction record', error);
+        slDto.response = { statusCode: 400, message: error.details };
+        await this.createSystemLog(slDto);
         return new ErrorResponseDto(400, error.details);
       }
+
+      transactionRecord = data;
+      slDto.transaction_id = data.id;
       slDto.response = {
         statusCode: 201,
         message: 'Transaction created successfully',
       };
-      slDto.transaction_id = data.id;
-      const { data: log, error: logError } = await this.postgresrest
-        .from('system_logs')
-        .insert(slDto)
-        .select()
-        .single();
-      if (logError) {
-        return new GeneralErrorResponseDto(
-          400,
-          'Failed to insert log',
-          logError,
+
+      // Step 3: Create system log for the transaction
+      const logResult = await this.createSystemLog(slDto);
+      if (logResult instanceof GeneralErrorResponseDto) {
+        this.logger.warn(
+          'Failed to create system log, but transaction succeeded',
         );
       }
-      this.logger.warn('Log created', log);
+
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
 
-      /**
-       * "transactorMobile":"263777757603",
-    "currency":"USD", // ZWG | USD
-    "channel":"USSD", //USSD | APP | WEB
-    "transactionId":""
-       */
-
-      const scSenderParams = {
-        transactorMobile: senderTransactionDto.sending_phone,
-        currency: senderTransactionDto.currency?.toUpperCase(),
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-
-      // Update sender's SmileCash balance
-      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
-      this.logger.warn('Updating sender SmileCash balance');
-      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
-      if (scSenderResponse instanceof GeneralErrorResponseDto) {
-        this.logger.error(
-          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
-        );
-        return scSenderResponse;
-      }
-      this.logger.warn(
-        'New sender balance',
-        scSenderResponse.data.data.billerResponse.balance,
-      );
-      this.logger.debug('Updating sender wallet');
-      const senderResponse = await walletsService.updateSmileCashBalance(
-        senderTransactionDto.sending_wallet,
-        scSenderResponse.data.data.billerResponse.balance,
-        senderTransactionDto.currency!.toUpperCase(),
+      // Step 4: Update sender and receiver balances (non-blocking operations)
+      // These operations should not fail the main transaction
+      await this.updateBalancesAfterTransfer(
+        senderTransactionDto,
+        scwService,
+        walletsService,
       );
 
-      this.logger.debug(
-        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
-      );
-
-      // Update receiver's SmileCash balance
-      const scReceiverParams = {
-        transactorMobile: senderTransactionDto.receiving_phone,
-        currency: senderTransactionDto.currency?.toUpperCase(),
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-      this.logger.warn(`Updating receiver SmileCash balance`);
-      const scReceiverResponse =
-        await scwService.balanceEnquiry(scReceiverParams);
-      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
-        this.logger.error(
-          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
-        );
-        return scReceiverResponse;
-      }
-      this.logger.warn(
-        'New receiver balance',
-        scSenderResponse.data.data.billerResponse.balance,
-      );
-      this.logger.debug('Updating receiver wallet');
-      const receiverResponse = await walletsService.updateSmileCashBalance(
-        senderTransactionDto.receiving_wallet,
-        scReceiverResponse.data.data.billerResponse.balance,
-        senderTransactionDto.currency!.toUpperCase(),
-      );
-
-      this.logger.debug(
-        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
-      );
+      // Return success response
       return {
         statusCode: 201,
         message: 'Transaction created successfully',
         data: {
-          message: senderTransactionDto,
-          // transaction_id: data.id,
-          // date: data.created_date,
-          // new_balance: debitResponse['balance'] ?? 0.0,
+          transaction: senderTransactionDto,
+          transaction_id: transactionRecord.id,
+          date: transactionRecord.created_date,
+          wallet_transfer: {
+            status: 'COMPLETE',
+            reference:
+              w2wResponse.data?.reference || w2wResponse.data?.data?.reference,
+          },
         },
-        // debitResponse,
-        // creditResponse
       };
     } catch (error) {
-      return new ErrorResponseDto(500, error);
+      this.logger.error('Unexpected error in createP2PTransaction', error);
+
+      // Even on unexpected error, try to log it
+      slDto.response = {
+        statusCode: 500,
+        message: 'Unexpected error occurred',
+      };
+      try {
+        await this.createSystemLog(slDto);
+      } catch (logError) {
+        this.logger.error('Failed to log error', logError);
+      }
+
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
+  /**
+   * Helper method to update balances after successful transfer
+   * This runs asynchronously and doesn't block the main transaction response
+   */
+  private async updateBalancesAfterTransfer(
+    senderTransactionDto: CreateTransactionDto,
+    scwService: SmileCashWalletService,
+    walletsService: WalletsService,
+  ): Promise<void> {
+    try {
+      // Update sender balance
+      await this.updateWalletBalance(
+        senderTransactionDto.sending_phone,
+        senderTransactionDto.sending_wallet,
+        senderTransactionDto.currency?.toUpperCase() || 'USD',
+        scwService,
+        walletsService,
+        'sender',
+      );
+
+      // Update receiver balance
+      await this.updateWalletBalance(
+        senderTransactionDto.receiving_phone,
+        senderTransactionDto.receiving_wallet,
+        senderTransactionDto.currency?.toUpperCase() || 'USD',
+        scwService,
+        walletsService,
+        'receiver',
+      );
+    } catch (error) {
+      this.logger.error('Error in balance updates (non-critical)', error);
+      // Don't throw - this is a non-critical operation
+    }
+  }
+
+  /**
+   * Helper method to update individual wallet balance
+   */
+  private async updateWalletBalance(
+    phone: string,
+    walletId: string,
+    currency: string,
+    scwService: SmileCashWalletService,
+    walletsService: WalletsService,
+    role: 'sender' | 'receiver',
+  ): Promise<void> {
+    try {
+      this.logger.warn(`Updating ${role} SmileCash balance for ${phone}`);
+
+      const balanceParams = {
+        transactorMobile: phone,
+        currency: currency,
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      const balanceResponse = await scwService.balanceEnquiry(balanceParams);
+
+      if (balanceResponse instanceof GeneralErrorResponseDto) {
+        this.logger.warn(
+          `Failed to get ${role} balance enquiry, but transaction succeeded. Error: ${JSON.stringify(balanceResponse.errorObject)}`,
+        );
+        return;
+      }
+
+      const balance = this.extractBalanceFromResponse(balanceResponse);
+
+      if (balance === null) {
+        this.logger.warn(`Could not extract ${role} balance from response`);
+        return;
+      }
+
+      this.logger.debug(`New ${role} balance: ${balance} ${currency}`);
+
+      const updateResult = await walletsService.updateSmileCashBalance(
+        walletId,
+        balance,
+        currency,
+      );
+
+      if (
+        updateResult instanceof ErrorResponseDto ||
+        updateResult instanceof GeneralErrorResponseDto
+      ) {
+        this.logger.warn(
+          `Failed to update ${role} wallet in database, but SmileCash balance is ${balance}. Error: ${JSON.stringify(updateResult)}`,
+        );
+      } else {
+        this.logger.debug(`${role} wallet updated successfully`);
+      }
+    } catch (error) {
+      this.logger.error(`Error updating ${role} wallet balance`, error);
+      // Don't throw - continue execution
+    }
+  }
+
+  /**
+   * Helper method to extract balance from various response formats
+   */
+  private extractBalanceFromResponse(response: any): number | null {
+    try {
+      // Check multiple possible locations for balance
+      const possiblePaths = [
+        response.data?.data?.billerResponse?.balance,
+        response.data?.data?.additionalData?.balance,
+        response.data?.balance,
+        response.balance,
+      ];
+
+      for (const balance of possiblePaths) {
+        if (balance !== undefined && balance !== null) {
+          const parsed = parseFloat(balance);
+          if (!isNaN(parsed)) return parsed;
+        }
+      }
+
+      // Try to extract from description if available
+      const description =
+        response.data?.data?.description || response.description;
+      if (description && typeof description === 'string') {
+        // Try patterns like "Balance: $26.920 USD" or "Balance: 26.92"
+        const patterns = [
+          /Balance:\s*\$?([\d.,]+)\s*(?:USD|ZWL)?/i,
+          /Balance\s*:\s*([\d.,]+)/i,
+        ];
+
+        for (const pattern of patterns) {
+          const match = description.match(pattern);
+          if (match && match[1]) {
+            const balanceStr = match[1].replace(/,/g, '');
+            const parsed = parseFloat(balanceStr);
+            if (!isNaN(parsed)) return parsed;
+          }
+        }
+      }
+
+      this.logger.warn('Could not find balance in response', { response });
+      return null;
+    } catch (error) {
+      this.logger.error('Error extracting balance from response', error);
+      return null;
+    }
+  }
+
+  /**
+   * Helper method to create system logs
+   */
+  private async createSystemLog(
+    slDto: CreateSystemLogDto,
+  ): Promise<{ data: any } | GeneralErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Failed to insert system log', error);
+        return new GeneralErrorResponseDto(400, 'Failed to insert log', error);
+      }
+
+      this.logger.warn('System log created', data);
+      return { data };
+    } catch (error) {
+      this.logger.error('Unexpected error creating system log', error);
+      return new GeneralErrorResponseDto(
+        500,
+        'Unexpected error creating log',
+        error,
+      );
     }
   }
 
@@ -432,9 +552,13 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
+      const senderBalance =
+        scSenderResponse.data?.data?.additionalData?.balance ||
+        scSenderResponse.data?.balance;
+      this.logger.warn('sender balance', senderBalance);
       const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
-        scSenderResponse.data.data.billerResponse.balance,
+        senderBalance,
         senderTransactionDto.currency!.toUpperCase(),
       );
 
@@ -458,9 +582,13 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
+      const receiverBalance =
+        scReceiverResponse.data?.data?.additionalData?.balance ||
+        scReceiverResponse.data?.balance;
+      this.logger.warn('receiver balance', receiverBalance);
       const receiverResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
-        scReceiverResponse.data.data.billerResponse.balance,
+        receiverBalance,
         senderTransactionDto.currency!.toUpperCase(),
       );
 

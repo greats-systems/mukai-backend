@@ -64,7 +64,7 @@ export class CreateTransactionDto {
   })
   @IsOptional()
   @IsUUID()
-  sending_phone?: string;
+  sending_phone: string;
 
   @ApiPropertyOptional({
     example: '0712345678',
@@ -72,7 +72,7 @@ export class CreateTransactionDto {
   })
   @IsOptional()
   @IsUUID()
-  receiving_phone?: string;
+  receiving_phone: string;
 
   @ApiPropertyOptional({
     example: 'payment',

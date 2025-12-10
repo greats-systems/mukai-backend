@@ -19,16 +19,10 @@ import { WalletsService } from './wallets.service';
 import { Int32 } from 'typeorm';
 import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
-// import { UUID } from 'crypto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
-// const paymentGateway = new SmilePayGateway();
-// const smileCashWalletService = new SmileCashWalletService();
-// const smileCashWalletController = new SmileCashWalletController(
-//   smileCashWalletService,
-// );
 
 @Injectable()
 export class TransactionsService {
@@ -1249,6 +1243,97 @@ export class TransactionsService {
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id`, error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async fetchCoopEarnings(
+    p_currency: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative earnings';
+      slDto.request = `?currency=${p_currency}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_earnings',
+        {
+          p_currency: p_currency,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative earnings', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative earnings',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative earnings fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative earnings fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopEarnings error', error);
+      return new ErrorResponseDto(500, 'fetchCoopEarnings error', error);
+    }
+  }
+
+  async fetchCoopEarningsDailyMTD(
+    currency: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative earnings MTD daily';
+      slDto.request = `?currency=${currency}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_earnings_daily_mtd',
+        { p_currency: currency },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative earnings MTD daily',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative earnings MTD daily',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative earnings MTD daily fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative earnings MTD daily fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopEarningsDailyMTD error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopEarningsDailyMTD error',
+        error,
+      );
     }
   }
 

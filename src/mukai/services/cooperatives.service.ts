@@ -105,6 +105,7 @@ export class CooperativesService {
           statusCode: 409,
           message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
         };
+
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -161,6 +162,25 @@ export class CooperativesService {
         );
       }
       */
+
+      // Fetch service centre ID for given nearest service centre
+      const { data: serviceCentreData, error: serviceCentreError } =
+        await this.postgresrest
+          .from('service_centres')
+          .select()
+          .eq('location', createCooperativeDto.service_centre)
+          .single();
+      if (serviceCentreError) {
+        slDto.response = serviceCentreError;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch service centre', serviceCentreError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch service centre',
+          serviceCentreError,
+        );
+      }
+      createCooperativeDto.service_centre = serviceCentreData.id;
 
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =

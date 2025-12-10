@@ -219,4 +219,11 @@ export class CreateCooperativeDto {
   })
   @IsString()
   exchange_rate: number;
+
+  @ApiProperty({
+    example: 'abcd1234-ef56-7890-ab12-cd34ef567890',
+    description: 'Nearest service centre UUID to the cooperative',
+  })
+  @IsString()
+  service_centre: string;
 }

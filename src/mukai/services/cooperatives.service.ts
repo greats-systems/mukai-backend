@@ -917,6 +917,103 @@ export class CooperativesService {
     }
   }
 
+  async fetchCoopsGenderDemographicsView(
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative gender demographics';
+      const { data, error } = await this.postgresrest
+        .from('coops_gender_demographics_view')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative gender demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative gender demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsGenderDemographicsView error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopsGenderDemographicsView error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopAgeDemographicsAnalytics(
+    lower_bound: number,
+    upper_bound: number,
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative age demographics';
+      slDto.request = `?lower_bound=${lower_bound}&upper_bound=${upper_bound}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_age_demographics_analytics',
+        {
+          lower_bound: lower_bound,
+          upper_bound: upper_bound,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative age demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative age demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopAgeDemographicsAnalytics error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopAgeDemographicsAnalytics error',
+        error,
+      );
+    }
+  }
+
   async setCoopExchangeRate(
     cooperative_id: string,
     exchange_rate: number,

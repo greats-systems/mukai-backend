@@ -32,6 +32,7 @@ import {
   ApiHeader,
   ApiExcludeEndpoint,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Cooperative } from '../entities/cooperative.entity';
 import { Profile } from 'src/user/entities/user.entity';
@@ -563,13 +564,84 @@ export class CooperativesController {
     return { paid: response, month, year };
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get cooperative details' })
-  @ApiParam({
-    name: 'id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Cooperative ID',
+  @Get('gender-demographics')
+  @ApiOperation({ summary: 'Get cooperative gender demographics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative gender demographics fetched successfully',
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopsGenderDemographicsView(@Req() req, @Headers() headers) {
+    const response =
+      await this.cooperativesService.fetchCoopsGenderDemographicsView(
+        req.user.sub,
+        headers['x-platform'],
+      );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response.message ?? 'an error occurred',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return response;
+  }
+
+  @Get('age-demographics')
+  @ApiOperation({ summary: 'Get cooperative age demographics' })
+  @ApiQuery({
+    name: 'lower_bound',
+    description: 'Lower age bound',
+    required: true,
+    example: 18,
+  })
+  @ApiQuery({
+    name: 'upper_bound',
+    description: 'Upper age bound',
+    required: true,
+    example: 65,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative age demographics fetched successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopsAgeDemographicsView(
+    @Query('lower_bound') lower_bound: number,
+    @Query('upper_bound') upper_bound: number,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response =
+      await this.cooperativesService.fetchCoopAgeDemographicsAnalytics(
+        lower_bound,
+        upper_bound,
+        req.user.sub,
+        headers['x-platform'],
+      );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response.message ?? 'an error occurred',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return response;
+  }
+
+  @Get(':id')
   @ApiResponse({
     status: 200,
     description: 'Cooperative details',

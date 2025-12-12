@@ -258,7 +258,7 @@ export class CooperativesService {
           mobile: user.phone,
           dateOfBirth: user.date_of_birth,
           idNumber: user.national_id_number,
-          gender: user.gender.toUpperCase(),
+          gender: user.gender?.toUpperCase(),
           source: 'Smile SACCO',
         } as CreateWalletRequest;
 

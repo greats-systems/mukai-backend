@@ -495,20 +495,6 @@ export class TransactionsController {
     return response;
   }
 
-  // @Get('bill-payment/:phone')
-  // async fetchMostRecentBillPayment(
-  //   @Param('phone') phone: string,
-  // ) {
-  //   const response =
-  //     await this.transactionsService.fetchMostRecentSenderTransaction(
-  //       phone,
-  //     );
-  //   if (response instanceof ErrorResponseDto) {
-  //     return new HttpException(response, response.statusCode);
-  //   }
-  //   return response;
-  // }
-
   @ApiOperation({
     summary: 'Get contributions for a wallet',
     description:

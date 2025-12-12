@@ -65,7 +65,7 @@ export class UserService {
       this.logger.debug(
         `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
       );
-      signupDto.password = '*'.repeat(signupDto.password.length);
+      signupDto.password = '*'.repeat(signupDto.password!.length);
       slDto.request = signupDto;
       slDto.response = {
         message: 'Duplicate email found',
@@ -92,7 +92,7 @@ export class UserService {
       this.logger.debug(
         `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
       );
-      signupDto.password = '*'.repeat(signupDto.password.length);
+      signupDto.password = '*'.repeat(signupDto.password!.length);
       slDto.request = signupDto;
       slDto.response = {
         message: 'Duplicate phone number found',
@@ -119,7 +119,7 @@ export class UserService {
       this.logger.debug(
         `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
       );
-      signupDto.password = '*'.repeat(signupDto.password.length);
+      signupDto.password = '*'.repeat(signupDto.password!.length);
       slDto.request = signupDto;
       slDto.response = {
         message: 'Duplicate national ID  found',
@@ -143,7 +143,7 @@ export class UserService {
     }
 
     // 2. Hash password for auth AND encrypt for profiles
-    const plainText = signupDto.password;
+    const plainText = signupDto.password!;
     const secretKey = process.env.SECRET_KEY || 'No secret key';
     const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
 

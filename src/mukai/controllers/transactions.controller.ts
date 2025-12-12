@@ -347,43 +347,79 @@ export class TransactionsController {
     }
     return response;
   }
-  /*
-  @Get('filter')
+  @Get('earnings')
   @ApiOperation({
-    summary: 'Filter transactions by type',
-    description: 'Retrieves transactions filtered by transaction type',
+    summary: 'Get cooperative earnings by currency',
+    description: 'Retrieves cooperative earnings filtered by currency',
   })
   @ApiQuery({
-    name: 'transaction_type',
-    required: true,
-    description: 'Type of transaction to filter by',
-    example: 'contribution',
-    type: String,
+    name: 'currency',
+    description: 'Currency to filter earnings by',
   })
   @ApiResponse({
     status: 200,
-    description: 'Filtered transactions retrieved successfully',
-    type: Object,
+    description: 'Cooperative earnings retrieved successfully',
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - invalid transaction type',
-    type: ErrorResponseDto,
+    description: 'Bad request',
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
-    type: ErrorResponseDto,
   })
-  async filterTransaction(@Query('transaction_type') transaction_type: string) {
-    const response =
-      await this.transactionsService.filterTransactions(transaction_type);
+  async fetchCoopEarnings(
+    @Query('currency') currency: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.transactionsService.fetchCoopEarnings(
+      currency.toUpperCase(),
+      req.user.sub,
+      headers['x-platform'],
+    );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response, response.statusCode);
     }
     return response;
   }
-  */
+
+  @Get('earnings/mtd')
+  @ApiOperation({
+    summary: 'Get cooperative daily month-to-date earnings by currency',
+    description: 'Retrieves cooperative earnings filtered by currency',
+  })
+  @ApiQuery({
+    name: 'currency',
+    description: 'Currency to filter earnings by',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative earnings retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopEarningsDailyMTD(
+    @Query('currency') currency: string,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    const response = await this.transactionsService.fetchCoopEarningsDailyMTD(
+      currency.toUpperCase(),
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
 
   @Get('filter')
   async streamTransactions(

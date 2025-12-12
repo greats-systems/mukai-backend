@@ -105,6 +105,7 @@ export class CooperativesService {
           statusCode: 409,
           message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
         };
+
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)
@@ -161,6 +162,25 @@ export class CooperativesService {
         );
       }
       */
+
+      // Fetch service centre ID for given nearest service centre
+      const { data: serviceCentreData, error: serviceCentreError } =
+        await this.postgresrest
+          .from('service_centres')
+          .select()
+          .eq('location', createCooperativeDto.service_centre)
+          .single();
+      if (serviceCentreError) {
+        slDto.response = serviceCentreError;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch service centre', serviceCentreError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch service centre',
+          serviceCentreError,
+        );
+      }
+      createCooperativeDto.service_centre = serviceCentreData.id;
 
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =
@@ -399,7 +419,7 @@ export class CooperativesService {
     }
   }
 
-  async viewCooperative(id: string): Promise<Cooperative | ErrorResponseDto> {
+  async viewCooperative(id: string): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -421,7 +441,7 @@ export class CooperativesService {
       if (!data) {
         return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
       }
-      return data as Cooperative;
+      return data;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
       return new ErrorResponseDto(
@@ -893,6 +913,103 @@ export class CooperativesService {
       return new ErrorResponseDto(
         500,
         error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async fetchCoopsGenderDemographicsView(
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative gender demographics';
+      const { data, error } = await this.postgresrest
+        .from('coops_gender_demographics_view')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative gender demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative gender demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsGenderDemographicsView error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopsGenderDemographicsView error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopAgeDemographicsAnalytics(
+    lower_bound: number,
+    upper_bound: number,
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative age demographics';
+      slDto.request = `?lower_bound=${lower_bound}&upper_bound=${upper_bound}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_age_demographics_analytics',
+        {
+          lower_bound: lower_bound,
+          upper_bound: upper_bound,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative age demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative age demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopAgeDemographicsAnalytics error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopAgeDemographicsAnalytics error',
+        error,
       );
     }
   }

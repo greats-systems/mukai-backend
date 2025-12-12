@@ -82,7 +82,7 @@ export class CreateSystemLogDto {
   @IsObject()
   @IsOptional()
   response: any;
-
+  /*
   @ApiProperty({
     description: 'Cooperative member request ID UUID',
     example: '380ca6bc-cae9-4486-a543-056029aaba1c',
@@ -122,6 +122,7 @@ export class CreateSystemLogDto {
   @IsUUID()
   @IsOptional()
   transaction_id?: string;
+  */
 
   @ApiProperty({
     description: 'Platform',

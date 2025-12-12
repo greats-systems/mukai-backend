@@ -74,7 +74,6 @@ export class CooperativeMemberApprovalsService {
       slDto.platform = platform;
       slDto.action = 'create a new poll';
       slDto.request = createCooperativeMemberApprovalsDto;
-      slDto.cooperative_id = createCooperativeMemberApprovalsDto.group_id;
       this.logger.debug(createCooperativeMemberApprovalsDto);
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -124,7 +123,6 @@ export class CooperativeMemberApprovalsService {
         statusCode: 201,
         message: 'Poll created successfully',
       };
-      slDto.poll_id = data.id;
       const { data: log, error: logError } = await this.postgresrest
         .from('system_logs')
         .insert(slDto)
@@ -212,7 +210,6 @@ export class CooperativeMemberApprovalsService {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'view polls for group';
-      slDto.cooperative_id = group_id;
       slDto.platform = platform;
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
@@ -331,11 +328,8 @@ export class CooperativeMemberApprovalsService {
     try {
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
-      slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
       slDto.action = 'update a poll';
       slDto.request = updateCooperativeMemberApprovalsDto;
-      slDto.poll_id = id;
-      slDto.cooperative_id = updateCooperativeMemberApprovalsDto.group_id;
       slDto.platform = platform;
 
       // Fetch coop data

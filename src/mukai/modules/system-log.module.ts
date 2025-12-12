@@ -6,5 +6,6 @@ import { SystemLogsService } from '../services/system-logs.service';
 @Module({
   providers: [SystemLogsService, PostgresRest],
   controllers: [SystemLogsController],
+  exports: [SystemLogsService],
 })
 export class SystemLogsModule {}

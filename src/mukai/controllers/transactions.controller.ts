@@ -421,6 +421,61 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('coop-disbursements')
+  @ApiOperation({
+    summary: 'Get cooperative disbursements',
+    description: 'Retrieves cooperative disbursements for all cooperatives',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative disbursements retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopDisbursements(@Req() req, @Headers() headers) {
+    const response = await this.transactionsService.fetchCoopDisbursements(
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
+  @Get('coop-analytics')
+  @ApiOperation({
+    summary: 'Get cooperative analytics',
+    description: 'Retrieves cooperative analytics for all cooperatives',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative analytics retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopAnalytics(@Req() req, @Headers() headers) {
+    const response = await this.transactionsService.fetchCoopAnalytics(
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
   @Get('filter')
   async streamTransactions(
     @Query('wallet_id') wallet_id: string,

@@ -702,7 +702,7 @@ export class AuthService {
       this.logger.warn('User status: ', profileData?.status);
       slDto.profile_id = user.id;
       slDto.action = 'login';
-      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password!.length) };
+      slDto.request = { email: loginDto.email, password: '*'.repeat(loginDto.password.length) };
       slDto.response = {
         status: profileData?.status,
         statusCode: 200,
@@ -1272,7 +1272,7 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-
+      /*
       if (existingUser.data) {
         this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
@@ -1334,6 +1334,7 @@ export class AuthService {
         this.logger.warn('System log created', log);
         return new ErrorResponseDto(422, 'National ID already in use');
       }
+      */
 
 
       // 2. Hash password for auth AND encrypt for profiles

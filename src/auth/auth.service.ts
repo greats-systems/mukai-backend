@@ -1272,12 +1272,12 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-
+      
       if (existingUser.data) {
         this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
         );
-        signupDto.password = '*'.repeat(signupDto.password.length);
+        signupDto.password = '*'.repeat(signupDto.password!.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate email found", data: existingUser.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1298,7 +1298,7 @@ export class AuthService {
         this.logger.debug(
           `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
-        signupDto.password = '*'.repeat(signupDto.password.length);
+        signupDto.password = '*'.repeat(signupDto.password!.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate phone number found", data: existingPhoneNumber.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1319,7 +1319,7 @@ export class AuthService {
         this.logger.debug(
           `Duplicate national ID found: ${JSON.stringify(existingNatID.data)}`,
         );
-        signupDto.password = '*'.repeat(signupDto.password.length);
+        signupDto.password = '*'.repeat(signupDto.password!.length);
         slDto.request = signupDto;
         slDto.response = { message: "Duplicate national ID  found", data: existingNatID.data };
         const { data: log, error: logError } = await this.postgresRest
@@ -1337,7 +1337,7 @@ export class AuthService {
 
 
       // 2. Hash password for auth AND encrypt for profiles
-      const plainText = signupDto.password;
+      const plainText = signupDto.password!;
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
       const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
@@ -1466,7 +1466,7 @@ export class AuthService {
           mobile: signupDto.phone,
           dateOfBirth: signupDto.date_of_birth,
           idNumber: signupDto.national_id_number,
-          gender: signupDto.gender.toUpperCase(),
+          gender: signupDto.gender?.toUpperCase() ?? 'No gender',
           source: 'SmileSACCO',
         } as CreateWalletRequest;
         this.logger.log(

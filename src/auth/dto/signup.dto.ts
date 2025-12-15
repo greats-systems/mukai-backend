@@ -15,7 +15,7 @@ export class SignupDto {
   })
   @IsString()
   */
-  id: string;
+  id?: string;
 
   @ApiProperty({
     example: 'user@example.com',
@@ -23,7 +23,7 @@ export class SignupDto {
     required: true,
   })
   @IsEmail()
-  email: string;
+  email?: string;
 
   @ApiProperty({
     example: '263770888000',
@@ -32,7 +32,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  phone: string;
+  phone?: string;
 
   /*
   @ApiProperty({
@@ -52,7 +52,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  first_name: string;
+  first_name?: string;
 
   @ApiProperty({
     example: 'Doe',
@@ -61,7 +61,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  last_name: string;
+  last_name?: string;
 
   @ApiProperty({
     example: 'individual',
@@ -70,7 +70,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  account_type: string;
+  account_type?: string;
 
   @ApiProperty({
     example: 'active',
@@ -79,7 +79,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  status: string;
+  status?: string;
 
   @ApiProperty({
     example: 'secretary',
@@ -88,7 +88,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(2)
-  role: string;
+  role?: string;
 
   @ApiProperty({
     example: '1990-01-01',
@@ -96,7 +96,7 @@ export class SignupDto {
     required: true,
   })
   @IsString()
-  dob: string;
+  dob?: string;
 
   @ApiProperty({
     example: 'male',
@@ -104,7 +104,7 @@ export class SignupDto {
     required: true,
   })
   @IsString()
-  gender: string;
+  gender?: string;
 
   // @ApiProperty({
   //   example: '123e4567-e89b-12d3-a456-426614174000',
@@ -126,7 +126,7 @@ export class SignupDto {
   //   description: 'Business ID associated with the user',
   // })
   // @IsString()
-  business_id: string;
+  business_id?: string;
 
   // @ApiPropertyOptional({
   //   example: 'member',
@@ -140,42 +140,42 @@ export class SignupDto {
   //   description: 'Cooperative account ID associated with the user',
   // })
   // @IsString()
-  coop_account_id: string;
+  coop_account_id?: string;
 
   // @ApiPropertyOptional({
   //   example: '123e4567-e89b-12d3-a456-426614174000',
   //   description: 'Cooperative account ID associated with the user',
   // })
   // @IsString()
-  cooperative_id: string;
+  cooperative_id?: string;
 
   // @ApiPropertyOptional({
   //   example: 'abc123',
   //   description: 'Push notification token for the user',
   // })
   // @IsString()
-  push_token: string;
+  push_token?: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com/avatar.jpg',
     description: "URL to the user's avatar image",
   })
   @IsString()
-  avatar: string;
+  avatar?: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com/national_id.jpg',
     description: "URL to the user's national ID document",
   })
   @IsString()
-  national_id_url: string;
+  national_id_url?: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com/passport.jpg',
     description: "URL to the user's passport document",
   })
   @IsString()
-  passport_url: string;
+  passport_url?: string;
 
   @ApiProperty({
     example: 'Password123!',
@@ -189,46 +189,46 @@ export class SignupDto {
   //   message:
   //     'Password must contain at least one lowercase, uppercase, and number',
   // })
-  password: string;
+  password?: string;
   @ApiPropertyOptional({
     example: 'Zimbabwe',
     description: 'Country where the user resides',
   })
   @IsString()
-  country: string;
+  country?: string;
 
   @ApiPropertyOptional({
     example: 'Harare',
     description: 'City where the user resides',
   })
   @IsString()
-  city: string;
+  city?: string;
 
   @ApiPropertyOptional({
     example: '2027999J23',
     description: 'National ID number of the user',
   })
   @IsString()
-  national_id_number: string;
+  national_id_number?: string;
 
   @ApiPropertyOptional({
     example: '200-01-01',
     description: 'Date of birth of the user',
   })
   @IsString()
-  date_of_birth: string;
+  date_of_birth?: string;
 
   @ApiPropertyOptional({
     example: true,
     description: 'Indicates if the user has been invited to join a coop',
   })
   @IsString()
-  is_invited: boolean;
+  is_invited?: boolean;
 
   @ApiPropertyOptional({
     example: true,
     description: 'Indicates if the user has requested to join a coop',
   })
   @IsString()
-  has_requested: boolean;
+  has_requested?: boolean;
 }

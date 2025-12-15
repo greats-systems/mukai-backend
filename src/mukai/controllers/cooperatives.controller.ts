@@ -197,6 +197,34 @@ export class CooperativesController {
     }
     return response;
   }
+  @Get('service-centre')
+  @ApiOperation({ summary: 'List all cooperatives linked to a service centre' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Object],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopsForServiceCentre(@Req() require, @Headers() headers) {
+    const response = await this.cooperativesService.fetchCoopsForServiceCentre(
+      require.user.sub,
+      headers['x-platform'],
+    );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'An error occurred',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return response;
+  }
 
   @Get('initialize-data/:member_id')
   @ApiOperation({ summary: 'Return coops to which a given member belongs' })

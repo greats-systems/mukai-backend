@@ -1337,6 +1337,78 @@ export class TransactionsService {
     }
   }
 
+  async fetchCoopDisbursements(logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative disbursements';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_disbursements_view')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative disbursements', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative disbursements',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative disbursements fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative disbursements fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopDisbursements error', error);
+      return new ErrorResponseDto(500, 'fetchCoopDisbursements error', error);
+    }
+  }
+
+  async fetchCoopAnalytics(logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative analytics';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_financial_analytics')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative analytics', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative analytics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative analytics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative analytics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopAnalytics error', error);
+      return new ErrorResponseDto(500, 'fetchCoopAnalytics error', error);
+    }
+  }
+
   async generateUserTransactionReport(
     wallet_id: string,
   ): Promise<object | ErrorResponseDto> {

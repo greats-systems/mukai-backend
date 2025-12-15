@@ -1014,6 +1014,52 @@ export class CooperativesService {
     }
   }
 
+  async fetchCoopsForServiceCentre(
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperatives for service centre';
+      // Implement function logic here
+      const { data, error } = await this.postgresrest
+        .from('service_centre_coops')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperatives for service centre',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperatives for service centre',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives for service centre fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperatives for service centre fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsForServiceCentre error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopsForServiceCentre error',
+        error,
+      );
+    }
+  }
+
   async setCoopExchangeRate(
     cooperative_id: string,
     exchange_rate: number,

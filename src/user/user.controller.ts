@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -6,6 +8,8 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  Headers,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
@@ -35,8 +39,18 @@ export class UserController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: SignupDto) {
-    return this.userService.updateUser(id, updateUserDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: SignupDto,
+    @Req() req,
+    @Headers() headers,
+  ) {
+    return this.userService.updateUser(
+      id,
+      updateUserDto,
+      req.user.sub,
+      headers['x-platform'],
+    );
   }
 
   @Delete(':id')

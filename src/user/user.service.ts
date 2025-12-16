@@ -11,6 +11,7 @@ import { SignupDto } from 'src/auth/dto/signup.dto';
 import { createClient } from '@supabase/supabase-js';
 import { CreateSystemLogDto } from 'src/mukai/dto/create/create-system-logs.dto';
 import * as CryptoJS from 'crypto-js';
+import { LoginDto } from 'src/auth/dto/login.dto';
 
 @Injectable()
 export class UserService {
@@ -268,11 +269,113 @@ export class UserService {
     }
   }
 
+  private async resetPassword(
+    resetPasswordDto: LoginDto,
+  ): Promise<object | ErrorResponseDto> {
+    const slDto = new CreateSystemLogDto();
+
+    // Locate user ID given their email
+    this.logger.debug(
+      `Resetting password using: ${JSON.stringify(resetPasswordDto)}`,
+    );
+    const { data: userData, error: userError } = await this.postgresrest
+      .from('profiles')
+      .select('id')
+      .eq('phone', resetPasswordDto.phone)
+      // .or(`phone.eq.${resetPasswordDto.phone}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    if (userError) {
+      this.logger.error(
+        `Error fetching email for password reset: ${JSON.stringify(userError)}`,
+      );
+      slDto.profile_email = resetPasswordDto.email;
+      slDto.action = 'reset password';
+      slDto.request = resetPasswordDto;
+      slDto.response = userError;
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to insert system log record',
+          logError,
+        );
+      }
+      this.logger.warn('System log record created', log);
+      return new ErrorResponseDto(400, userError.details);
+    }
+    const { data, error } = await this.supabaseAdmin.auth.admin.updateUserById(
+      userData.id,
+      { password: resetPasswordDto.password },
+    );
+    if (error) {
+      this.logger.error(`Error updating password, ${JSON.stringify(error)}`);
+      return new ErrorResponseDto(400, error.details);
+    }
+
+    // Update profile
+    const plainText = resetPasswordDto.password;
+    const secretKey = process.env.SECRET_KEY || 'No secret key';
+    const cipherText = CryptoJS.AES.encrypt(plainText, secretKey).toString();
+    const decipheredBytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+    const decipheredText = decipheredBytes.toString(CryptoJS.enc.Utf8);
+    this.logger.debug(
+      `Plain text: ${plainText} Cipher text: ${cipherText}: Deciphered text: ${decipheredText}`,
+    );
+    const { data: update, error: updateError } = await this.postgresrest
+      .from('profiles')
+      .update({ password: cipherText })
+      .eq('id', userData.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      this.logger.error(
+        `Error updating profile, ${JSON.stringify(updateError)}`,
+      );
+      return new ErrorResponseDto(400, updateError.details);
+    }
+
+    this.logger.log(`Password reset response: ${JSON.stringify(update)}`);
+
+    slDto.profile_id = userData.id;
+    slDto.action = 'reset password';
+    slDto.request = resetPasswordDto;
+    slDto.response = data;
+    const { data: log, error: logError } = await this.postgresrest
+      .from('system_logs')
+      .insert(slDto)
+      .select()
+      .single();
+    if (logError) {
+      this.logger.error('Failed to insert system log record', logError);
+      return new ErrorResponseDto(
+        400,
+        'Failed to insert system log record',
+        logError,
+      );
+    }
+    this.logger.warn('System log record created', log);
+    return data as object;
+  }
+
   async updateUser(
     id: string,
     updateUserDto: SignupDto,
+    logged_in_user_id?: string,
+    platform?: string,
   ): Promise<User | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'update user';
+      slDto.platform = platform;
       const { data, error } = await this.postgresrest
         .from('profiles')
         .update(updateUserDto)
@@ -283,6 +386,20 @@ export class UserService {
       if (error) {
         this.logger.error(`Error updating user ${id}`, error);
         return new ErrorResponseDto(400, error.details);
+      }
+
+      // Update the password
+      if (updateUserDto.password) {
+        const rpDto = new LoginDto();
+        rpDto.email = updateUserDto.email!;
+        rpDto.password = updateUserDto.password;
+        const response = await this.resetPassword(rpDto);
+        if (response instanceof ErrorResponseDto) {
+          this.logger.error(
+            `Error resetting password for user ${id}: ${response.message}`,
+          );
+          return response;
+        }
       }
 
       return data as User;

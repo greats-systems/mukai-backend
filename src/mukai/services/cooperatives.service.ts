@@ -544,15 +544,25 @@ export class CooperativesService {
 
   async viewCooperativeMembers(
     cooperative_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<Profile[] | Profile | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = `view members of cooperative ${cooperative_id}`;
+      slDto.request = `${cooperative_id}/memnbers`;
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('member_id, profiles(*)')
         .eq('cooperative_id', cooperative_id)
+        .neq('member_id', logged_in_user_id)
         .order('created_at', { ascending: false });
 
       if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
         this.logger.error(
           `Error fetching members for cooperative ${cooperative_id}`,
           error,
@@ -561,6 +571,11 @@ export class CooperativesService {
       }
 
       if (!data || data.length === 0) {
+        slDto.response = {
+          statusCode: 404,
+          message: 'Members not found',
+        };
+        await this.postgresrest.from('system_logs').insert(slDto);
         return new ErrorResponseDto(
           404,
           `Members in cooperative with id ${cooperative_id} not found`,

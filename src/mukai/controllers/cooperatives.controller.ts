@@ -385,9 +385,14 @@ export class CooperativesController {
   })
   async viewCooperativeMembers(
     @Param('cooperative_id') cooperative_id: string,
+    @Req() req,
+    @Headers() headers,
   ) {
-    const response =
-      await this.cooperativesService.viewCooperativeMembers(cooperative_id);
+    const response = await this.cooperativesService.viewCooperativeMembers(
+      cooperative_id,
+      req.user.sub,
+      headers['x-platform'],
+    );
     console.log(response);
     if (response) {
       if (response['statusCode'] === 400) {

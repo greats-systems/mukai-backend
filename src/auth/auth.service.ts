@@ -1266,7 +1266,7 @@ export class AuthService {
             .or('account_type.eq.coop-member,account_type.eq.coop-manager')
             .limit(1)
             .maybeSingle(),
-            this.postgresRest
+          this.postgresRest
             .from('profiles')
             .select('phone')
             .eq('phone', signupDto.phone)
@@ -1278,7 +1278,7 @@ export class AuthService {
             .limit(1)
             .maybeSingle(),
         ]);
-      
+
       if (existingUser.data) {
         this.logger.debug(
           `Duplicate email found: ${JSON.stringify(existingUser.data)}`,
@@ -1300,7 +1300,7 @@ export class AuthService {
       }
 
 
-      if (existingPhoneNumber.data) {
+      if ((signupDto.account_type == 'coop-member' || signupDto.account_type == 'coop-manager') && existingPhoneNumber.data) {
         this.logger.debug(
           `Duplicate phone number found for account type ${signupDto.account_type}: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
@@ -1320,7 +1320,7 @@ export class AuthService {
         return new ErrorResponseDto(422, 'Phone number already in use');
       }
 
-      if (existingZBPhoneNumber.data) {
+      if ((signupDto.account_type == 'operations-manager' || signupDto.account_type == 'super-admin') && existingZBPhoneNumber.data) {
         this.logger.debug(
           `Duplicate ZB phone number found for: ${JSON.stringify(existingZBPhoneNumber.data)}`,
         );

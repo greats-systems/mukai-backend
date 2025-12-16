@@ -408,6 +408,16 @@ export class CooperativesController {
     return response;
   }
 
+  @Get(':cooperative_id/interest-rate')
+  async fetchCoopInterestRate(@Param('cooperative_id') cooperative_id: string) {
+    const response =
+      await this.cooperativesService.fetchCoopInterestRate(cooperative_id);
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
   @Get('filter')
   @ApiOperation({ summary: 'Check if user is admin for a given coop' })
   @ApiResponse({

@@ -798,6 +798,34 @@ export class CooperativesService {
     }
   }
 
+  async fetchCoopInterestRate(
+    cooperative_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select('interest_rate')
+        .eq('id', cooperative_id)
+        .maybeSingle();
+      if (error) {
+        this.logger.error('Error fetching coop interest rate', error);
+        return new ErrorResponseDto(
+          400,
+          'Error fetching coop interest rate',
+          error,
+        );
+      }
+      return new SuccessResponseDto(
+        200,
+        'Coop interest rate fetched successfully',
+        data as object,
+      );
+    } catch (e) {
+      this.logger.error('fetchCoopInterestRate error', e);
+      return new ErrorResponseDto(500, 'fetchCoopInterestRate error', e);
+    }
+  }
+
   async filterCooperativesLike(
     fclDto: FiletrCooperativesLikeDto,
     logged_in_user_id: string,

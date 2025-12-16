@@ -275,14 +275,7 @@ export class UserService {
     try {
       const { data, error } = await this.postgresrest
         .from('profiles')
-        .update({
-          role: updateUserDto.role,
-          first_name: updateUserDto.first_name,
-          last_name: updateUserDto.last_name,
-          email: updateUserDto.email,
-          // username: updateUserDto.username,
-          // password: updateUserDto.password,
-        })
+        .update(updateUserDto)
         .eq('id', id)
         .select()
         .single();

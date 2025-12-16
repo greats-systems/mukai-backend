@@ -27,7 +27,7 @@ import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/re
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
-import { up } from 'supabase/apps/cms/src/migrations/20250529_103319';
+// import { up } from 'supabase/apps/cms/src/migrations/20250529_103319';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {

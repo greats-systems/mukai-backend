@@ -39,18 +39,8 @@ export class UserController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateUserDto: SignupDto,
-    @Req() req,
-    @Headers() headers,
-  ) {
-    return this.userService.updateUser(
-      id,
-      updateUserDto,
-      req.user.sub,
-      headers['x-platform'],
-    );
+  update(@Param('id') id: string, @Body() updateUserDto: SignupDto) {
+    return this.userService.updateUser(id, updateUserDto);
   }
 
   @Delete(':id')

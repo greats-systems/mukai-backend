@@ -1270,7 +1270,9 @@ export class AuthService {
             .from('profiles')
             .select('phone')
             .eq('phone', signupDto.phone)
-            .or('account_type.eq.operations-manager,account_type.eq.super-admin'),
+            .or('account_type.eq.operations-manager,account_type.eq.super-admin')
+            .limit(1)
+            .maybeSingle(),
           this.postgresRest
             .from('profiles')
             .select('national_id_number')

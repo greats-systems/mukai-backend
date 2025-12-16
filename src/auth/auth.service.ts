@@ -1339,7 +1339,7 @@ export class AuthService {
           return new ErrorResponseDto(400, 'Failed to create system log record', logError);
         }
         this.logger.warn('System log created', log);
-        return new ErrorResponseDto(422, 'Phone number already in use');
+        return new ErrorResponseDto(422, 'ZB phone number already in use');
       }
 
 

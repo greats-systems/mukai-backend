@@ -281,7 +281,7 @@ export class UserService {
     const { data: userData, error: userError } = await this.postgresrest
       .from('profiles')
       .select('id')
-      .eq('phone', resetPasswordDto.phone)
+      .eq('email', resetPasswordDto.email)
       // .or(`phone.eq.${resetPasswordDto.phone}`)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -292,7 +292,10 @@ export class UserService {
       );
       slDto.profile_email = resetPasswordDto.email;
       slDto.action = 'reset password';
-      slDto.request = resetPasswordDto;
+      slDto.request = {
+        email: resetPasswordDto.email,
+        password: '*'.repeat(resetPasswordDto.password.length),
+      };
       slDto.response = userError;
       const { data: log, error: logError } = await this.postgresrest
         .from('system_logs')

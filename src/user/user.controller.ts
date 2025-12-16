@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Controller,
   Get,
@@ -8,8 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
-  Headers,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';

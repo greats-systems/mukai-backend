@@ -212,9 +212,9 @@ export class CooperativesController {
     status: 500,
     description: 'Internal server error',
   })
-  async fetchCoopsForServiceCentre(@Req() require, @Headers() headers) {
+  async fetchCoopsForServiceCentre(@Req() req, @Headers() headers) {
     const response = await this.cooperativesService.fetchCoopsForServiceCentre(
-      require.user.sub,
+      req.user.sub,
       headers['x-platform'],
     );
     if (response['statusCode'] === 400) {

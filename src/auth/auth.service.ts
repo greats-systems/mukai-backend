@@ -1251,7 +1251,7 @@ export class AuthService {
     try {
 
       // 1. Check for existing users in parallel
-      const [existingUser, existingPhoneNumber, existingNatID] =
+      const [existingUser, existingPhoneNumber, existingZBPhoneNumber, existingNatID] =
         await Promise.all([
           this.supabaseAdmin
             .from('users')
@@ -1263,8 +1263,14 @@ export class AuthService {
             .from('profiles')
             .select('phone')
             .eq('phone', signupDto.phone)
+            .or('account_type.eq.coop-member,account_type.eq.coop-manager')
             .limit(1)
             .maybeSingle(),
+            this.postgresRest
+            .from('profiles')
+            .select('phone')
+            .eq('phone', signupDto.phone)
+            .or('account_type.eq.operations-manager,account_type.eq.super-admin'),
           this.postgresRest
             .from('profiles')
             .select('national_id_number')
@@ -1296,11 +1302,31 @@ export class AuthService {
 
       if (existingPhoneNumber.data) {
         this.logger.debug(
-          `Duplicate phone number found: ${JSON.stringify(existingPhoneNumber.data)}`,
+          `Duplicate phone number found for account type ${signupDto.account_type}: ${JSON.stringify(existingPhoneNumber.data)}`,
         );
         signupDto.password = '*'.repeat(signupDto.password!.length);
         slDto.request = signupDto;
-        slDto.response = { message: "Duplicate phone number found", data: existingPhoneNumber.data };
+        slDto.response = { message: "Duplicate end-user phone number found", data: existingPhoneNumber.data };
+        const { data: log, error: logError } = await this.postgresRest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to create system log record', logError);
+          return new ErrorResponseDto(400, 'Failed to create system log record', logError);
+        }
+        this.logger.warn('System log created', log);
+        return new ErrorResponseDto(422, 'Phone number already in use');
+      }
+
+      if (existingZBPhoneNumber.data) {
+        this.logger.debug(
+          `Duplicate ZB phone number found for: ${JSON.stringify(existingZBPhoneNumber.data)}`,
+        );
+        signupDto.password = '*'.repeat(signupDto.password!.length);
+        slDto.request = signupDto;
+        slDto.response = { message: "Duplicate ZB phone number found", data: existingPhoneNumber.data };
         const { data: log, error: logError } = await this.postgresRest
           .from('system_logs')
           .insert(slDto)

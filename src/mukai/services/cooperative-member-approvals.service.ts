@@ -27,6 +27,7 @@ import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/re
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+// import { up } from 'supabase/apps/cms/src/migrations/20250529_103319';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
 function initLogger(funcname: Function): Logger {
@@ -413,6 +414,18 @@ export class CooperativeMemberApprovalsService {
       this.logger.debug(
         `Poll description: ${updateCooperativeMemberApprovalsDto.poll_description}`,
       );
+      // If a coop has 2 or 3 members, adjust consensus logic
+      if (
+        coopData.no_of_members == 2 &&
+        updateCooperativeMemberApprovalsDto.supporting_votes!.length > 0
+      ) {
+        updateCooperativeMemberApprovalsDto.consensus_reached = true;
+      } else if (
+        coopData.no_of_members == 3 &&
+        updateCooperativeMemberApprovalsDto.supporting_votes!.length > 1
+      ) {
+        updateCooperativeMemberApprovalsDto.consensus_reached = true;
+      }
       this.logger.debug(
         `Consensus reached? ${updateCooperativeMemberApprovalsDto.consensus_reached}`,
       );

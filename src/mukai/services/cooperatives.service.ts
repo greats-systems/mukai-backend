@@ -260,7 +260,7 @@ export class CooperativesService {
         const scwRequest = {
           firstName: user.first_name,
           lastName: user.last_name,
-          mobile: user.phone,
+          mobile: createCooperativeDto.coop_phone,
           dateOfBirth: user.date_of_birth,
           idNumber: user.national_id_number,
           gender: user.gender?.toUpperCase(),

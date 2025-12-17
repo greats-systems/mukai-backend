@@ -1008,7 +1008,7 @@ export class AuthService {
       // 2. Get essential profile data only
       const { data: profileData, error: profileError } = await this.postgresRest
         .from('profiles')
-        .select('id, wallet_id, phone, first_name, last_name, account_type')
+        .select('id, wallet_id, phone, first_name, last_name, account_type, status')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -1083,7 +1083,7 @@ export class AuthService {
       // const session = await this.createSession(user.id);
 
       const response: AuthLoginSuccessResponse = {
-        status: 'account authenticated',
+        status: profileData?.status,
         statusCode: 200,
         message: 'account authenticated successfully',
         access_token: this.jwtService.sign({

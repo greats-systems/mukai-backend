@@ -948,8 +948,9 @@ export class AuthService {
       const secretKey = process.env.SECRET_KEY || 'No secret key';
       const { data, error } = await this.postgresRest
         .from('profiles')
-        .select('email')
+        .select('email, password')
         .eq('phone', loginDto.phone)
+        .or('account_type.eq.coop-member,account_type.eq.coop-manager')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

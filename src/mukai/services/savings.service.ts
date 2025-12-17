@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prettier/prettier */
@@ -51,26 +52,6 @@ export class SavingsService {
         data: data as SavingsPortfolioDto,
       };
     } catch (error) {
-      return new ErrorResponseDto(500, error);
-    }
-  }
-
-  async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest.from("wallets").select();
-
-      if (error) {
-        this.logger.error("Error fetching Wallets", error);
-        return new ErrorResponseDto(400, error.details);
-      }
-
-      return {
-        statusCode: 200,
-        message: "Wallets fetched successfully",
-        data: data as Wallet[],
-      };
-    } catch (error) {
-      this.logger.error("Exception in findAllWallets", error);
       return new ErrorResponseDto(500, error);
     }
   }
@@ -173,8 +154,6 @@ export class SavingsService {
       return new ErrorResponseDto(500, error);
     }
   }
-
-
 
 
   async viewWalletProfileSavings(

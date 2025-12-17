@@ -24,7 +24,8 @@ export class ServiceCentreService {
     slDto.action = 'fetch all service centres';
     const { data, error } = await this.postgresrest
       .from('service_centres')
-      .select();
+      .select()
+      .order('location', { ascending: true });
     if (error) {
       slDto.response = error;
       await this.slService.createSystemLogs(slDto);

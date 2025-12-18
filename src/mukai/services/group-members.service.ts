@@ -11,6 +11,8 @@ import { GroupMembers } from '../entities/group-members.entity';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import { CooperativesService } from './cooperatives.service';
 import { UUID } from 'crypto';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -120,22 +122,38 @@ export class GroupMemberService {
 
   async findMembersInGroup(
     cooperative_id: string,
-  ): Promise<GroupMembers[] | ErrorResponseDto> {
-    this.logger.log('cooperative_id');
-    this.logger.log(cooperative_id);
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    const slDto = new CreateSystemLogDto();
+    slDto.profile_id = logged_in_user_id;
+    slDto.action = 'fetch members for a specific coop';
+    slDto.request = cooperative_id;
+    slDto.platform = platform;
     try {
       const { data, error } = await this.postgresrest
         .from('group_members')
-        .select()
+        .select('*, cooperative_id(*), member_id(*)')
         .eq('cooperative_id', cooperative_id)
         .order('created_at', { ascending: false });
 
       if (error) {
         this.logger.error('Error fetching group', error);
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
         return new ErrorResponseDto(400, error.details);
       }
+      slDto.response = {
+        statusCode: 200,
+        data: 'Coop members fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
 
-      return data as GroupMembers[];
+      return new SuccessResponseDto(
+        200,
+        'Coop members fetched successfully',
+        data as GroupMembers[],
+      );
     } catch (error) {
       this.logger.error('Exception in findAllGroupMember', error);
       return new ErrorResponseDto(500, error);

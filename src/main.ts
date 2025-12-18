@@ -18,7 +18,7 @@ async function bootstrap() {
       'MkandoWallet (SmileSACCO) Savings and Credit Cooperatives Management API Documentation',
     )
     .addServer('http://localhost:3001', 'Development')
-    .addServer('https://10.132.195.183/api', 'Production')
+    .addServer('http://10.132.195.183/api', 'Production')
     .setVersion('1.0')
 
     .build();

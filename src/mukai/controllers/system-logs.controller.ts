@@ -22,6 +22,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 import { SystemLogsService } from '../services/system-logs.service';
 import { SystemLog } from '../entities/system-logs.entity';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 @ApiTags('System Logs')
 @UseGuards(JwtAuthGuard)
@@ -78,14 +79,8 @@ export class SystemLogsController {
   })
   async findAll(@Req() req) {
     const response = await this.slService.findAllSystemLogs(req.user.sub);
-    if (response['statusCode'] === 400) {
-      throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
-    }
-    if (response['statusCode'] === 500) {
-      throw new HttpException(
-        response['message'],
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }

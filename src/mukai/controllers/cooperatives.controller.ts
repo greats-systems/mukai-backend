@@ -19,8 +19,8 @@ import {
 import { CooperativesService } from '../services/cooperatives.service';
 import {
   CreateCooperativeDto,
-  FiletrCooperativesLikeDto,
-  FiletrCooperativesDto,
+  FilterCooperativesLikeDto,
+  FilterCooperativesDto,
 } from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import {
@@ -102,7 +102,7 @@ export class CooperativesController {
 
   @Post('search')
   @ApiOperation({ summary: 'Filter cooperatives' })
-  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiBody({ type: FilterCooperativesDto })
   @ApiResponse({
     status: 200,
     description: 'Filtered cooperatives fetched successfully',
@@ -117,7 +117,7 @@ export class CooperativesController {
     description: 'Internal server error',
   })
   async filterCooperatives(
-    @Body() fcDto: FiletrCooperativesDto,
+    @Body() fcDto: FilterCooperativesDto,
     @Req() req,
     @Headers() headers,
   ) {
@@ -136,7 +136,7 @@ export class CooperativesController {
   @ApiOperation({
     summary: 'Search cooperatives suggestions by category, name or city',
   })
-  @ApiBody({ type: FiletrCooperativesDto })
+  @ApiBody({ type: FilterCooperativesDto })
   @ApiResponse({
     status: 200,
     description: 'Filtered cooperatives fetched successfully',
@@ -151,7 +151,7 @@ export class CooperativesController {
     description: 'Internal server error',
   })
   async filterCooperativesLike(
-    @Body() fclDto: FiletrCooperativesLikeDto,
+    @Body() fclDto: FilterCooperativesLikeDto,
     @Req() req,
     @Headers() headers,
   ) {

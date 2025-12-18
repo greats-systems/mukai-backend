@@ -5,6 +5,7 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 import { SystemLog } from '../entities/system-logs.entity';
+import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -35,7 +36,7 @@ export class SystemLogsService {
 
   async findAllSystemLogs(
     logged_in_user_id: string,
-  ): Promise<object[] | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('logs')
@@ -48,7 +49,11 @@ export class SystemLogsService {
         return new ErrorResponseDto(400, error.details);
       }
 
-      return data as object[];
+      return new SuccessResponseDto(
+        200,
+        'Logs fetched successfully',
+        data as object[],
+      );
     } catch (error) {
       this.logger.error('Exception in findAllSystemLogs', error);
       return new ErrorResponseDto(500, error);

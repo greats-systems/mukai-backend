@@ -29,7 +29,7 @@ export class UserController {
     return this.userService.findAllUser();
   }
 
-  @Get()
+  @Get('coop-managers')
   findAllCoopManagers() {
     return this.userService.findAllCoopManagers();
   }

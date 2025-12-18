@@ -249,6 +249,27 @@ export class UserService {
     }
   }
 
+  async findAllCoopManagers(): Promise<User[]> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('profiles')
+        .select('*')
+        .eq('account_type', 'coop-manager')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        this.logger.error('Error fetching users', error);
+        return [];
+      }
+
+      return data as User[];
+    } catch (error) {
+      this.logger.error('Exception in findAllUser', error);
+      return [];
+    }
+  }
+
   async viewUser(id: number): Promise<User | null> {
     try {
       const { data, error } = await this.postgresrest

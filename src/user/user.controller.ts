@@ -29,6 +29,11 @@ export class UserController {
     return this.userService.findAllUser();
   }
 
+  @Get('coop-managers')
+  findAllCoopManagers() {
+    return this.userService.findAllCoopManagers();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.userService.viewUser(+id);

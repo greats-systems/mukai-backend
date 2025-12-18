@@ -66,7 +66,10 @@ export class CooperativesService {
           .eq('name', createCooperativeDto.name)
           .eq('coop_phone', createCooperativeDto.coop_phone)
           .eq('category', createCooperativeDto.category)
-          .eq('city', createCooperativeDto.city),
+          .eq('city', createCooperativeDto.city)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
         this.postgresrest
           .from('profiles')
           .select()
@@ -97,7 +100,7 @@ export class CooperativesService {
       }
 
       // Check if cooperative already exists (data array is NOT empty)
-      if (existingCoopResult.data && existingCoopResult.data.length > 0) {
+      if (existingCoopResult.data) {
         this.logger.log(
           `Coop already exists: ${JSON.stringify(existingCoopResult.data)}`,
         );
@@ -123,7 +126,7 @@ export class CooperativesService {
       }
 
       // Check if user profile exists for the phone number
-      /*
+
       if (existingUserResult.data.length > 0) {
         this.logger.debug(
           `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
@@ -137,8 +140,8 @@ export class CooperativesService {
           // null,
         );
       }
-      
 
+      /*
       // Handle existing user check
       if (existingUserResult.data.length > 0) {
         this.logger.error(

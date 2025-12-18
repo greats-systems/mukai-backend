@@ -8,8 +8,8 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import {
   CreateCooperativeDto,
-  FiletrCooperativesDto,
-  FiletrCooperativesLikeDto,
+  FilterCooperativesDto,
+  FilterCooperativesLikeDto,
 } from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import { Cooperative } from '../entities/cooperative.entity';
@@ -648,7 +648,7 @@ export class CooperativesService {
   }
 
   async filterCooperatives(
-    fcDto: FiletrCooperativesDto,
+    fcDto: FilterCooperativesDto,
     logged_in_user_id: string,
     platform: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
@@ -660,7 +660,7 @@ export class CooperativesService {
       slDto.platform = platform;
       // this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
       const coopsList: Cooperative[] = [];
-      if (!fcDto.category || !fcDto.city || !fcDto.province) {
+      if (!fcDto.category && !fcDto.city && !fcDto.province) {
         const { data, error } = await this.postgresrest
           .from('cooperatives')
           .select()
@@ -714,11 +714,14 @@ export class CooperativesService {
           }
         }
       } else {
+        this.logger.warn(`FiletrCooperativesDto: ${JSON.stringify(fcDto)}`);
         const { data, error } = await this.postgresrest
           .from('cooperatives')
           .select()
           .match({
             category: fcDto.category,
+            // province_state: fcDto.province,
+            // city: fcDto.city,
           })
           .or(`province_state.eq.${fcDto.province},city.eq.${fcDto.city}`)
           .order('name', { ascending: true });
@@ -827,7 +830,7 @@ export class CooperativesService {
   }
 
   async filterCooperativesLike(
-    fclDto: FiletrCooperativesLikeDto,
+    fclDto: FilterCooperativesLikeDto,
     logged_in_user_id: string,
     platform: string,
   ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {

@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsUUID } from 'class-validator';
 import { UUID } from 'crypto';
 
-export class FiletrCooperativesDto {
+export class FilterCooperativesDto {
   @ApiProperty({
     example: '8e8bf5e9-0702-4ebf-bd39-98d020f6da3f',
     description: 'Profile ID',
@@ -40,7 +40,7 @@ export class FiletrCooperativesDto {
   city?: string;
 }
 
-export class FiletrCooperativesLikeDto {
+export class FilterCooperativesLikeDto {
   @ApiProperty({
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Profile ID',

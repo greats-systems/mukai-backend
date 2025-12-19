@@ -1373,6 +1373,45 @@ export class TransactionsService {
     }
   }
 
+  async fetchCoopDisbursementTotals(
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative disbursement totals';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_disbursement_totals')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative disbursements', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative disbursements',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative disbursements fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative disbursements fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopDisbursements error', error);
+      return new ErrorResponseDto(500, 'fetchCoopDisbursements error', error);
+    }
+  }
+
   async fetchCoopAnalytics(logged_in_user_id: string, platform: string) {
     try {
       const slDto = new CreateSystemLogDto();

@@ -449,6 +449,34 @@ export class TransactionsController {
     return response;
   }
 
+  @Get('coop-disbursement-totals')
+  @ApiOperation({
+    summary: 'Get total disbursements per cooperative and currency',
+    description: 'Retrieves cooperative disbursements per cooperatives',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative disbursements retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopDisbursementTotals(@Req() req, @Headers() headers) {
+    const response = await this.transactionsService.fetchCoopDisbursementTotals(
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
   @Get('coop-analytics')
   @ApiOperation({
     summary: 'Get cooperative analytics',

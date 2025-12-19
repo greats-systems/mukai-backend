@@ -387,7 +387,7 @@ export class CooperativeMemberRequestsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select(
-          'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
+          '*, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
         )
         .eq('member_id', member_id)
         .eq('status', 'invited');
@@ -552,16 +552,19 @@ export class CooperativeMemberRequestsService {
       slDto.profile_id = logged_in_user_id;
       slDto.platform = platform;
       slDto.request = updateCooperativeMemberRequestDto;
-      // this.logger.debug(updateCooperativeMemberRequestDto);
+      this.logger.debug(updateCooperativeMemberRequestDto);
 
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        .eq('member_id', updateCooperativeMemberRequestDto.member_id)
+        // .eq('member_id', updateCooperativeMemberRequestDto.member_id)
+        .eq('id', updateCooperativeMemberRequestDto.id)
         .select()
+        .order('created_at', {ascending: true})
+        .limit(1)
         .single();
       if (error) {
-        this.logger.error(`Error updating CooperativeMemberRequests`, error);
+        this.logger.error(`Error updating CooperativeMemberRequests`, error, data);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -640,7 +643,7 @@ export class CooperativeMemberRequestsService {
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
-        data: data as CooperativeMemberRequest[],
+        data: data,
       };
     } catch (error) {
       this.logger.error(
@@ -656,12 +659,15 @@ export class CooperativeMemberRequestsService {
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.warn(updateCooperativeMemberRequestDto)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
         .eq('member_id', id)
+        /*
         .select()
         .single();
+        */
       if (error) {
         this.logger.error(
           `Error updating CooperativeMemberRequests ${id}`,
@@ -672,7 +678,7 @@ export class CooperativeMemberRequestsService {
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
-        data: data as CooperativeMemberRequest,
+        data: data,
       };
     } catch (error) {
       this.logger.error(

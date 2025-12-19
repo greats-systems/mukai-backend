@@ -1345,7 +1345,7 @@ export class TransactionsService {
       slDto.action = 'Fetch cooperative disbursements';
       slDto.request = ``;
       const { data, error } = await this.postgresrest
-        .from('coop_disbursements_view')
+        .from('coop_disbursements_view_2')
         .select();
       if (error) {
         slDto.response = error;

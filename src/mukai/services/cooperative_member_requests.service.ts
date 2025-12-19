@@ -346,7 +346,7 @@ export class CooperativeMemberRequestsService {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
-        .select('member_id, profiles(*)')
+        .select('id, member_id, profiles(*)')
         .eq('cooperative_id', group_id)
         .eq('status', status);
 
@@ -560,8 +560,8 @@ export class CooperativeMemberRequestsService {
         // .eq('member_id', updateCooperativeMemberRequestDto.member_id)
         .eq('id', updateCooperativeMemberRequestDto.id)
         .select()
-        .order('created_at', {ascending: true})
-        .limit(1)
+        // .order('created_at', {ascending: true})
+        // .limit(1)
         .single();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error, data);

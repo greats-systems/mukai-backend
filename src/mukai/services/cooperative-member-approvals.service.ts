@@ -756,9 +756,12 @@ export class CooperativeMemberApprovalsService {
       updateLoanDto.is_approved = true;
       updateLoanDto.updated_at = DateTime.now().toISO();
       updateLoanDto.date_disbursed = DateTime.now().toISO();
+      /*
       updateLoanDto.remaining_balance = parseFloat(
         updateCooperativeMemberApprovalsDto.additional_info,
       );
+      */
+      updateLoanDto.remaining_balance = updateLoanDto.payment_amount;
       const currentDate = DateTime.now();
       const dueDate = currentDate.plus({
         months: loanTerm,

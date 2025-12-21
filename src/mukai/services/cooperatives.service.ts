@@ -555,7 +555,7 @@ export class CooperativesService {
       slDto.platform = platform;
       slDto.profile_id = logged_in_user_id;
       slDto.action = `view members of cooperative ${cooperative_id}`;
-      slDto.request = `${cooperative_id}/memnbers`;
+      slDto.request = `${cooperative_id}/members`;
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('member_id, profiles(*)')

@@ -560,8 +560,10 @@ export class CooperativeMemberRequestsService {
         // .eq('member_id', updateCooperativeMemberRequestDto.member_id)
         .eq('id', updateCooperativeMemberRequestDto.id)
         .select()
+        /*
         .order('created_at', {ascending: true})
         .limit(1)
+        */
         .single();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error, data);
@@ -615,12 +617,15 @@ export class CooperativeMemberRequestsService {
           );
         }
         this.logger.warn('Log created', log);
-      } else {
+      } 
+      /*
+      else {
         return new ErrorResponseDto(
           400,
           'Failed to add member. Check the cooperative ID',
         );
       }
+      */
       slDto.action = 'declined member request';
       slDto.response = {
         statusCode: 200,

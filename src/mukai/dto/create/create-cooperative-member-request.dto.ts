@@ -13,6 +13,15 @@ export class CreateCooperativeMemberRequestDto {
 
   @ApiPropertyOptional({
     example: '2023-01-01T00:00:00Z',
+    description: 'Mandatory create timestamp',
+    required: true,
+  })
+  @IsString()
+  @IsOptional()
+  created_at?: string;
+
+  @ApiPropertyOptional({
+    example: '2023-01-01T00:00:00Z',
     description: 'Mandatory update timestamp',
     required: true,
   })

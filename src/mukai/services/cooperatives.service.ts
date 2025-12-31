@@ -28,6 +28,9 @@ import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.d
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
+import { GroupMembers } from '../entities/group-members.entity';
+import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -1345,7 +1348,7 @@ export class CooperativesService {
         .select()
         .maybeSingle();
       if (error) {
-        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        this.logger.error(`Error updating cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -1356,44 +1359,155 @@ export class CooperativesService {
     }
   }
 
-  // async updateCooperative(
-  //   id: string,
-  //   updateCooperativeDto: UpdateCooperativeDto,
-  // ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
-  //   this.logger.log(updateCooperativeDto);
-  //   /**
-  //    * Before updating the interest rate, the members should vote on it first
-  //    */
-  //   try {
-  //     const cmaDto = new CreateCooperativeMemberApprovalsDto();
-  //     const cmaService = new CooperativeMemberApprovalsService(
-  //       this.postgresrest,
-  //     );
-  //     cmaDto.group_id = id;
-  //     cmaDto.poll_description = 'set interest rate';
-  //     cmaDto.additional_info = updateCooperativeDto.additional_info;
-  //     this.logger.log(cmaDto);
-  //     const cmaResponse =
-  //       await cmaService.createCooperativeMemberApprovals(cmaDto);
-  //     this.logger.log(cmaResponse);
-  //     /*
-  //     const { data, error } = await this.postgresrest
-  //       .from('cooperatives')
-  //       .update(updateCooperativeDto)
-  //       .eq('id', id)
-  //       .select()
-  //       .single();
-  //     if (error) {
-  //       this.logger.error(`Error updating Cooperatives ${id}`, error);
-  //       return new ErrorResponseDto(400, error.details);
-  //     }
-  //     */
-  //     return cmaResponse as CooperativeMemberApprovals;
-  //   } catch (error) {
-  //     this.logger.error(`Exception in updateCooperative for id ${id}`, error);
-  //     return new ErrorResponseDto(500, error);
-  //   }
-  // }
+  async exitCooperative(
+    gmDto: UpdateGroupMemberDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      this.logger.log(gmDto);
+      // Select group member record
+      const { data: gmData, error: gmError } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .match({
+          cooperative_id: gmDto.cooperative_id,
+          member_id: gmDto.member_id,
+        })
+        .single();
+      if (gmError) {
+        this.logger.error('Failed to select member', gmError);
+        return new ErrorResponseDto(400, 'Failed to select member', gmError);
+      }
+
+      const groupMember = gmData as GroupMembers;
+
+      // Delete group member record
+      const { data: deleteData, error: deleteError } = await this.postgresrest
+        .from('group_members')
+        .delete()
+        .eq('id', groupMember.id);
+      if (deleteError) {
+        this.logger.error('Failed to delete member', deleteError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to delete member',
+          deleteError,
+        );
+      }
+      this.logger.log('Group member deleted', deleteData);
+
+      // Update cooperative size
+      const { data: memberCount, error: memberCountError } =
+        await this.postgresrest.rpc('fetch_coop_size', {
+          p_coop_id: gmDto.cooperative_id,
+        });
+      if (memberCountError) {
+        this.logger.error('Failed to get coop size', memberCountError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop size',
+          memberCountError,
+        );
+      }
+
+      const { data: updateCoop, error: updateCoopError } =
+        await this.postgresrest
+          .from('cooperatives')
+          .update({
+            no_of_members: memberCount,
+            updated_at: new Date(),
+          })
+          .eq('id', gmDto.cooperative_id);
+      if (updateCoopError) {
+        this.logger.error('Failed to update coop size', updateCoopError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop size',
+          updateCoopError,
+        );
+      }
+      this.logger.log('Coop size updated', updateCoop);
+
+      // Delete cooperative request
+      const { data: cmr, error: cmrError } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select()
+        .match({
+          cooperative_id: gmDto.cooperative_id,
+          member_id: gmDto.member_id,
+        })
+        .eq('cooperative_id', gmDto.cooperative_id)
+        .eq('member_id', gmDto.member_id)
+        .single();
+      if (cmrError && cmrError.code != 'PGRST116') {
+        this.logger.error('Failed to fetch coop request for member', cmrError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop request for member',
+          cmrError,
+        );
+      }
+      // this.logger.log(cmr);
+
+      const coopMemberRequest = cmr as CooperativeMemberRequest;
+      this.logger.log(coopMemberRequest);
+      const { data: deleteCmr, error: deleteCmrError } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .delete()
+        .eq('id', coopMemberRequest.id);
+      if (deleteCmrError) {
+        this.logger.error(
+          'Failed to delete coop request for member',
+          deleteCmrError,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to delete coop request for member',
+          deleteCmrError,
+        );
+      }
+      this.logger.log('Coop member request deleted', deleteCmr);
+
+      // Check how many cooperatives the user is a part of
+      const { data: memberCoops, error: memberCoopsError } =
+        await this.postgresrest.rpc('fetch_coops_for_member', {
+          p_member_id: gmDto.member_id,
+        });
+      if (memberCoopsError) {
+        this.logger.error('Failed to fetch coops for member', memberCoopsError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coops for member',
+          memberCoopsError,
+        );
+      }
+      if (memberCoops < 1) {
+        // If the user belonged to 1 coop, they're neither invited nor have requested to join, and their cooperative id should be null
+        const { data: profile, error: profileError } = await this.postgresrest
+          .from('profiles')
+          .update({
+            cooperative_id: null,
+            is_invited: null,
+            has_requested: null,
+          })
+          .eq('id', gmDto.member_id)
+          .select()
+          .single();
+        if (profileError) {
+          this.logger.error('Failed to update profile', profileError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to update profile',
+            profileError,
+          );
+        }
+        this.logger.log('Profile updated', profile);
+      }
+      return new SuccessResponseDto(200, 'Coop member deleted successfully');
+    } catch (error) {
+      this.logger.error('exitCooperative error', error);
+      return new ErrorResponseDto(500, 'exitCooperative error', error);
+    }
+  }
 
   async updateCooperative(
     id: string,

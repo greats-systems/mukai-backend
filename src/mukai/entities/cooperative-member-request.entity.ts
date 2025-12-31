@@ -9,6 +9,12 @@ export class CooperativeMemberRequest {
 
   @ApiProperty({
     example: '2023-01-01T00:00:00Z',
+    description: 'Creation timestamp',
+  })
+  crated_at: string;
+
+  @ApiProperty({
+    example: '2023-01-01T00:00:00Z',
     description: 'Last update timestamp',
   })
   updated_at: string;
@@ -17,7 +23,7 @@ export class CooperativeMemberRequest {
     example: '987e6543-e21b-43d2-b456-426614174000',
     description: 'Cooperative ID',
   })
-  coop_id: string;
+  cooperative_id: string;
 
   @ApiProperty({
     example: '456e7890-e12b-34d3-c567-426614174000',

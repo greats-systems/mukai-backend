@@ -39,6 +39,7 @@ import { Profile } from 'src/user/entities/user.entity';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
 
 @ApiTags('Cooperatives')
 @UseGuards(JwtAuthGuard)
@@ -713,6 +714,33 @@ export class CooperativesController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @Patch('exit')
+  @ApiOperation({
+    summary: 'Exit a cooperative',
+  })
+  @ApiBody({
+    type: UpdateGroupMemberDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Coop member exited successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Intrnal server error',
+  })
+  async exitCooperative(@Body() gmDto: UpdateGroupMemberDto) {
+    const response = await this.cooperativesService.exitCooperative(gmDto);
+    if (response instanceof ErrorResponseDto) {
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }

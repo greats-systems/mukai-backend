@@ -618,6 +618,38 @@ export class CooperativeMemberRequestsService {
         }
         this.logger.warn('Log created', log);
       } 
+      else if(updateCooperativeMemberRequestDto.cooperative_id != null &&
+        updateCooperativeMemberRequestDto.status === 'rejected' ){    
+          slDto.action = 'member rejected invitation';      // If the member declined to join a cooperative
+          const {data: profile, error: profileError} = await this.postgresrest.from('profiles').update({
+            is_invited: null,
+            updated_at: new Date()
+          })
+          .eq('id', updateCooperativeMemberRequestDto.member_id)
+          .select()
+          .single()
+          if(profileError){
+            this.logger.log('Failed to update profile', profileError);
+            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+          }
+          this.logger.log('Profile updated', profile);
+        }
+        else if(updateCooperativeMemberRequestDto.cooperative_id != null &&
+        updateCooperativeMemberRequestDto.status === 'declined' ){
+          slDto.action = 'admin declined member';            // If the member was rejected by the admin
+          const {data: profile, error: profileError} = await this.postgresrest.from('profiles').update({
+            has_requested: null,
+            updated_at: new Date()
+          })
+          .eq('id', updateCooperativeMemberRequestDto.member_id)
+          .select()
+          .single()
+          if(profileError){
+            this.logger.log('Failed to update profile', profileError);
+            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+          }
+          this.logger.log('Profile updated', profile);
+        }
       /*
       else {
         return new ErrorResponseDto(
@@ -626,7 +658,6 @@ export class CooperativeMemberRequestsService {
         );
       }
       */
-      slDto.action = 'declined member request';
       slDto.response = {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',

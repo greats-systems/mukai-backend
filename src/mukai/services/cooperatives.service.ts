@@ -701,6 +701,7 @@ export class CooperativesService {
             .select()
             .eq('cooperative_id', coop.id)
             .eq('member_id', fcDto.profile_id)
+            .eq('status', 'active')
             .limit(1)
             .single();
           if (requestError && requestError.code != 'PGRST116') {

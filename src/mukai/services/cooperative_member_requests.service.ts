@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -63,7 +64,7 @@ export class CooperativeMemberRequestsService {
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
         // .eq('status', 'unresolved')
-        // .or('status.eq.invited,status.eq.unresolved,status.eq.active')
+        .or('status.eq.invited,status.eq.unresolved')
         .maybeSingle();
       if (error) {
         this.logger.error('Error checking existing member request', error);
@@ -617,47 +618,36 @@ export class CooperativeMemberRequestsService {
           );
         }
         this.logger.warn('Log created', log);
-      } 
-      else if(updateCooperativeMemberRequestDto.cooperative_id != null &&
-        updateCooperativeMemberRequestDto.status === 'rejected' ){    
-          slDto.action = 'member rejected invitation';      // If the member declined to join a cooperative
-          const {data: profile, error: profileError} = await this.postgresrest.from('profiles').update({
-            is_invited: null,
-            updated_at: new Date()
-          })
-          .eq('id', updateCooperativeMemberRequestDto.member_id)
-          .select()
-          .single()
-          if(profileError){
-            this.logger.log('Failed to update profile', profileError);
-            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
-          }
-          this.logger.log('Profile updated', profile);
-        }
-        else if(updateCooperativeMemberRequestDto.cooperative_id != null &&
-        updateCooperativeMemberRequestDto.status === 'declined' ){
-          slDto.action = 'admin declined member';            // If the member was rejected by the admin
-          const {data: profile, error: profileError} = await this.postgresrest.from('profiles').update({
-            has_requested: null,
-            updated_at: new Date()
-          })
-          .eq('id', updateCooperativeMemberRequestDto.member_id)
-          .select()
-          .single()
-          if(profileError){
-            this.logger.log('Failed to update profile', profileError);
-            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
-          }
-          this.logger.log('Profile updated', profile);
-        }
-      /*
-      else {
-        return new ErrorResponseDto(
-          400,
-          'Failed to add member. Check the cooperative ID',
-        );
       }
-      */
+      // If the user has exactly one request or invitation
+      else if (updateCooperativeMemberRequestDto.cooperative_id != null &&
+        (updateCooperativeMemberRequestDto.status === 'declined' || updateCooperativeMemberRequestDto.status === 'rejected')) {
+          /*
+        const { data, error } = await this.postgresrest
+          .from('cooperative_member_requests')
+          .delete()
+          .eq('id', updateCooperativeMemberRequestDto.id);
+        if (error) {
+          this.logger.error('Failed to delete request', error);
+          return new ErrorResponseDto(400, 'Failed to delete request', error);
+        }
+        */
+        slDto.action = 'admin declined member';            // If the member was rejected by the admin
+        // Delete the cmr record
+        const { data: profile, error: profileError } = await this.postgresrest.from('profiles').update({
+          has_requested: null,
+          is_invited: null,
+          updated_at: new Date()
+        })
+          .eq('id', updateCooperativeMemberRequestDto.member_id)
+          .select()
+          .single()
+        if (profileError) {
+          this.logger.log('Failed to update profile', profileError);
+          return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+        }
+        this.logger.log('Profile updated', profile);
+      }
       slDto.response = {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
@@ -700,10 +690,10 @@ export class CooperativeMemberRequestsService {
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
         .eq('member_id', id)
-        /*
-        .select()
-        .single();
-        */
+      /*
+      .select()
+      .single();
+      */
       if (error) {
         this.logger.error(
           `Error updating CooperativeMemberRequests ${id}`,

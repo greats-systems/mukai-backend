@@ -157,6 +157,15 @@ export class CooperativeMemberRequestsController {
     return response;
   }
 
+  @Get('/pending-invitations/:member_id')
+  async checkIfMemberIsInvited(@Param('member_id') member_id: string){
+    const response = await this.cooperativeMemberRequestsService.checkIfMemberIsInvited(member_id);
+    if(response instanceof ErrorResponseDto){
+      return new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
   @Get('/pending/:member_id')
   @ApiOperation({
     summary: 'Get pending request from user who wants to join group',

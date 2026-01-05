@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
@@ -247,7 +246,7 @@ export class CooperativeMemberRequestsService {
         );
 
         updateDto.has_requested =
-          createCooperativeMemberRequestDto.has_requested ?? false;
+          createCooperativeMemberRequestDto.has_requested;
         this.logger.log(
           `Updating request status for ${createCooperativeMemberRequestDto.member_id!}`,
         );
@@ -511,6 +510,34 @@ export class CooperativeMemberRequestsService {
     }
   }
 
+  async checkIfMemberIsInvited(member_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select('*, cooperative_member_requests_cooperative_id_fkey(*,cooperatives_admin_id_fkey(*))')
+        .match({
+          member_id: member_id,
+          status: 'invited'
+        })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code != 'PGRST116') {
+        this.logger.error('Failed to check for invitations', error);
+        return new ErrorResponseDto(400, 'Failed to check for invitations', error);
+      }
+      if (data) {
+        return new SuccessResponseDto(200, 'Invitation fetched successfully', data);
+      }
+      return new SuccessResponseDto(404, 'No invitations found');
+    }
+    catch (error) {
+      this.logger.error('checkIfMemberIsInvited error', error);
+      return new ErrorResponseDto(500, 'checkIfMemberIsInvited error', error);
+    }
+  }
+
   async getPendingRequestDetails(
     member_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
@@ -558,13 +585,8 @@ export class CooperativeMemberRequestsService {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        // .eq('member_id', updateCooperativeMemberRequestDto.member_id)
         .eq('id', updateCooperativeMemberRequestDto.id)
         .select()
-        /*
-        .order('created_at', {ascending: true})
-        .limit(1)
-        */
         .single();
       if (error) {
         this.logger.error(`Error updating CooperativeMemberRequests`, error, data);
@@ -622,31 +644,31 @@ export class CooperativeMemberRequestsService {
       // If the user has exactly one request or invitation
       else if (updateCooperativeMemberRequestDto.cooperative_id != null &&
         (updateCooperativeMemberRequestDto.status === 'declined' || updateCooperativeMemberRequestDto.status === 'rejected')) {
-          /*
-        const { data, error } = await this.postgresrest
-          .from('cooperative_member_requests')
-          .delete()
-          .eq('id', updateCooperativeMemberRequestDto.id);
-        if (error) {
-          this.logger.error('Failed to delete request', error);
-          return new ErrorResponseDto(400, 'Failed to delete request', error);
+        // Fetch coop requests. If the member has multiple requests, don't hard-reset is_invited or has_requested
+        const { data: cmrCount, error: cmrCountError } = await this.postgresrest.rpc('fetch_invitations_for_member', { p_member_id: updateCooperativeMemberRequestDto.member_id });
+        if (cmrCountError) {
+          slDto.response = cmrCountError;
+          await this.postgresrest.from('system_logs').insert(slDto);
+          this.logger.error('Failed to get request count', cmrCountError);
+          return new ErrorResponseDto(400, 'Failed to get request count', cmrCountError);
         }
-        */
-        slDto.action = 'admin declined member';            // If the member was rejected by the admin
-        // Delete the cmr record
-        const { data: profile, error: profileError } = await this.postgresrest.from('profiles').update({
-          has_requested: null,
-          is_invited: null,
-          updated_at: new Date()
-        })
-          .eq('id', updateCooperativeMemberRequestDto.member_id)
-          .select()
-          .single()
-        if (profileError) {
-          this.logger.log('Failed to update profile', profileError);
-          return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+        // If the member was rejected by the admin
+        this.logger.warn('Requests: ', cmrCount);
+        if (cmrCount < 2) {
+          const { data: profile, error: profileError } = await this.postgresrest.from('profiles').update({
+            has_requested: null,
+            is_invited: null,
+            updated_at: new Date()
+          })
+            .eq('id', updateCooperativeMemberRequestDto.member_id)
+            .select()
+            .single()
+          if (profileError) {
+            this.logger.log('Failed to update profile', profileError);
+            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+          }
+          this.logger.log('Profile updated', profile);
         }
-        this.logger.log('Profile updated', profile);
       }
       slDto.response = {
         statusCode: 200,

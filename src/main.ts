@@ -17,6 +17,8 @@ async function bootstrap() {
     .setDescription(
       'MkandoWallet (SmileSACCO) Savings and Credit Cooperatives Management API Documentation',
     )
+    .addServer('http://localhost:3001', 'Development')
+    .addServer('http://10.132.195.183/api', 'Production')
     .setVersion('1.0')
 
     .build();
@@ -51,7 +53,9 @@ async function bootstrap() {
   // );
 
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0', () => {
-    console.log('server connected');
+    console.log(
+      `server connected, running on port ${process.env.PORT ?? 3001}`,
+    );
   });
 }
 void bootstrap();

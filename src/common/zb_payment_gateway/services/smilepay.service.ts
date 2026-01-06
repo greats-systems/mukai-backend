@@ -1,20 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { PostgresRest } from 'src/common/postgresrest';
 import { v4 } from 'uuid';
 import {
+  EcocashPaymentRequest,
   ExpressPaymentAuth,
   ExpressPaymentConfirm,
   ExpressPaymentSmilePayRequestAuth,
   ExpressPaymentSmilePayRequestConfirm,
+  StandardCheckoutRequest,
 } from '../requests/smilepay.requests';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 // import axios from 'axios';
 import { plainToInstance } from 'class-transformer';
-import { ExpressPaymentSmilePayResponse } from '../responses/smilepay.responses';
+import {
+  ExpressPaymentSmilePayResponse,
+  StandardCheckoutResponse,
+} from '../responses/smilepay.responses';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
 // import uuidv4 from 'supabase/apps/studio/lib/uuid';
@@ -32,8 +36,8 @@ export class SmilePayService {
 
   constructor(private readonly postgresrest: PostgresRest) {
     this.baseUrl = process.env.SMILEPAY_API_URL || '';
-    this.apiKey = process.env.SMILEPAY_API_KEY || '';
-    this.apiSecret = process.env.SMILEPAY_API_SECRET || '';
+    this.apiKey = process.env.SMILEPAY_API_KEY_1 || '';
+    this.apiSecret = process.env.SMILEPAY_API_SECRET_1 || '';
   }
 
   private getHeaders() {
@@ -45,9 +49,52 @@ export class SmilePayService {
     return headers;
   }
 
+  async initiateStandardCheckout(
+    authRequest: StandardCheckoutRequest,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      authRequest.orderReference = v4();
+      const requestOptions = {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(authRequest),
+        redirect: 'follow',
+      } as RequestInit;
+      const authResponse = await fetch(
+        `${this.baseUrl}/payments/initiate-transaction`,
+        requestOptions,
+      );
+      const authResponseJson = await authResponse.json();
+      const parsedResponse = plainToInstance(
+        StandardCheckoutResponse,
+        authResponseJson,
+      );
+      if (parsedResponse.responseCode !== '00') {
+        return new GeneralErrorResponseDto(
+          HttpStatus.BAD_REQUEST,
+          'Failed to authorize payment request',
+          parsedResponse,
+        );
+      }
+      this.logger.log(`${parsedResponse.paymentUrl}`);
+      return new SuccessResponseDto(
+        HttpStatus.OK,
+        'Waiting for authorization',
+        authResponseJson as StandardCheckoutResponse,
+      );
+    } catch (error) {
+      this.logger.debug(`initiateStandardCheckout error: ${error}`);
+      return new GeneralErrorResponseDto(
+        500,
+        'initiateStandardCheckout error',
+        error,
+      );
+    }
+  }
+
   async initiateExpressCheckoutSmilePay(
     authRequest: ExpressPaymentSmilePayRequestAuth,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug(`Initiating SmilePay payment using ${this.baseUrl}`);
       this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
@@ -94,7 +141,7 @@ export class SmilePayService {
 
   async confirmExpressCheckoutSmilePay(
     confirmRequest: ExpressPaymentSmilePayRequestConfirm,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug('Confirming SmilePay payment');
       const requestOptions = {
@@ -136,7 +183,7 @@ export class SmilePayService {
 
   async initiateExpressCheckoutInnbucks(
     authRequest: ExpressPaymentAuth,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug(`Initiating Innbucks payment using ${this.baseUrl}`);
       this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
@@ -182,11 +229,11 @@ export class SmilePayService {
   }
 
   async initiateExpressCheckoutEcocash(
-    authRequest: ExpressPaymentAuth,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    authRequest: EcocashPaymentRequest,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
-      this.logger.debug(`Initiating Ecocash payment using ${this.baseUrl}`);
-      this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
+      // this.logger.debug(`Initiating Ecocash payment using ${this.baseUrl}`);
+      // this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
       authRequest.orderReference = v4();
       const requestOptions = {
         method: 'POST',
@@ -194,7 +241,7 @@ export class SmilePayService {
         body: JSON.stringify(authRequest),
         redirect: 'follow',
       } as RequestInit;
-      this.logger.log(JSON.stringify(authRequest));
+      // this.logger.log(JSON.stringify(authRequest));
       const authResponse = await fetch(
         `${this.baseUrl}/payments/express-checkout/ecocash`,
         requestOptions,
@@ -230,7 +277,7 @@ export class SmilePayService {
 
   async initiateExpressCheckoutOmari(
     authRequest: ExpressPaymentAuth,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug(`Initiating Omari payment using ${this.baseUrl}`);
       this.logger.debug(`Auth request: ${JSON.stringify(authRequest)}`);
@@ -277,7 +324,7 @@ export class SmilePayService {
 
   async confirmExpressCheckoutOmari(
     confirmRequest: ExpressPaymentConfirm,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug('Confirming Omari payment');
       const requestOptions = {
@@ -319,7 +366,7 @@ export class SmilePayService {
 
   async initiateExpressCheckoutVisaMastercard(
     authRequest: ExpressPaymentAuth,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       this.logger.debug(
         `Initiating Visa/Mastercard payment using ${this.baseUrl}`,

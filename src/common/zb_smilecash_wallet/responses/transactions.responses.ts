@@ -18,6 +18,7 @@ export class TransactionResponseAuth {
   responseCode: string;
   responseDescription: string;
   data: {
+    transactionId: string;
     amount: number;
     transactionStatus: 'PENDING';
     authResponse: {

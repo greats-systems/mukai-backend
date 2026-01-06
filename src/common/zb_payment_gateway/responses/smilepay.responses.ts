@@ -4,3 +4,10 @@ export class ExpressPaymentSmilePayResponse {
   status: string;
   transactionReference: string;
 }
+
+export class StandardCheckoutResponse {
+  responseMessage: string;
+  responseCode: string;
+  paymentUrl: string;
+  transactionReference: string;
+}

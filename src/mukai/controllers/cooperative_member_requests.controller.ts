@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -9,6 +13,8 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Req,
+  Headers,
 } from '@nestjs/common';
 import { CooperativeMemberRequestsService } from '../services/cooperative_member_requests.service';
 import { CreateCooperativeMemberRequestDto } from '../dto/create/create-cooperative-member-request.dto';
@@ -20,15 +26,15 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
-  ApiBearerAuth,
   ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Cooperative Member Requests')
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @ApiHeader({
   name: 'apikey',
   description: 'API key for authentication (insert access token)',
@@ -47,7 +53,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 export class CooperativeMemberRequestsController {
   constructor(
     private readonly cooperativeMemberRequestsService: CooperativeMemberRequestsService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new member request' })
@@ -70,10 +76,15 @@ export class CooperativeMemberRequestsController {
   async create(
     @Body()
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
+    @Req() req,
+    @Headers() headers,
   ) {
+    const platform = headers['x-platform'];
     const response =
       await this.cooperativeMemberRequestsService.createCooperativeMemberRequest(
         createCooperativeMemberRequestDto,
+        req.user.sub,
+        platform
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -96,9 +107,9 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll() {
+  async findAll(@Req() req, @Headers() headers) {
     const response =
-      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests();
+      await this.cooperativeMemberRequestsService.findAllCooperativeMemberRequests(req.user.sub, headers['x-platform']);
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',
@@ -130,16 +141,27 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findCooperativeInvitations(@Param('member_id') member_id: string) {
+  async findCooperativeInvitations(@Param('member_id') member_id: string, @Req() req, @Headers() headers) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeInvitations(
         member_id,
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
         response.message || 'An error occurred',
         response.statusCode,
       );
+    }
+    return response;
+  }
+
+  @Get('/pending-invitations/:member_id')
+  async checkIfMemberIsInvited(@Param('member_id') member_id: string){
+    const response = await this.cooperativeMemberRequestsService.checkIfMemberIsInvited(member_id);
+    if(response instanceof ErrorResponseDto){
+      return new HttpException(response, response.statusCode);
     }
     return response;
   }
@@ -168,10 +190,12 @@ export class CooperativeMemberRequestsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async getPendingRequestDetails(@Param('member_id') member_id: string) {
+  async getPendingRequestDetails(@Param('member_id') member_id: string, @Req() req, @Headers() headers) {
     const response =
       await this.cooperativeMemberRequestsService.findCooperativeRequests(
         member_id,
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(
@@ -295,10 +319,14 @@ export class CooperativeMemberRequestsController {
   async update(
     @Body()
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
+    @Req() req,
+    @Headers() headers
   ) {
     const response =
       await this.cooperativeMemberRequestsService.updateCooperativeMemberRequest(
         updateCooperativeMemberRequestDto,
+        req.user.sub,
+        headers['x-platform']
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(

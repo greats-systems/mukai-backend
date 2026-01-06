@@ -17,16 +17,12 @@ import {
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { WalletsService } from './wallets.service';
 import { Int32 } from 'typeorm';
-// import { UUID } from 'crypto';
+import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
-// const paymentGateway = new SmilePayGateway();
-// const smileCashWalletService = new SmileCashWalletService();
-// const smileCashWalletController = new SmileCashWalletController(
-//   smileCashWalletService,
-// );
 
 @Injectable()
 export class TransactionsService {
@@ -159,24 +155,65 @@ export class TransactionsService {
     }
   }
 
-  async createP2PTransaction(
-    senderTransactionDto: CreateTransactionDto,
-  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+  async payMunicipalityBill(
+    mbRequest: MunicipalityBillRequest,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
     try {
       const scwService = new SmileCashWalletService(this.postgresrest);
-      /*When a transaction is initiated, 4 steps should take place:
-       1. the initiator's transaction is recorded in the transactions table
-       2. the initiator's wallet is debited
-       3. the receiver's wallet is credited
-       4 the receiver's credit is recorded in the transactions table
+      // 1. Transfer customer's US$ funds to agent account (wallet-to-wallet)
+      const pmbResponse = await scwService.payMunicipalityBill(mbRequest);
+      if (pmbResponse instanceof GeneralErrorResponseDto) {
+        return pmbResponse;
+      }
 
-       When SmileCash money is transferred, the new balances of the sender and receiver should reflect accordingly
-       */
-      const walletsService = new WalletsService(
-        this.postgresrest,
-        // this.smileWalletService,
-      );
+      // 3. Return a success message
+      this.logger.log('Payment successful!');
 
+      const senderTransactionDto = new CreateTransactionDto();
+      senderTransactionDto.narrative = 'bill payment';
+      senderTransactionDto.amount = mbRequest.w2obTransferRequest.amount;
+      senderTransactionDto.currency = 'ZWG';
+      senderTransactionDto.sending_phone = '263780032799';
+      senderTransactionDto.receiving_phone =
+        mbRequest.w2obTransferRequest.bankAccount;
+      senderTransactionDto.transfer_mode = 'WALLETPLUS';
+
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .insert(senderTransactionDto)
+        .select()
+        .single();
+
+      if (error) {
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to record transaction',
+          error,
+        );
+      }
+
+      return new SuccessResponseDto(201, 'Payment successful!', data);
+    } catch (e) {
+      this.logger.error(`payMunicipalityBill error: ${e}`);
+      return new GeneralErrorResponseDto(500, 'payMunicipalityBill error', e);
+    }
+  }
+
+  async createP2PTransaction(
+    senderTransactionDto: CreateTransactionDto,
+    logged_in_user_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    let transactionRecord: any = null;
+    const slDto = new CreateSystemLogDto();
+    slDto.profile_id = logged_in_user_id;
+    slDto.action = `payment: ${senderTransactionDto.transaction_type}`;
+    slDto.request = senderTransactionDto;
+
+    try {
+      const scwService = new SmileCashWalletService(this.postgresrest);
+      const walletsService = new WalletsService(this.postgresrest);
+
+      // Step 1: Initiate wallet-to-wallet transfer
       const request = {
         receiverMobile: senderTransactionDto.receiving_phone,
         senderPhone: senderTransactionDto.sending_phone,
@@ -185,105 +222,273 @@ export class TransactionsService {
         channel: senderTransactionDto.transfer_mode,
         narration: senderTransactionDto.transaction_type,
       };
+
       this.logger.warn('Initiating wallet to wallet transfer');
+      this.logger.debug('Starting walletToWallet transfer', request);
+
       const w2wResponse = await scwService.walletToWallet(
         request as WalletToWalletTransferRequest,
       );
+
+      // Handle wallet transfer failure
       if (w2wResponse instanceof GeneralErrorResponseDto) {
         this.logger.error(
           `Error in wallet to wallet transfer: ${JSON.stringify(w2wResponse.errorObject)}`,
         );
+        slDto.response = w2wResponse;
+        await this.createSystemLog(slDto);
         return w2wResponse;
       }
+
       this.logger.debug(
         `Wallet to wallet transfer response: ${JSON.stringify(w2wResponse)}`,
       );
 
+      // Step 2: Record the transaction in database
       const { data, error } = await this.postgresrest
         .from('transactions')
         .insert(senderTransactionDto)
         .select()
         .single();
+
       if (error) {
-        this.logger.log(error);
+        this.logger.error('Failed to insert transaction record', error);
+        slDto.response = { statusCode: 400, message: error.details };
+        await this.createSystemLog(slDto);
         return new ErrorResponseDto(400, error.details);
+      }
+
+      transactionRecord = data;
+      slDto.response = {
+        statusCode: 201,
+        message: 'Transaction created successfully',
+      };
+
+      // Step 3: Create system log for the transaction
+      const logResult = await this.createSystemLog(slDto);
+      if (logResult instanceof GeneralErrorResponseDto) {
+        this.logger.warn(
+          'Failed to create system log, but transaction succeeded',
+        );
       }
 
       this.logger.debug(`Transaction created: ${JSON.stringify(data)}`);
 
-      /**
-       * "transactorMobile":"263777757603",
-    "currency":"USD", // ZWG | USD
-    "channel":"USSD", //USSD | APP | WEB
-    "transactionId":""
-       */
-
-      const scSenderParams = {
-        transactorMobile: senderTransactionDto.sending_phone,
-        currency: senderTransactionDto.currency?.toUpperCase(),
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-
-      // Update sender's SmileCash balance
-      this.logger.debug(`Sender currency: ${senderTransactionDto.currency}`);
-      this.logger.warn('Updating sender SmileCash balance');
-      const scSenderResponse = await scwService.balanceEnquiry(scSenderParams);
-      if (scSenderResponse instanceof GeneralErrorResponseDto) {
-        this.logger.error(
-          `Error in sender balance enquiry: ${JSON.stringify(scSenderResponse.errorObject)}`,
-        );
-        return scSenderResponse;
-      }
-      const senderResponse = await walletsService.updateSmileCashBalance(
-        senderTransactionDto.sending_wallet,
-        scSenderResponse.data.data.billerResponse.balance,
-        senderTransactionDto.currency!.toUpperCase(),
+      // Step 4: Update sender and receiver balances (non-blocking operations)
+      // These operations should not fail the main transaction
+      await this.updateBalancesAfterTransfer(
+        senderTransactionDto,
+        scwService,
+        walletsService,
       );
 
-      this.logger.debug(
-        `Sender balance updated: ${JSON.stringify(senderResponse)}`,
-      );
-
-      // Update receiver's SmileCash balance
-      const scReceiverParams = {
-        transactorMobile: senderTransactionDto.receiving_phone,
-        currency: senderTransactionDto.currency?.toUpperCase(),
-        channel: 'USSD',
-        transactionId: '',
-      } as BalanceEnquiryRequest;
-      this.logger.warn(`Updating receiver SmileCash balance`);
-      const scReceiverResponse =
-        await scwService.balanceEnquiry(scReceiverParams);
-      if (scReceiverResponse instanceof GeneralErrorResponseDto) {
-        this.logger.error(
-          `Error in receiver balance enquiry: ${JSON.stringify(scReceiverResponse.errorObject)}`,
-        );
-        return scReceiverResponse;
-      }
-      const receiverResponse = await walletsService.updateSmileCashBalance(
-        senderTransactionDto.receiving_wallet,
-        scReceiverResponse.data.data.billerResponse.balance,
-        senderTransactionDto.currency!.toUpperCase(),
-      );
-
-      this.logger.debug(
-        `Receiver balance updated: ${JSON.stringify(receiverResponse)}`,
-      );
+      // Return success response
       return {
         statusCode: 201,
         message: 'Transaction created successfully',
         data: {
-          message: senderTransactionDto,
-          // transaction_id: data.id,
-          // date: data.created_date,
-          // new_balance: debitResponse['balance'] ?? 0.0,
+          transaction: senderTransactionDto,
+          transaction_id: transactionRecord.id,
+          date: transactionRecord.created_date,
+          wallet_transfer: {
+            status: 'COMPLETE',
+            reference:
+              w2wResponse.data?.reference || w2wResponse.data?.data?.reference,
+          },
         },
-        // debitResponse,
-        // creditResponse
       };
     } catch (error) {
-      return new ErrorResponseDto(500, error);
+      this.logger.error('Unexpected error in createP2PTransaction', error);
+
+      // Even on unexpected error, try to log it
+      slDto.response = {
+        statusCode: 500,
+        message: 'Unexpected error occurred',
+      };
+      try {
+        await this.createSystemLog(slDto);
+      } catch (logError) {
+        this.logger.error('Failed to log error', logError);
+      }
+
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Unknown error',
+      );
+    }
+  }
+
+  /**
+   * Helper method to update balances after successful transfer
+   * This runs asynchronously and doesn't block the main transaction response
+   */
+  private async updateBalancesAfterTransfer(
+    senderTransactionDto: CreateTransactionDto,
+    scwService: SmileCashWalletService,
+    walletsService: WalletsService,
+  ): Promise<void> {
+    try {
+      // Update sender balance
+      await this.updateWalletBalance(
+        senderTransactionDto.sending_phone,
+        senderTransactionDto.sending_wallet,
+        senderTransactionDto.currency?.toUpperCase() || 'USD',
+        scwService,
+        walletsService,
+        'sender',
+      );
+
+      // Update receiver balance
+      await this.updateWalletBalance(
+        senderTransactionDto.receiving_phone,
+        senderTransactionDto.receiving_wallet,
+        senderTransactionDto.currency?.toUpperCase() || 'USD',
+        scwService,
+        walletsService,
+        'receiver',
+      );
+    } catch (error) {
+      this.logger.error('Error in balance updates (non-critical)', error);
+      // Don't throw - this is a non-critical operation
+    }
+  }
+
+  /**
+   * Helper method to update individual wallet balance
+   */
+  private async updateWalletBalance(
+    phone: string,
+    walletId: string,
+    currency: string,
+    scwService: SmileCashWalletService,
+    walletsService: WalletsService,
+    role: 'sender' | 'receiver',
+  ): Promise<void> {
+    try {
+      this.logger.warn(`Updating ${role} SmileCash balance for ${phone}`);
+
+      const balanceParams = {
+        transactorMobile: phone,
+        currency: currency,
+        channel: 'USSD',
+        transactionId: '',
+      } as BalanceEnquiryRequest;
+
+      const balanceResponse = await scwService.balanceEnquiry(balanceParams);
+
+      if (balanceResponse instanceof GeneralErrorResponseDto) {
+        this.logger.warn(
+          `Failed to get ${role} balance enquiry, but transaction succeeded. Error: ${JSON.stringify(balanceResponse.errorObject)}`,
+        );
+        return;
+      }
+
+      const balance = this.extractBalanceFromResponse(balanceResponse);
+
+      if (balance === null) {
+        this.logger.warn(`Could not extract ${role} balance from response`);
+        return;
+      }
+
+      this.logger.debug(`New ${role} balance: ${balance} ${currency}`);
+
+      const updateResult = await walletsService.updateSmileCashBalance(
+        walletId,
+        balance,
+        currency,
+      );
+
+      if (
+        updateResult instanceof ErrorResponseDto ||
+        updateResult instanceof GeneralErrorResponseDto
+      ) {
+        this.logger.warn(
+          `Failed to update ${role} wallet in database, but SmileCash balance is ${balance}. Error: ${JSON.stringify(updateResult)}`,
+        );
+      } else {
+        this.logger.debug(`${role} wallet updated successfully`);
+      }
+    } catch (error) {
+      this.logger.error(`Error updating ${role} wallet balance`, error);
+      // Don't throw - continue execution
+    }
+  }
+
+  /**
+   * Helper method to extract balance from various response formats
+   */
+  private extractBalanceFromResponse(response: any): number | null {
+    try {
+      // Check multiple possible locations for balance
+      const possiblePaths = [
+        response.data?.data?.billerResponse?.balance,
+        response.data?.data?.additionalData?.balance,
+        response.data?.balance,
+        response.balance,
+      ];
+
+      for (const balance of possiblePaths) {
+        if (balance !== undefined && balance !== null) {
+          const parsed = parseFloat(balance);
+          if (!isNaN(parsed)) return parsed;
+        }
+      }
+
+      // Try to extract from description if available
+      const description =
+        response.data?.data?.description || response.description;
+      if (description && typeof description === 'string') {
+        // Try patterns like "Balance: $26.920 USD" or "Balance: 26.92"
+        const patterns = [
+          /Balance:\s*\$?([\d.,]+)\s*(?:USD|ZWL)?/i,
+          /Balance\s*:\s*([\d.,]+)/i,
+        ];
+
+        for (const pattern of patterns) {
+          const match = description.match(pattern);
+          if (match && match[1]) {
+            const balanceStr = match[1].replace(/,/g, '');
+            const parsed = parseFloat(balanceStr);
+            if (!isNaN(parsed)) return parsed;
+          }
+        }
+      }
+
+      this.logger.warn('Could not find balance in response', { response });
+      return null;
+    } catch (error) {
+      this.logger.error('Error extracting balance from response', error);
+      return null;
+    }
+  }
+
+  /**
+   * Helper method to create system logs
+   */
+  private async createSystemLog(
+    slDto: CreateSystemLogDto,
+  ): Promise<{ data: any } | GeneralErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Failed to insert system log', error);
+        return new GeneralErrorResponseDto(400, 'Failed to insert log', error);
+      }
+
+      this.logger.warn('System log created', data);
+      return { data };
+    } catch (error) {
+      this.logger.error('Unexpected error creating system log', error);
+      return new GeneralErrorResponseDto(
+        500,
+        'Unexpected error creating log',
+        error,
+      );
     }
   }
 
@@ -340,9 +545,13 @@ export class TransactionsService {
         );
         return scSenderResponse;
       }
+      const senderBalance =
+        scSenderResponse.data?.data?.additionalData?.balance ||
+        scSenderResponse.data?.balance;
+      this.logger.warn('sender balance', senderBalance);
       const senderResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.sending_wallet,
-        scSenderResponse.data.data.billerResponse.balance,
+        senderBalance,
         senderTransactionDto.currency!.toUpperCase(),
       );
 
@@ -366,9 +575,13 @@ export class TransactionsService {
         );
         return scReceiverResponse;
       }
+      const receiverBalance =
+        scReceiverResponse.data?.data?.additionalData?.balance ||
+        scReceiverResponse.data?.balance;
+      this.logger.warn('receiver balance', receiverBalance);
       const receiverResponse = await walletsService.updateSmileCashBalance(
         senderTransactionDto.receiving_wallet,
-        scReceiverResponse.data.data.billerResponse.balance,
+        receiverBalance,
         senderTransactionDto.currency!.toUpperCase(),
       );
 
@@ -614,7 +827,7 @@ export class TransactionsService {
   async findAllTransactions(): Promise<Transaction[] | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
-        .from('transactions')
+        .from('super_admin_transactions')
         .select();
 
       if (error) {
@@ -626,6 +839,134 @@ export class TransactionsService {
     } catch (error) {
       this.logger.error('Exception in findAllTransactions', error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async findUserTransactions(
+    wallet_id: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch user transactions';
+      slDto.request = wallet_id;
+
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_user_transactions',
+        { p_wallet_id: wallet_id },
+      );
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+
+        if (logError) {
+          this.logger.error('Failed to create system log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
+        this.logger.error('Failed to fetch user transactions', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch user transactions',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'User transactions fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (logError) {
+        this.logger.error('Failed to create system log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log');
+      }
+      this.logger.warn('Log created', log);
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data,
+      );
+    } catch (e) {
+      this.logger.error('findUserTransactions error', e);
+      return new ErrorResponseDto(500, 'findUserTransactions error', e);
+    }
+  }
+
+  async fetchUserSubsAndContributions(
+    member_wallet_id: string,
+    coop_wallet_id,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch member subs and contributions';
+      slDto.request = `?member_wallet_id=${member_wallet_id}&coop_wallet_id=${coop_wallet_id}`;
+
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_user_subs_and_contributions',
+        {
+          p_member_wallet_id: member_wallet_id,
+          p_coop_wallet_id: coop_wallet_id,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+
+        if (logError) {
+          this.logger.error('Failed to create system log', logError);
+          return new ErrorResponseDto(400, 'Failed to create log');
+        }
+        this.logger.warn('Log created', log);
+        this.logger.error('Failed to fetch user transactions', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch user transactions',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'User transactions fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (logError) {
+        this.logger.error('Failed to create system log', logError);
+        return new ErrorResponseDto(400, 'Failed to create log');
+      }
+      this.logger.warn('Log created', log);
+      return new SuccessResponseDto(
+        200,
+        'Transactions fetched successfully',
+        data,
+      );
+    } catch (e) {
+      this.logger.error('findUserTransactions error', e);
+      return new ErrorResponseDto(500, 'findUserTransactions error', e);
     }
   }
 
@@ -656,6 +997,35 @@ export class TransactionsService {
       return new ErrorResponseDto(500, error);
     }
   }
+  /*
+  async fetchMostRecentBillPayment(
+    phone: string,
+  ): Promise<object | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('transactions')
+        .select(
+          `*,
+          transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
+          transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
+        )
+        .eq('sending_wallet', sending_wallet)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        this.logger.error('Error fetching most recent transaction', error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      return data as object;
+    } catch (error) {
+      this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+  */
 
   async streamTransactions(
     wallet_id: string,
@@ -873,6 +1243,208 @@ export class TransactionsService {
     } catch (error) {
       this.logger.error(`Exception in viewTransaction for id`, error);
       return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async fetchCoopEarnings(
+    p_currency: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative earnings';
+      slDto.request = `?currency=${p_currency}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_earnings',
+        {
+          p_currency: p_currency,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative earnings', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative earnings',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative earnings fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative earnings fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopEarnings error', error);
+      return new ErrorResponseDto(500, 'fetchCoopEarnings error', error);
+    }
+  }
+
+  async fetchCoopEarningsDailyMTD(
+    currency: string,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative earnings MTD daily';
+      slDto.request = `?currency=${currency}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_earnings_daily_mtd',
+        { p_currency: currency },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative earnings MTD daily',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative earnings MTD daily',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative earnings MTD daily fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative earnings MTD daily fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopEarningsDailyMTD error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopEarningsDailyMTD error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopDisbursements(logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative disbursements';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_disbursement_view_2')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative disbursements', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative disbursements',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative disbursements fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative disbursements fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopDisbursements error', error);
+      return new ErrorResponseDto(500, 'fetchCoopDisbursements error', error);
+    }
+  }
+
+  async fetchCoopDisbursementTotals(
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative disbursement totals';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_disbursement_totals')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative disbursements', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative disbursements',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative disbursements fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative disbursements fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopDisbursements error', error);
+      return new ErrorResponseDto(500, 'fetchCoopDisbursements error', error);
+    }
+  }
+
+  async fetchCoopAnalytics(logged_in_user_id: string, platform: string) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative analytics';
+      slDto.request = ``;
+      const { data, error } = await this.postgresrest
+        .from('coop_financial_analytics')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperative analytics', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative analytics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative analytics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative analytics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopAnalytics error', error);
+      return new ErrorResponseDto(500, 'fetchCoopAnalytics error', error);
     }
   }
 

@@ -127,7 +127,9 @@ export class WalletsService {
   async findAllWallets(): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
       this.logger.debug("Fetching all wallets");
-      const { data, error } = await this.postgresrest.from("wallets").select();
+      const { data, error } = await this.postgresrest
+        .from("wallets")
+        .select('*,profile_id(*)');
 
       if (error) {
         this.logger.error("Error fetching Wallets", error);
@@ -221,8 +223,8 @@ export class WalletsService {
         this.logger.error(`Error fetching Wallet ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
-      // this.logger.log("Wallet data:", JSON.stringify(data));
-      
+      // this.logger.debug(`Wallet data:, ${JSON.stringify(data[0]['wallets_profile_id_fkey'])}`);
+      this.logger.warn('wiewWallet data', data)
       if (data[0].phone != null) {
         this.logger.debug(`Fetching SmileCash USD balance for ${data[0].phone}`);
         const scwService = new SmileCashWalletService(this.postgresrest);
@@ -253,7 +255,7 @@ export class WalletsService {
         } else {
           data[0].balance_zwg = 0.0;
         }
-        
+
 
         this.logger.log({
           statusCode: 200,
@@ -265,7 +267,7 @@ export class WalletsService {
       return {
         statusCode: 200,
         message: "Wallet fetched successfully",
-        data: data as Wallet[],
+        data,
       };
     } catch (error) {
       this.logger.error(`Exception in viewWallet for id ${id}`, error);
@@ -280,7 +282,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("group_id", coop_id)
         .single();
 
@@ -292,7 +294,7 @@ export class WalletsService {
         return new ErrorResponseDto(400, error.details);
       }
       this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
+      // this.logger.debug('Fetching SmileCash USD and ZWG Coop Wallet balance');
       const walletPhone = data?.coop_phone;
       const balanceEnquiryParams = {
         transactorMobile: walletPhone,
@@ -338,7 +340,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("profile_id", profile_id)
         .eq("is_group_wallet", false);
 
@@ -484,7 +486,7 @@ export class WalletsService {
     try {
       const { data, error } = await this.postgresrest
         .from("wallets")
-        .select()
+        .select('*,profile_id(*)')
         .eq("id", wallet_id)
         .single();
 
@@ -612,7 +614,7 @@ export class WalletsService {
     // const transactionsService = new TransactionsService(this.postgresrest);
     // const createTransactionDto = new CreateTransactionDto();
     try {
-      this.logger.log("Updating SmileCash balance");
+      this.logger.debug("Updating SmileCash balance", { balance: balance, currency: currency });
       if (currency == 'USD') {
         const { data: updateData, error: updateError } = await this.postgresrest
           .from("wallets")

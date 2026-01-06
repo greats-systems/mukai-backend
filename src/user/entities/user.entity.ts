@@ -54,4 +54,5 @@ export class Profile {
   push_token?: string;
   tenant_id?: string;
   main_business_uid?: string;
+  status?: string;
 }

@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -12,6 +13,7 @@ import { UserService } from './user.service';
 import { SignupDto } from 'src/auth/dto/signup.dto';
 import { GroupMemberService } from './group-members.service';
 import { CreateGroupMemberDto } from '../dto/create/create-group-members.dto';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -20,7 +22,7 @@ function initLogger(funcname: Function): Logger {
 @Injectable()
 export class CooperativeMemberRequestsService {
   private readonly logger = initLogger(CooperativeMemberRequestsService);
-  constructor(private readonly postgresrest: PostgresRest) {}
+  constructor(private readonly postgresrest: PostgresRest) { }
 
   async hasAlreadyJoinedCoop(
     coop_id: string,
@@ -38,6 +40,7 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error checking member who already joined', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member exists:\n${JSON.stringify(data)}`);
         return true;
@@ -60,12 +63,13 @@ export class CooperativeMemberRequestsService {
         .eq('cooperative_id', coop_id)
         .eq('member_id', member_id)
         // .eq('status', 'unresolved')
-        // .or('status.eq.invited,status.eq.unresolved,status.eq.active')
+        .or('status.eq.invited,status.eq.unresolved')
         .maybeSingle();
       if (error) {
         this.logger.error('Error checking existing member request', error);
         return new ErrorResponseDto(400, error.details);
       }
+      this.logger.debug(data);
       if (data) {
         this.logger.log(`Member request exists:\n${JSON.stringify(data)}`);
         return true;
@@ -79,8 +83,15 @@ export class CooperativeMemberRequestsService {
 
   async createCooperativeMemberRequest(
     createCooperativeMemberRequestDto: CreateCooperativeMemberRequestDto,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'request to join a cooperative';
+      slDto.request = createCooperativeMemberRequestDto;
       // Check if user has already joined the cooperative
       this.logger.debug('Checking if they have joined the coop');
       const hasAlreadyJoined = await this.hasAlreadyJoinedCoop(
@@ -99,12 +110,50 @@ export class CooperativeMemberRequestsService {
         return hasAlreadyRequested;
       }
       if (hasAlreadyJoined) {
+        slDto.response = {
+          statusCode: 409,
+          message: 'You have already joined this cooperative',
+          error: null,
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(
           409,
           'You have already joined this cooperative',
         );
       }
       if (hasAlreadyRequested) {
+        slDto.response = {
+          statusCode: 409,
+          message: 'You have already requested to join this cooperative',
+          error: null,
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(
           409,
           'You have already requsted to join this cooperative',
@@ -129,14 +178,32 @@ export class CooperativeMemberRequestsService {
         .single();
       if (error) {
         this.logger.error('Error creating cooperative member request', error);
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
         return new ErrorResponseDto(400, error.details);
       }
+      const profileService = new UserService(this.postgresrest);
+      const updateDto = new SignupDto();
       if (createCooperativeMemberRequestDto.is_invited) {
         this.logger.debug(
           `Updating is_invited for user ${createCooperativeMemberRequestDto.member_id}`,
         );
-        const profileService = new UserService(this.postgresrest);
-        const updateDto = new SignupDto();
+
         updateDto.is_invited = createCooperativeMemberRequestDto.is_invited;
         this.logger.log(
           `Updating invitation status for ${createCooperativeMemberRequestDto.member_id!}`,
@@ -152,6 +219,69 @@ export class CooperativeMemberRequestsService {
             updateResponse.errorObject,
           );
         }
+
+        slDto.action = 'invite a member to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 201,
+          message: 'Cooperative member request created successfully',
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
+      } else {
+        this.logger.debug(
+          `Updating has_requested for user ${createCooperativeMemberRequestDto.member_id}`,
+        );
+
+        updateDto.has_requested =
+          createCooperativeMemberRequestDto.has_requested;
+        this.logger.log(
+          `Updating request status for ${createCooperativeMemberRequestDto.member_id!}`,
+        );
+        const updateResponse = await profileService.updateUser(
+          createCooperativeMemberRequestDto.member_id!,
+          updateDto,
+        );
+        if (updateResponse instanceof ErrorResponseDto) {
+          return new ErrorResponseDto(
+            400,
+            'Failed to update user request status',
+            updateResponse.errorObject,
+          );
+        }
+
+        slDto.action = 'request to join a cooperative';
+        slDto.request = createCooperativeMemberRequestDto;
+        slDto.response = {
+          statusCode: 201,
+          message: 'Cooperative member request created successfully',
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('System log record created', log);
       }
       return {
         statusCode: 201,
@@ -164,10 +294,14 @@ export class CooperativeMemberRequestsService {
     }
   }
 
-  async findAllCooperativeMemberRequests(): Promise<
+  async findAllCooperativeMemberRequests(logged_in_user_id: string, platform: string): Promise<
     SuccessResponseDto | ErrorResponseDto
   > {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view all polls';
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select();
@@ -176,6 +310,22 @@ export class CooperativeMemberRequestsService {
         this.logger.error('Error fetching CooperativeMemberRequests', error);
         return new ErrorResponseDto(400, error.details);
       }
+
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative member requests fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+
+      if (logError) {
+        return new ErrorResponseDto(400, logError.details);
+      }
+
+      this.logger.warn('Log created', log);
 
       return {
         statusCode: 200,
@@ -196,7 +346,7 @@ export class CooperativeMemberRequestsService {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
-        .select('member_id, profiles(*)')
+        .select('id, member_id, profiles(*)')
         .eq('cooperative_id', group_id)
         .eq('status', status);
 
@@ -224,22 +374,52 @@ export class CooperativeMemberRequestsService {
 
   async findCooperativeInvitations(
     member_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    // this.logger.log(`${group_id}/${status}`);
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'view invitations from cooperatives';
+      slDto.request = member_id;
+      slDto.platform = platform;
+
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .select(
-          'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
+          '*, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
         )
         .eq('member_id', member_id)
         .eq('status', 'invited');
 
       if (error) {
         this.logger.error('Error fetching coop invitations', error);
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Faield to insert system logs record', logError);
+        }
+        this.logger.warn('Log created', log);
         return new ErrorResponseDto(400, error.details);
       }
 
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative invitations fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Faield to insert system logs record', logError);
+      }
+      this.logger.warn('Log created', log);
       this.logger.log({
         statusCode: 200,
         message: 'Cooperative invitations fetched successfully',
@@ -259,8 +439,14 @@ export class CooperativeMemberRequestsService {
 
   async findCooperativeRequests(
     member_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
-    // this.logger.log(`${group_id}/${status}`);
+    const slDto = new CreateSystemLogDto();
+    slDto.profile_id = logged_in_user_id;
+    slDto.action = 'view cooperative requests';
+    slDto.platform = platform;
+    slDto.request = member_id;
     try {
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
@@ -268,7 +454,7 @@ export class CooperativeMemberRequestsService {
           'status, cooperative_id, cooperative_member_requests_cooperative_id_fkey(*, cooperatives_admin_id_fkey(*))',
         )
         .eq('member_id', member_id)
-        .eq('status', 'unresolved');
+        .or('status.eq.unresolved,status.eq.pending');
 
       if (error) {
         this.logger.error('Error fetching coop invitations', error);
@@ -324,6 +510,34 @@ export class CooperativeMemberRequestsService {
     }
   }
 
+  async checkIfMemberIsInvited(member_id: string): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select('*, cooperative_member_requests_cooperative_id_fkey(*,cooperatives_admin_id_fkey(*))')
+        .match({
+          member_id: member_id,
+          status: 'invited'
+        })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code != 'PGRST116') {
+        this.logger.error('Failed to check for invitations', error);
+        return new ErrorResponseDto(400, 'Failed to check for invitations', error);
+      }
+      if (data) {
+        return new SuccessResponseDto(200, 'Invitation fetched successfully', data);
+      }
+      return new SuccessResponseDto(404, 'No invitations found');
+    }
+    catch (error) {
+      this.logger.error('checkIfMemberIsInvited error', error);
+      return new ErrorResponseDto(500, 'checkIfMemberIsInvited error', error);
+    }
+  }
+
   async getPendingRequestDetails(
     member_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
@@ -358,21 +572,35 @@ export class CooperativeMemberRequestsService {
 
   async updateCooperativeMemberRequest(
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.request = updateCooperativeMemberRequestDto;
+      this.logger.debug(updateCooperativeMemberRequestDto);
+
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
-        .eq('member_id', updateCooperativeMemberRequestDto.member_id)
-        .select();
+        .eq('id', updateCooperativeMemberRequestDto.id)
+        .select()
+        .single();
       if (error) {
-        this.logger.error(`Error updating CooperativeMemberRequests`, error);
+        this.logger.error(`Error updating CooperativeMemberRequests`, error, data);
         return new ErrorResponseDto(400, error.details);
       }
 
       // If the user's status is active, update the coop size
-      if (updateCooperativeMemberRequestDto.status === 'active') {
+      if (
+        updateCooperativeMemberRequestDto.cooperative_id != null &&
+        updateCooperativeMemberRequestDto.status === 'active'
+      ) {
         // Add member and coop IDs to group_members
+        slDto.action = 'accepted member into cooperative';
+
         const gmService = new GroupMemberService(this.postgresrest);
         const gmDto = new CreateGroupMemberDto();
         gmDto.member_id = updateCooperativeMemberRequestDto.member_id!;
@@ -394,11 +622,76 @@ export class CooperativeMemberRequestsService {
         if (userResponse instanceof ErrorResponseDto) {
           return userResponse;
         }
+        slDto.response = {
+          statusCode: 200,
+          message: 'Cooperative member request updated successfully',
+        };
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          this.logger.error('Failed to insert system log record', logError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to insert system log record',
+            logError,
+          );
+        }
+        this.logger.warn('Log created', log);
       }
+      // If the user has exactly one request or invitation
+      else if (updateCooperativeMemberRequestDto.cooperative_id != null &&
+        (updateCooperativeMemberRequestDto.status === 'declined' || updateCooperativeMemberRequestDto.status === 'rejected')) {
+        // Fetch coop requests. If the member has multiple requests, don't hard-reset is_invited or has_requested
+        const { data: cmrCount, error: cmrCountError } = await this.postgresrest.rpc('fetch_invitations_for_member', { p_member_id: updateCooperativeMemberRequestDto.member_id });
+        if (cmrCountError) {
+          slDto.response = cmrCountError;
+          await this.postgresrest.from('system_logs').insert(slDto);
+          this.logger.error('Failed to get request count', cmrCountError);
+          return new ErrorResponseDto(400, 'Failed to get request count', cmrCountError);
+        }
+        // If the member was rejected by the admin
+        this.logger.warn('Requests: ', cmrCount);
+        if (cmrCount < 2) {
+          const { data: profile, error: profileError } = await this.postgresrest.from('profiles').update({
+            has_requested: null,
+            is_invited: null,
+            updated_at: new Date()
+          })
+            .eq('id', updateCooperativeMemberRequestDto.member_id)
+            .select()
+            .single()
+          if (profileError) {
+            this.logger.log('Failed to update profile', profileError);
+            return new ErrorResponseDto(400, 'Faield to  update profile', profileError);
+          }
+          this.logger.log('Profile updated', profile);
+        }
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative member request updated successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        this.logger.error('Failed to insert system log record', logError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to insert system log record',
+          logError,
+        );
+      }
+      this.logger.warn('System log created', log);
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
-        data: data as CooperativeMemberRequest[],
+        data: data,
       };
     } catch (error) {
       this.logger.error(
@@ -414,12 +707,15 @@ export class CooperativeMemberRequestsService {
     updateCooperativeMemberRequestDto: UpdateCooperativeMemberRequestDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      this.logger.warn(updateCooperativeMemberRequestDto)
       const { data, error } = await this.postgresrest
         .from('cooperative_member_requests')
         .update(updateCooperativeMemberRequestDto)
         .eq('member_id', id)
-        .select()
-        .single();
+      /*
+      .select()
+      .single();
+      */
       if (error) {
         this.logger.error(
           `Error updating CooperativeMemberRequests ${id}`,
@@ -430,7 +726,7 @@ export class CooperativeMemberRequestsService {
       return {
         statusCode: 200,
         message: 'Cooperative member request updated successfully',
-        data: data as CooperativeMemberRequest,
+        data: data,
       };
     } catch (error) {
       this.logger.error(

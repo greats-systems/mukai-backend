@@ -112,6 +112,11 @@ export class CooperativesService {
           message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
         };
 
+        // Check if exchange rate exists
+        if (!createCooperativeDto.exchange_rate) {
+          createCooperativeDto.exchange_rate = 1;
+        }
+
         const { data: log, error: logError } = await this.postgresrest
           .from('system_logs')
           .insert(slDto)

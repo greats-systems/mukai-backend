@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
@@ -21,7 +22,6 @@ import { TransactionsService } from './transactions.service';
 import { Group } from '../entities/group.entity';
 import { Profile } from 'src/user/entities/user.entity';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-import { SignupDto } from 'src/auth/dto/signup.dto';
 import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
 import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
@@ -49,19 +49,24 @@ export class CooperativesService {
     platform: string,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     try {
+      // Initialize system log
       const slDto = new CreateSystemLogDto();
       slDto.platform = platform;
       slDto.profile_id = logged_in_user_id;
       slDto.action = 'create cooperative';
       slDto.request = createCooperativeDto;
+
+      // Initialize services
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const walletsService = new WalletsService(this.postgresrest);
       const scwService = new SmileCashWalletService(this.postgresrest);
 
-      this.logger.debug(createCooperativeDto);
+      this.logger.debug(
+        'Creating cooperative with data:',
+        createCooperativeDto,
+      );
 
-      // 1. Check for existing coop and user in parallel
-
+      // 1. Check for existing cooperative and user profile in parallel
       const [existingCoopResult, existingUserResult] = await Promise.all([
         this.postgresrest
           .from('cooperatives')
@@ -79,102 +84,64 @@ export class CooperativesService {
           .eq('phone', createCooperativeDto.coop_phone),
       ]);
 
-      // Handle errors for both queries
+      // Handle query errors
       if (existingCoopResult.error) {
         this.logger.error(
-          `Failed to check for existing coop: ${JSON.stringify(existingCoopResult.error)}`,
+          'Failed to check for existing coop:',
+          existingCoopResult.error,
         );
         return new GeneralErrorResponseDto(
           400,
-          existingCoopResult.error.message,
+          'Failed to validate cooperative information',
           existingCoopResult.error,
         );
       }
 
       if (existingUserResult.error) {
         this.logger.error(
-          `Failed to check for user profile: ${JSON.stringify(existingUserResult.error)}`,
+          'Failed to check for user profile:',
+          existingUserResult.error,
         );
         return new GeneralErrorResponseDto(
           400,
-          existingUserResult.error.message,
+          'Failed to validate user information',
           existingUserResult.error,
         );
       }
 
-      // Check if cooperative already exists (data array is NOT empty)
+      // Check if cooperative already exists
       if (existingCoopResult.data) {
-        this.logger.log(
-          `Coop already exists: ${JSON.stringify(existingCoopResult.data)}`,
+        this.logger.warn(
+          'Cooperative already exists:',
+          existingCoopResult.data,
         );
+
         slDto.response = {
           statusCode: 409,
           message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
         };
 
-        // Check if exchange rate exists
-        if (!createCooperativeDto.exchange_rate) {
-          createCooperativeDto.exchange_rate = 1;
-        }
+        await this.postgresrest.from('system_logs').insert(slDto);
 
-        const { data: log, error: logError } = await this.postgresrest
-          .from('system_logs')
-          .insert(slDto)
-          .select()
-          .single();
-        if (logError) {
-          return new ErrorResponseDto(400, 'Failed to insert log', logError);
-        }
-        this.logger.warn('Log created', log);
         return new GeneralErrorResponseDto(
           409,
-          `A cooperative with these details already exists`,
+          'A cooperative with these details already exists',
           existingCoopResult.data,
         );
       }
 
       // Check if user profile exists for the phone number
-
       if (existingUserResult.data.length > 0) {
-        this.logger.debug(
-          `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
-        );
-        this.logger.log(
-          `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
+        this.logger.warn(
+          `User with phone ${createCooperativeDto.coop_phone} already exists`,
         );
         return new GeneralErrorResponseDto(
           409,
-          `A user with the phone ${createCooperativeDto.coop_phone} already exists`,
-          // null,
+          `A user with the phone number ${createCooperativeDto.coop_phone} already exists`,
         );
       }
 
-      /*
-      // Handle existing user check
-      if (existingUserResult.data.length > 0) {
-        this.logger.error(
-          `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
-        );
-        return new GeneralErrorResponseDto(
-          422,
-          'User already exists',
-          existingUserResult.data,
-          // existingUserResult.error,
-        );
-      }
-      if (existingUserResult.data.length > 0) {
-        this.logger.log(
-          `User found: ${JSON.stringify(existingUserResult.data)}`,
-        );
-        return new GeneralErrorResponseDto(
-          409,
-          'This phone number is taken by another user. Please edit your coop info',
-          existingUserResult,
-        );
-      }
-      */
-
-      // Fetch service centre ID for given nearest service centre
+      // Handle service centre lookup
       if (createCooperativeDto.service_centre) {
         const { data: serviceCentreData, error: serviceCentreError } =
           await this.postgresrest
@@ -182,23 +149,27 @@ export class CooperativesService {
             .select()
             .eq('location', createCooperativeDto.service_centre)
             .single();
+
         if (serviceCentreError) {
-          slDto.response = serviceCentreError;
-          await this.postgresrest.from('system_logs').insert(slDto);
           this.logger.error(
-            'Failed to fetch service centre',
+            'Failed to fetch service centre:',
             serviceCentreError,
           );
           return new ErrorResponseDto(
             400,
-            'Failed to fetch service centre',
+            'Invalid service centre provided',
             serviceCentreError,
           );
         }
         createCooperativeDto.service_centre = serviceCentreData.id;
       }
 
-      // 2. Create cooperative
+      // Set default exchange rate if not provided
+      if (!createCooperativeDto.exchange_rate) {
+        createCooperativeDto.exchange_rate = 1;
+      }
+
+      // 2. Create cooperative record
       const { data: createCooperativeResponse, error: coopError } =
         await this.postgresrest
           .from('cooperatives')
@@ -207,13 +178,17 @@ export class CooperativesService {
           .single();
 
       if (coopError) {
-        this.logger.error(`Error creating coop: ${JSON.stringify(coopError)}`);
-        return new GeneralErrorResponseDto(400, coopError.message, coopError);
+        this.logger.error('Error creating cooperative:', coopError);
+        return new GeneralErrorResponseDto(
+          400,
+          'Failed to create cooperative',
+          coopError,
+        );
       }
 
       const coopId = createCooperativeResponse.id;
 
-      // 3. Create group member
+      // 3. Create group member record
       const createGroupMemberDto = new CreateGroupMemberDto();
       createGroupMemberDto.cooperative_id = coopId;
       createGroupMemberDto.member_id = createCooperativeDto.admin_id!;
@@ -221,10 +196,12 @@ export class CooperativesService {
       const groupMemberResponse =
         await groupMembersService.createGroupMember(createGroupMemberDto);
       if (groupMemberResponse instanceof ErrorResponseDto) {
+        // Rollback cooperative creation if group member fails
+        await this.postgresrest.from('cooperatives').delete().eq('id', coopId);
         return groupMemberResponse;
       }
 
-      // 4. Check balances in parallel
+      // 4. Check SmileCash wallet balances and register if needed
       const [scwBalanceResponse, scwBalanceResponseZWG] = await Promise.all([
         scwService.balanceEnquiry({
           transactorMobile: createCooperativeDto.coop_phone,
@@ -238,113 +215,210 @@ export class CooperativesService {
         } as BalanceEnquiryRequest),
       ]);
 
-      // 5. Create wallet
+      // Initialize wallet DTO
       const createWalletDto = new CreateWalletDto();
       createWalletDto.profile_id = createCooperativeDto.admin_id;
       createWalletDto.coop_phone = createCooperativeDto.coop_phone;
       createWalletDto.default_currency = 'usd';
       createWalletDto.is_group_wallet = true;
       createWalletDto.group_id = coopId;
+      createWalletDto.balance = 0.0;
+      createWalletDto.balance_zwg = 0.0;
 
-      if (
-        scwBalanceResponse instanceof GeneralErrorResponseDto ||
-        scwBalanceResponseZWG instanceof GeneralErrorResponseDto
-      ) {
-        createWalletDto.balance = 0.0;
-        createWalletDto.balance_zwg = 0.0;
+      // Check if SmileCash wallet needs to be registered
+      let smileCashWalletRegistered = false;
+      let smileCashWalletError: any = null;
 
-        const { data, error } = await this.postgresrest
-          .from('profiles')
-          .select()
-          .eq('id', createCooperativeDto.admin_id)
-          .maybeSingle();
+      const isAccountNotFoundError = (response: any): boolean => {
+        return (
+          response instanceof GeneralErrorResponseDto &&
+          response.statusCode === 304
+        );
+      };
 
-        if (error) {
-          return new GeneralErrorResponseDto(
-            400,
-            'Failed to fetch admin',
-            error,
-          );
-        }
-
-        const user = data as SignupDto;
-        const scwRequest = {
-          firstName: user.first_name,
-          lastName: user.last_name,
-          mobile: createCooperativeDto.coop_phone,
-          dateOfBirth: user.date_of_birth,
-          idNumber: user.national_id_number,
-          gender: user.gender?.toUpperCase(),
-          source: 'Smile SACCO',
-        } as CreateWalletRequest;
-
-        const scwResponse = await scwService.createWallet(scwRequest);
-        if (
-          scwResponse instanceof GeneralErrorResponseDto &&
-          scwResponse.statusCode != 409
-        ) {
-          return scwResponse;
-        }
-      }
-
+      // Process USD balance response
       if (scwBalanceResponse instanceof SuccessResponseDto) {
         createWalletDto.balance =
           scwBalanceResponse.data.data.billerResponse.balance;
+        smileCashWalletRegistered = true;
+        this.logger.debug(`USD balance found: ${createWalletDto.balance}`);
+      } else if (isAccountNotFoundError(scwBalanceResponse)) {
+        this.logger.debug(
+          'USD SmileCash wallet not found, will attempt registration',
+        );
+      } else {
+        this.logger.warn(
+          'Unexpected error checking USD balance:',
+          scwBalanceResponse,
+        );
       }
 
+      // Process ZWG balance response
+      if (scwBalanceResponseZWG instanceof SuccessResponseDto) {
+        createWalletDto.balance_zwg =
+          scwBalanceResponseZWG.data.data.billerResponse.balance;
+        smileCashWalletRegistered = true;
+        this.logger.debug(`ZWG balance found: ${createWalletDto.balance_zwg}`);
+      } else if (isAccountNotFoundError(scwBalanceResponseZWG)) {
+        this.logger.debug(
+          'ZWG SmileCash wallet not found, will attempt registration',
+        );
+      } else {
+        this.logger.warn(
+          'Unexpected error checking ZWG balance:',
+          scwBalanceResponseZWG,
+        );
+      }
+
+      // Register SmileCash wallet if not found
+      if (!smileCashWalletRegistered) {
+        try {
+          // Fetch admin user details for wallet registration
+          const { data: adminData, error: adminError } = await this.postgresrest
+            .from('profiles')
+            .select(
+              'first_name, last_name, date_of_birth, national_id_number, gender',
+            )
+            .eq('id', createCooperativeDto.admin_id!)
+            .single();
+
+          if (adminError) {
+            this.logger.error(
+              'Failed to fetch admin details for wallet registration:',
+              adminError,
+            );
+            smileCashWalletError = adminError;
+          } else {
+            // Prepare and send wallet registration request
+            const scwRequest: CreateWalletRequest = {
+              firstName: adminData.first_name,
+              lastName: adminData.last_name,
+              mobile: createCooperativeDto.coop_phone!,
+              dateOfBirth: adminData.date_of_birth,
+              idNumber: adminData.national_id_number,
+              gender: adminData.gender.toUpperCase(),
+              source: 'Smile SACCO',
+            };
+
+            this.logger.debug(
+              'Attempting to register SmileCash wallet:',
+              scwRequest,
+            );
+
+            const scwResponse = await scwService.createWallet(scwRequest);
+
+            if (scwResponse instanceof SuccessResponseDto) {
+              this.logger.log('SmileCash wallet registered successfully');
+              smileCashWalletRegistered = true;
+            } else if (scwResponse instanceof GeneralErrorResponseDto) {
+              // Handle specific error cases
+              if (scwResponse.statusCode === 409) {
+                this.logger.log('SmileCash wallet already exists');
+                smileCashWalletRegistered = true;
+              } else {
+                this.logger.error(
+                  'Failed to register SmileCash wallet:',
+                  scwResponse,
+                );
+                smileCashWalletError = scwResponse;
+              }
+            }
+          }
+        } catch (walletError) {
+          this.logger.error(
+            'Exception during SmileCash wallet registration:',
+            walletError,
+          );
+          smileCashWalletError = walletError;
+        }
+      }
+
+      // 5. Create internal wallet record
       const walletResponse = await walletsService.createWallet(createWalletDto);
       if (walletResponse instanceof ErrorResponseDto) {
+        // Cleanup on wallet creation failure
+        await Promise.all([
+          this.postgresrest.from('cooperatives').delete().eq('id', coopId),
+          this.postgresrest
+            .from('group_members')
+            .delete()
+            .eq('cooperative_id', coopId),
+        ]);
         return walletResponse;
       }
 
-      // 6. Update cooperative wallet
+      // 6. Update cooperative with wallet ID
       const updateCoopDto = new UpdateCooperativeDto();
       updateCoopDto.wallet_id = walletResponse['data']['id'];
-      updateCoopDto.id = coopId;
 
       const updateCoopResponse = await this.updateCooperativeWallet(
-        updateCoopDto.id!.toString(),
+        coopId.toString(),
         updateCoopDto,
       );
 
-      this.logger.debug('updateCoopResponse');
-      this.logger.debug(updateCoopResponse);
-
-      // 7. Update admin profile
-      const updateUserDto = new SignupDto();
-      updateUserDto.id = createCooperativeDto.admin_id!;
-      updateUserDto.coop_phone = createCooperativeDto.coop_phone!;
-
-      const { data: updateResponse, error: updateError } =
-        await this.postgresrest
-          .from('profiles')
-          .update(updateUserDto)
-          .eq('id', updateUserDto.id)
-          .select()
-          .maybeSingle();
-
-      if (updateError) {
-        return new ErrorResponseDto(400, JSON.stringify(updateError));
+      if (updateCoopResponse instanceof ErrorResponseDto) {
+        this.logger.error(
+          'Failed to update cooperative wallet reference:',
+          updateCoopResponse,
+        );
       }
 
-      this.logger.debug(`Update response: ${JSON.stringify(updateResponse)}`);
+      // 7. Update admin profile with coop phone
+      const updateUserDto = {
+        coop_phone: createCooperativeDto.coop_phone,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: updateError } = await this.postgresrest
+        .from('profiles')
+        .update(updateUserDto)
+        .eq('id', createCooperativeDto.admin_id!);
+
+      if (updateError) {
+        this.logger.warn(
+          'Failed to update admin profile with coop phone:',
+          updateError,
+        );
+      }
+
+      // Log successful creation
       slDto.response = {
         statusCode: 201,
         message: 'Cooperative created successfully',
+        metadata: {
+          smileCashWalletRegistered,
+          smileCashWalletError: smileCashWalletError
+            ? smileCashWalletError.message
+            : null,
+          initialBalance: createWalletDto.balance,
+          initialBalanceZWG: createWalletDto.balance_zwg,
+        },
       };
-      const { data: log, error: logError } = await this.postgresrest
-        .from('system_logs')
-        .insert(slDto)
-        .select()
-        .single();
-      if (logError) {
-        return new ErrorResponseDto(400, 'Failed to insert log', logError);
-      }
-      this.logger.warn('Log created', log);
 
-      return createCooperativeResponse as Cooperative;
+      const { error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto);
+
+      if (logError) {
+        this.logger.error('Failed to insert system log:', logError);
+      }
+
+      this.logger.log(
+        `Cooperative ${createCooperativeDto.name} created successfully with ID: ${coopId}`,
+      );
+
+      // Return cooperative data
+      return {
+        ...createCooperativeResponse,
+        wallet_id: updateCoopDto.wallet_id,
+      } as Cooperative;
     } catch (error) {
-      return new ErrorResponseDto(500, error);
+      this.logger.error('Unexpected error in createCooperative:', error);
+      return new ErrorResponseDto(
+        500,
+        'An unexpected error occurred while creating the cooperative',
+        error,
+      );
     }
   }
 

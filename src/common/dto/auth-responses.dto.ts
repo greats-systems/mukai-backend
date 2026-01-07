@@ -129,7 +129,7 @@ export class AuthLoginSuccessResponse {
     description: 'Status message',
     example: 'account authenticated',
   })
-  status: string;
+  status?: string;
 
   @ApiProperty({
     description: 'HTTP status code',

@@ -27,8 +27,8 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
 @ApiTags('Loans')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
@@ -176,8 +176,8 @@ export class LoanController {
   @Get('cooperative/:cooperative_id')
   @ApiOperation({ summary: 'Get list of coop loans' })
   @ApiParam({
-    name: 'profile_id',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    name: 'cooperative_id',
+    example: '7d97dad4-9f19-4f76-b8e4-93e110bf293d',
     description: 'Cooperative ID',
   })
   @ApiResponse({
@@ -198,14 +198,11 @@ export class LoanController {
     description: 'Internal server error',
   })
   async viewCoopLoans(
-    @Param('cooperative_id') profile_id,
+    @Param('cooperative_id') cooperative_id,
     @Body() profileBody: object,
   ) {
-    console.debug(`viewCoopLoans profile_id: ${profileBody['profile_id']}`);
-    const response = await this.loanService.viewCoopLoans(
-      profile_id,
-      profileBody['profile_id'],
-    );
+    console.debug(`viewCoopLoans cooperative_id: ${cooperative_id}`);
+    const response = await this.loanService.viewCoopLoans(cooperative_id);
     if (response['statusCode'] === 400) {
       throw new HttpException(response['message'], HttpStatus.BAD_REQUEST);
     }

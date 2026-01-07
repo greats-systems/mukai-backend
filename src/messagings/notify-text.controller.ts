@@ -1,11 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Controller, Post, Body } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiExcludeController,
-} from '@nestjs/swagger';
+import { ApiTags, ApiExcludeController } from '@nestjs/swagger';
 import { NotifyTextService } from './notify_text.service';
 
 @ApiTags('text')

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -488,23 +487,14 @@ export class LoanService {
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
       createLoanDto.created_at = DateTime.now().toISO();
-      createLoanDto.remaining_balance = createLoanDto.total_repayment_amount;
-      const { data: loanResponse, error } = await this.postgresrest
-        .from('loans')
-        .insert(createLoanDto)
-        .select()
-        .single();
-      if (error) {
-        this.logger.log(error);
-        return new ErrorResponseDto(400, error.details);
-      }
-      return loanResponse as Loan;
       /*
       // Check if the user has an existing loan
       const hasActiveLoan = await this.hasActiveLoan(createLoanDto);
       if (hasActiveLoan instanceof ErrorResponseDto) {
         return hasActiveLoan;
       }
+      */
+      this.logger.warn('Create loan dto', createLoanDto);
       const { data: loanResponse, error } = await this.postgresrest
         .from('loans')
         .insert(createLoanDto)
@@ -583,6 +573,7 @@ export class LoanService {
     loanDto: CreateLoanDto,
   ): Promise<boolean | ErrorResponseDto> {
     try {
+      this.logger.debug(JSON.stringify(loanDto));
       const { data, error } = await this.postgresrest
         .from('loans')
         .select()
@@ -636,9 +627,9 @@ export class LoanService {
 
   async viewCoopLoans(
     cooperative_id: string,
-    profile_id: string,
+    // profile_id: string,
   ): Promise<Loan[] | ErrorResponseDto> {
-    this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
+    // this.logger.debug(`viewCoopLoans profile_id ${profile_id}`);
     try {
       const { data, error } = await this.postgresrest
         .from('loans')

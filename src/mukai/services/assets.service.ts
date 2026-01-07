@@ -11,9 +11,6 @@ import { Asset } from '../entities/asset.entity';
 import { CreateAssetDto } from '../dto/create/create-asset.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
-// import { CooperativeMemberApprovals } from '../entities/cooperative-member-approvals.entity';
-import { CooperativeMemberApprovalsService } from './cooperative-member-approvals.service';
-// import { CooperativesService } from './cooperatives.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
 
 function initLogger(funcname: Function): Logger {
@@ -56,10 +53,6 @@ export class AssetsService {
     createAssetDto: CreateAssetDto,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     const createCoopMemberApproval = new CreateCooperativeMemberApprovalsDto();
-    // const gmService = new GroupMemberService(this.postgresrest);
-    const coopMemberApprovalService = new CooperativeMemberApprovalsService(
-      this.postgresrest,
-    );
     try {
       this.logger.log(createAssetDto.group_id);
 
@@ -91,6 +84,7 @@ export class AssetsService {
       createCoopMemberApproval.additional_info = data['id'];
 
       // Create poll
+      /*
       const pollResponse =
         await coopMemberApprovalService.createCooperativeMemberApprovals(
           createCoopMemberApproval,
@@ -102,6 +96,7 @@ export class AssetsService {
         this.logger.log(pollResponse);
         return pollResponse;
       }
+      */
 
       return {
         statusCode: 201,

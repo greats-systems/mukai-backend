@@ -6,7 +6,11 @@
 import { Logger, Injectable } from '@nestjs/common';
 import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
-import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
+import {
+  CreateCooperativeDto,
+  FilterCooperativesDto,
+  FilterCooperativesLikeDto,
+} from '../dto/create/create-cooperative.dto';
 import { UpdateCooperativeDto } from '../dto/update/update-cooperative.dto';
 import { Cooperative } from '../entities/cooperative.entity';
 import { GroupMemberService } from './group-members.service';
@@ -23,6 +27,11 @@ import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { BalanceEnquiryRequest } from 'src/common/zb_smilecash_wallet/requests/transactions.requests';
 import { CreateWalletRequest } from 'src/common/zb_smilecash_wallet/requests/registration_and_auth.requests';
+import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+import { UpdateGroupMemberDto } from '../dto/update/update-group-members.dto';
+import { GroupMembers } from '../entities/group-members.entity';
+import { CooperativeMemberRequest } from '../entities/cooperative-member-request.entity';
+
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
 }
@@ -36,8 +45,15 @@ export class CooperativesService {
   ) {}
   async createCooperative(
     createCooperativeDto: CreateCooperativeDto,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'create cooperative';
+      slDto.request = createCooperativeDto;
       const groupMembersService = new GroupMemberService(this.postgresrest);
       const walletsService = new WalletsService(this.postgresrest);
       const scwService = new SmileCashWalletService(this.postgresrest);
@@ -45,7 +61,7 @@ export class CooperativesService {
       this.logger.debug(createCooperativeDto);
 
       // 1. Check for existing coop and user in parallel
-      /*
+
       const [existingCoopResult, existingUserResult] = await Promise.all([
         this.postgresrest
           .from('cooperatives')
@@ -53,7 +69,10 @@ export class CooperativesService {
           .eq('name', createCooperativeDto.name)
           .eq('coop_phone', createCooperativeDto.coop_phone)
           .eq('category', createCooperativeDto.category)
-          .eq('city', createCooperativeDto.city),
+          .eq('city', createCooperativeDto.city)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
         this.postgresrest
           .from('profiles')
           .select()
@@ -84,10 +103,24 @@ export class CooperativesService {
       }
 
       // Check if cooperative already exists (data array is NOT empty)
-      if (existingCoopResult.data && existingCoopResult.data.length > 0) {
+      if (existingCoopResult.data) {
         this.logger.log(
           `Coop already exists: ${JSON.stringify(existingCoopResult.data)}`,
         );
+        slDto.response = {
+          statusCode: 409,
+          message: `A cooperative called ${createCooperativeDto.name} with these details already exists`,
+        };
+
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to insert log', logError);
+        }
+        this.logger.warn('Log created', log);
         return new GeneralErrorResponseDto(
           409,
           `A cooperative with these details already exists`,
@@ -96,6 +129,7 @@ export class CooperativesService {
       }
 
       // Check if user profile exists for the phone number
+
       if (existingUserResult.data.length > 0) {
         this.logger.debug(
           `${JSON.stringify(existingUserResult.data.length)} user(s) found with the number ${createCooperativeDto.coop_phone}`,
@@ -109,16 +143,17 @@ export class CooperativesService {
           // null,
         );
       }
-      
 
+      /*
       // Handle existing user check
       if (existingUserResult.data.length > 0) {
         this.logger.error(
           `Failed to check for existing user: ${JSON.stringify(existingUserResult)}`,
         );
         return new GeneralErrorResponseDto(
-          400,
-          JSON.stringify(existingUserResult.data),
+          422,
+          'User already exists',
+          existingUserResult.data,
           // existingUserResult.error,
         );
       }
@@ -133,6 +168,31 @@ export class CooperativesService {
         );
       }
       */
+
+      // Fetch service centre ID for given nearest service centre
+      if (createCooperativeDto.service_centre) {
+        const { data: serviceCentreData, error: serviceCentreError } =
+          await this.postgresrest
+            .from('service_centres')
+            .select()
+            .eq('location', createCooperativeDto.service_centre)
+            .single();
+        if (serviceCentreError) {
+          slDto.response = serviceCentreError;
+          await this.postgresrest.from('system_logs').insert(slDto);
+          this.logger.error(
+            'Failed to fetch service centre',
+            serviceCentreError,
+          );
+          return new ErrorResponseDto(
+            400,
+            'Failed to fetch service centre',
+            serviceCentreError,
+          );
+        }
+        createCooperativeDto.service_centre = serviceCentreData.id;
+      }
+
       // 2. Create cooperative
       const { data: createCooperativeResponse, error: coopError } =
         await this.postgresrest
@@ -206,10 +266,10 @@ export class CooperativesService {
         const scwRequest = {
           firstName: user.first_name,
           lastName: user.last_name,
-          mobile: user.phone,
+          mobile: createCooperativeDto.coop_phone,
           dateOfBirth: user.date_of_birth,
           idNumber: user.national_id_number,
-          gender: user.gender.toUpperCase(),
+          gender: user.gender?.toUpperCase(),
           source: 'Smile SACCO',
         } as CreateWalletRequest;
 
@@ -262,6 +322,21 @@ export class CooperativesService {
         return new ErrorResponseDto(400, JSON.stringify(updateError));
       }
 
+      this.logger.debug(`Update response: ${JSON.stringify(updateResponse)}`);
+      slDto.response = {
+        statusCode: 201,
+        message: 'Cooperative created successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
+
       return createCooperativeResponse as Cooperative;
     } catch (error) {
       return new ErrorResponseDto(500, error);
@@ -270,8 +345,15 @@ export class CooperativesService {
 
   async initializeMembers(
     member_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<object[] | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'fetch coops to which a user belongs';
+      slDto.request = member_id;
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select()
@@ -281,31 +363,74 @@ export class CooperativesService {
         return new ErrorResponseDto(400, 'Error initializing members', error);
       }
       this.logger.log(`initializeMembers data: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Faield to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
       return data;
     } catch (error) {
       return new ErrorResponseDto(500, 'Error initializing members', error);
     }
   }
 
-  async findAllCooperatives(): Promise<Cooperative[] | ErrorResponseDto> {
+  async findAllCooperatives(
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<object | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'fetch all cooperatives';
       const { data, error } = await this.postgresrest
         .from('cooperatives')
         .select('*, cooperatives_admin_id_fkey(*)');
 
       if (error) {
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Faield to create log', logError);
+        }
+        this.logger.warn('Log created', log);
         this.logger.error('Error fetching Cooperatives', error);
         return new ErrorResponseDto(400, error.details);
       }
-      this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      return data as Cooperative[];
+      // this.logger.log(`Coop data: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: ' Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Faield to create log', logError);
+      }
+      this.logger.warn('Log created', log);
+      return data;
     } catch (error) {
       this.logger.error('Exception in findAllCooperatives', error);
       return new ErrorResponseDto(500, error);
     }
   }
 
-  async viewCooperative(id: string): Promise<Cooperative | ErrorResponseDto> {
+  async viewCooperative(id: string): Promise<object | ErrorResponseDto> {
     try {
       const { data, error } = await this.postgresrest
         .from('cooperatives')
@@ -327,8 +452,7 @@ export class CooperativesService {
       if (!data) {
         return new ErrorResponseDto(404, `Cooperative with id ${id} not found`);
       }
-      // this.logger.log(`Coop data: ${JSON.stringify(data)}`);
-      return data as Cooperative;
+      return data;
     } catch (error) {
       this.logger.error(`Exception in viewCooperative for id ${id}`, error);
       return new ErrorResponseDto(
@@ -426,15 +550,25 @@ export class CooperativesService {
 
   async viewCooperativeMembers(
     cooperative_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<Profile[] | Profile | ErrorResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.platform = platform;
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = `view members of cooperative ${cooperative_id}`;
+      slDto.request = `${cooperative_id}/members`;
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('member_id, profiles(*)')
         .eq('cooperative_id', cooperative_id)
+        .neq('member_id', logged_in_user_id)
         .order('created_at', { ascending: false });
 
       if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
         this.logger.error(
           `Error fetching members for cooperative ${cooperative_id}`,
           error,
@@ -443,6 +577,11 @@ export class CooperativesService {
       }
 
       if (!data || data.length === 0) {
+        slDto.response = {
+          statusCode: 404,
+          message: 'Members not found',
+        };
+        await this.postgresrest.from('system_logs').insert(slDto);
         return new ErrorResponseDto(
           404,
           `Members in cooperative with id ${cooperative_id} not found`,
@@ -481,6 +620,7 @@ export class CooperativesService {
         .select()
         .ilike('account_type', '%member%')
         .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
         .is('cooperative_id', null)
         .order('created_at', { ascending: false })
         .order('first_name', { ascending: true });
@@ -513,10 +653,555 @@ export class CooperativesService {
     }
   }
 
+  async filterCooperatives(
+    fcDto: FilterCooperativesDto,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'search for cooperatives to join';
+      slDto.request = fcDto;
+      slDto.platform = platform;
+      // this.logger.debug(`fcDto: ${JSON.stringify(fcDto)}`);
+      const coopsList: Cooperative[] = [];
+      if (!fcDto.category && !fcDto.city && !fcDto.province) {
+        const { data, error } = await this.postgresrest
+          .from('cooperatives')
+          .select()
+          .order('name', { ascending: true });
+        if (error) {
+          this.logger.error('Failed to filer cooperatives', error);
+        }
+        // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+        const coops = data as Cooperative[];
+        for (const coop of coops) {
+          // Check if the member is already active in a coop
+          this.logger.warn(coop.name);
+          const { data: active, error: activeError } = await this.postgresrest
+            .from('group_members')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (activeError && activeError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch group members', activeError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch group members',
+              activeError,
+            );
+          }
+          this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+          const { data: request, error: requestError } = await this.postgresrest
+            .from('cooperative_member_requests')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .or('status.eq.unresolved,status.eq.invited')
+            .limit(1)
+            .single();
+          if (requestError && requestError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch coop request', requestError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch coop request',
+              requestError,
+            );
+          }
+          this.logger.debug(
+            `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+          );
+          // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
+          if (!active && !request) {
+            coopsList.push(coop);
+          }
+        }
+      } else {
+        this.logger.warn(`FiletrCooperativesDto: ${JSON.stringify(fcDto)}`);
+        const { data, error } = await this.postgresrest
+          .from('cooperatives')
+          .select()
+          .match({
+            category: fcDto.category,
+            // province_state: fcDto.province,
+            // city: fcDto.city,
+          })
+          .or(`province_state.eq.${fcDto.province},city.eq.${fcDto.city}`)
+          .order('name', { ascending: true });
+        if (error) {
+          this.logger.error('Failed to filer cooperatives', error);
+        }
+        // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+        const coops = data as Cooperative[];
+        for (const coop of coops) {
+          // Check if the member is already active in a coop
+          this.logger.warn(coop.name);
+          const { data: active, error: activeError } = await this.postgresrest
+            .from('group_members')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .limit(1)
+            .single();
+          if (activeError && activeError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch group members', activeError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch group members',
+              activeError,
+            );
+          }
+          this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+          const { data: request, error: requestError } = await this.postgresrest
+            .from('cooperative_member_requests')
+            .select()
+            .eq('cooperative_id', coop.id)
+            .eq('member_id', fcDto.profile_id)
+            .or('status.eq.unresolved,status.eq.invited')
+            .limit(1)
+            .single();
+          if (requestError && requestError.code != 'PGRST116') {
+            this.logger.error('Failed to fetch coop request', requestError);
+            return new GeneralErrorResponseDto(
+              400,
+              'Failed to fetch coop request',
+              requestError,
+            );
+          }
+          this.logger.debug(
+            `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+          );
+          // Append the list if the user is not in the specified group, and does not have a request to join said grou[]
+          if (!active && !request) {
+            coopsList.push(coop);
+          }
+        }
+      }
+
+      slDto.response = {
+        statusCode: 200,
+        message: 'Filtered cooperatives fetched successfully',
+      };
+
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
+
+      return new SuccessResponseDto(
+        200,
+        'Filtered cooperatives fetched successfully',
+        coopsList as object[],
+      );
+    } catch (e) {
+      this.logger.error('filterCooperatives error', e);
+      return new GeneralErrorResponseDto(500, 'filterCooperatives error', e);
+    }
+  }
+
+  async fetchCoopInterestRate(
+    cooperative_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select('interest_rate')
+        .eq('id', cooperative_id)
+        .maybeSingle();
+      if (error) {
+        this.logger.error('Error fetching coop interest rate', error);
+        return new ErrorResponseDto(
+          400,
+          'Error fetching coop interest rate',
+          error,
+        );
+      }
+      return new SuccessResponseDto(
+        200,
+        'Coop interest rate fetched successfully',
+        data as object,
+      );
+    } catch (e) {
+      this.logger.error('fetchCoopInterestRate error', e);
+      return new ErrorResponseDto(500, 'fetchCoopInterestRate error', e);
+    }
+  }
+
+  async filterCooperativesLike(
+    fclDto: FilterCooperativesLikeDto,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | GeneralErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = `filter cooperatives like ${fclDto.search_term}`;
+      slDto.request = fclDto;
+      this.logger.debug(`fclDto: ${JSON.stringify(fclDto)}`);
+      const coopsList: Cooperative[] = [];
+      const { data, error } = await this.postgresrest
+        .from('cooperatives')
+        .select()
+        .or(
+          `category.ilike.%${fclDto.search_term}%,name.ilike.%${fclDto.search_term}%,city.ilike.%${fclDto.search_term}%`,
+        )
+        .order('name', { ascending: true });
+      if (error) {
+        this.logger.error('Failed to filer cooperatives', error);
+      }
+      // this.logger.log(`Filtered coops: ${JSON.stringify(data)}`);
+
+      const coops = data as Cooperative[];
+      for (const coop of coops) {
+        // Check if the member is already active in a coop
+        this.logger.warn(coop.name);
+        const { data: active, error: activeError } = await this.postgresrest
+          .from('group_members')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (activeError && activeError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch group members', activeError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch group members',
+            activeError,
+          );
+        }
+        this.logger.warn(`group mambers: ${JSON.stringify(active)}`);
+        const { data: request, error: requestError } = await this.postgresrest
+          .from('cooperative_member_requests')
+          .select()
+          .eq('cooperative_id', coop.id)
+          .eq('member_id', fclDto.profile_id)
+          .limit(1)
+          .single();
+        if (requestError && requestError.code != 'PGRST116') {
+          this.logger.error('Failed to fetch coop request', requestError);
+          return new GeneralErrorResponseDto(
+            400,
+            'Failed to fetch coop request',
+            requestError,
+          );
+        }
+        this.logger.debug(
+          `active: ${JSON.stringify(active)}, request: ${JSON.stringify(request)}`,
+        );
+        // Append the list if the user is not in the specified group, and does not have a request to join said group
+        if (!active && !request) {
+          coopsList.push(coop);
+        }
+      }
+
+      slDto.response = {
+        statusCode: 200,
+        message: 'Filtered cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
+
+      return new SuccessResponseDto(
+        200,
+        'Filtered cooperatives fetched successfully',
+        coopsList as object[],
+      );
+    } catch (e) {
+      this.logger.error('filterCooperatives error', e);
+      return new GeneralErrorResponseDto(500, 'filterCooperatives error', e);
+    }
+  }
+
+  async viewAvailableMembersLike(
+    searchTerm: string,
+  ): Promise<Profile[] | Profile | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('profiles')
+        .select()
+        .ilike('account_type', '%member%')
+        .or(
+          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
+        )
+        .or('is_invited.is.null,is_invited.eq.false')
+        .or('has_requested.is.null,has_requested.eq.false')
+        .is('cooperative_id', null)
+        .order('created_at', { ascending: false })
+        .order('first_name', { ascending: true });
+
+      if (error) {
+        this.logger.error(`Error fetching available members`, error);
+        return new ErrorResponseDto(400, error.details);
+      }
+
+      this.logger.log(`viewAvailableMembers data: ${JSON.stringify(data)}`);
+
+      if (!data || data.length === 0) {
+        return new ErrorResponseDto(404, `Members not found`);
+      }
+
+      // Extract profiles from the data
+      const profiles = data.flatMap((item) => item.profiles);
+
+      if (profiles.length === 0) {
+        return new ErrorResponseDto(404, `No member profiles found`);
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.error(`Exception in viewAvailableMembers`, error);
+      return new ErrorResponseDto(
+        500,
+        error instanceof Error ? error.message : 'Internal server error',
+      );
+    }
+  }
+
+  async fetchCoopsGenderDemographicsView(
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative gender demographics';
+      const { data, error } = await this.postgresrest
+        .from('coops_gender_demographics_view')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative gender demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative gender demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative gender demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsGenderDemographicsView error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopsGenderDemographicsView error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopAgeDemographicsAnalytics(
+    lower_bound: number,
+    upper_bound: number,
+    logged_in_user_id: string,
+    platform: string,
+  ) {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperative age demographics';
+      slDto.request = `?lower_bound=${lower_bound}&upper_bound=${upper_bound}`;
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_age_demographics_analytics',
+        {
+          lower_bound: lower_bound,
+          upper_bound: upper_bound,
+        },
+      );
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative age demographics',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperative age demographics fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperative age demographics fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopAgeDemographicsAnalytics error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopAgeDemographicsAnalytics error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopsForServiceCentre(
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperatives for service centre';
+      // Implement function logic here
+      const { data, error } = await this.postgresrest
+        .from('service_centre_coops')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error(
+          'Failed to fetch cooperatives for service centre',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperatives for service centre',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives for service centre fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperatives for service centre fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsForServiceCentre error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopsForServiceCentre error',
+        error,
+      );
+    }
+  }
+
+  async setCoopExchangeRate(
+    cooperative_id: string,
+    exchange_rate: number,
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.action = 'set exchange rate';
+      slDto.platform = platform;
+      slDto.request = `?cooperative_id=${cooperative_id}&exchange_rate=${exchange_rate}`;
+      // Insert into exchange rates table
+      const { data, error } = await this.postgresrest
+        .from('coop_exchange_rates')
+        .insert({
+          cooperative_id: cooperative_id,
+          exchange_rate: exchange_rate,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to set exchange rate', error);
+        return new ErrorResponseDto(400, 'Failed to set exchange rate', error);
+      }
+
+      this.logger.warn('Exchange rate created', data);
+
+      // Update cooperative
+      const { data: update, error: updateError } = await this.postgresrest
+        .from('cooperatives')
+        .update({
+          exchange_rate: exchange_rate,
+        })
+        .eq('id', cooperative_id)
+        .select()
+        .single();
+      if (updateError) {
+        slDto.response = updateError;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to update cooperatives', updateError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to update cooperative',
+          updateError,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      this.logger.debug('Exchange rate updated successfully');
+      slDto.response = {
+        statusCode: 200,
+        message: 'Exchange rate updated successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Exchange rate updated successfully',
+        update,
+      );
+    } catch (error) {
+      this.logger.error('setExchangeRate error', error);
+      return new ErrorResponseDto(500, 'setExchangeRate error', error);
+    }
+  }
+
   async viewCooperativesForMember(
     member_id: string,
+    logged_in_user_id: string,
+    platform: string,
   ): Promise<Group[] | ErrorResponseDto | SuccessResponseDto> {
     try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'fetch cooperatives for member';
+      slDto.request = member_id;
       const { data, error } = await this.postgresrest
         .from('group_members')
         .select('*,coop_members_cooperative_id_fkey(*)')
@@ -525,9 +1210,32 @@ export class CooperativesService {
 
       if (error) {
         this.logger.error('Error fetching cooperative', error);
+        slDto.response = error;
+        const { data: log, error: logError } = await this.postgresrest
+          .from('system_logs')
+          .insert(slDto)
+          .select()
+          .single();
+        if (logError) {
+          return new ErrorResponseDto(400, 'Failed to insert log', logError);
+        }
+        this.logger.warn('Log created', log);
         return new ErrorResponseDto(400, error.details);
       }
       // this.logger.debug(`Coops for ${member_id}: ${JSON.stringify(data)}`);
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives fetched successfully',
+      };
+      const { data: log, error: logError } = await this.postgresrest
+        .from('system_logs')
+        .insert(slDto)
+        .select()
+        .single();
+      if (logError) {
+        return new ErrorResponseDto(400, 'Failed to insert log', logError);
+      }
+      this.logger.warn('Log created', log);
       return {
         statusCode: 200,
         message: 'Cooperatives fetched successfully',
@@ -577,6 +1285,7 @@ export class CooperativesService {
       );
       const transactionsService = new TransactionsService(
         this.postgresrest,
+        undefined,
         // this.smileWalletService,
       );
       const subsDict: object[] = [];
@@ -642,7 +1351,7 @@ export class CooperativesService {
         .select()
         .maybeSingle();
       if (error) {
-        this.logger.error(`Error updating Cooperatives ${id}`, error);
+        this.logger.error(`Error updating cooperatives ${id}`, error);
         return new ErrorResponseDto(400, error.details);
       }
 
@@ -653,44 +1362,155 @@ export class CooperativesService {
     }
   }
 
-  // async updateCooperative(
-  //   id: string,
-  //   updateCooperativeDto: UpdateCooperativeDto,
-  // ): Promise<CooperativeMemberApprovals | ErrorResponseDto> {
-  //   this.logger.log(updateCooperativeDto);
-  //   /**
-  //    * Before updating the interest rate, the members should vote on it first
-  //    */
-  //   try {
-  //     const cmaDto = new CreateCooperativeMemberApprovalsDto();
-  //     const cmaService = new CooperativeMemberApprovalsService(
-  //       this.postgresrest,
-  //     );
-  //     cmaDto.group_id = id;
-  //     cmaDto.poll_description = 'set interest rate';
-  //     cmaDto.additional_info = updateCooperativeDto.additional_info;
-  //     this.logger.log(cmaDto);
-  //     const cmaResponse =
-  //       await cmaService.createCooperativeMemberApprovals(cmaDto);
-  //     this.logger.log(cmaResponse);
-  //     /*
-  //     const { data, error } = await this.postgresrest
-  //       .from('cooperatives')
-  //       .update(updateCooperativeDto)
-  //       .eq('id', id)
-  //       .select()
-  //       .single();
-  //     if (error) {
-  //       this.logger.error(`Error updating Cooperatives ${id}`, error);
-  //       return new ErrorResponseDto(400, error.details);
-  //     }
-  //     */
-  //     return cmaResponse as CooperativeMemberApprovals;
-  //   } catch (error) {
-  //     this.logger.error(`Exception in updateCooperative for id ${id}`, error);
-  //     return new ErrorResponseDto(500, error);
-  //   }
-  // }
+  async exitCooperative(
+    gmDto: UpdateGroupMemberDto,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      this.logger.log(gmDto);
+      // Select group member record
+      const { data: gmData, error: gmError } = await this.postgresrest
+        .from('group_members')
+        .select()
+        .match({
+          cooperative_id: gmDto.cooperative_id,
+          member_id: gmDto.member_id,
+        })
+        .single();
+      if (gmError) {
+        this.logger.error('Failed to select member', gmError);
+        return new ErrorResponseDto(400, 'Failed to select member', gmError);
+      }
+
+      const groupMember = gmData as GroupMembers;
+
+      // Delete group member record
+      const { data: deleteData, error: deleteError } = await this.postgresrest
+        .from('group_members')
+        .delete()
+        .eq('id', groupMember.id);
+      if (deleteError) {
+        this.logger.error('Failed to delete member', deleteError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to delete member',
+          deleteError,
+        );
+      }
+      this.logger.log('Group member deleted', deleteData);
+
+      // Update cooperative size
+      const { data: memberCount, error: memberCountError } =
+        await this.postgresrest.rpc('fetch_coop_size', {
+          p_coop_id: gmDto.cooperative_id,
+        });
+      if (memberCountError) {
+        this.logger.error('Failed to get coop size', memberCountError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop size',
+          memberCountError,
+        );
+      }
+
+      const { data: updateCoop, error: updateCoopError } =
+        await this.postgresrest
+          .from('cooperatives')
+          .update({
+            no_of_members: memberCount,
+            updated_at: new Date(),
+          })
+          .eq('id', gmDto.cooperative_id);
+      if (updateCoopError) {
+        this.logger.error('Failed to update coop size', updateCoopError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop size',
+          updateCoopError,
+        );
+      }
+      this.logger.log('Coop size updated', updateCoop);
+
+      // Delete cooperative request
+      const { data: cmr, error: cmrError } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .select()
+        .match({
+          cooperative_id: gmDto.cooperative_id,
+          member_id: gmDto.member_id,
+        })
+        .eq('cooperative_id', gmDto.cooperative_id)
+        .eq('member_id', gmDto.member_id)
+        .single();
+      if (cmrError && cmrError.code != 'PGRST116') {
+        this.logger.error('Failed to fetch coop request for member', cmrError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coop request for member',
+          cmrError,
+        );
+      }
+      // this.logger.log(cmr);
+
+      const coopMemberRequest = cmr as CooperativeMemberRequest;
+      this.logger.log(coopMemberRequest);
+      const { data: deleteCmr, error: deleteCmrError } = await this.postgresrest
+        .from('cooperative_member_requests')
+        .delete()
+        .eq('id', coopMemberRequest.id);
+      if (deleteCmrError) {
+        this.logger.error(
+          'Failed to delete coop request for member',
+          deleteCmrError,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to delete coop request for member',
+          deleteCmrError,
+        );
+      }
+      this.logger.log('Coop member request deleted', deleteCmr);
+
+      // Check how many cooperatives the user is a part of
+      const { data: memberCoops, error: memberCoopsError } =
+        await this.postgresrest.rpc('fetch_coops_for_member', {
+          p_member_id: gmDto.member_id,
+        });
+      if (memberCoopsError) {
+        this.logger.error('Failed to fetch coops for member', memberCoopsError);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch coops for member',
+          memberCoopsError,
+        );
+      }
+      if (memberCoops < 1) {
+        // If the user belonged to 1 coop, they're neither invited nor have requested to join, and their cooperative id should be null
+        const { data: profile, error: profileError } = await this.postgresrest
+          .from('profiles')
+          .update({
+            cooperative_id: null,
+            is_invited: null,
+            has_requested: null,
+          })
+          .eq('id', gmDto.member_id)
+          .select()
+          .single();
+        if (profileError) {
+          this.logger.error('Failed to update profile', profileError);
+          return new ErrorResponseDto(
+            400,
+            'Failed to update profile',
+            profileError,
+          );
+        }
+        this.logger.log('Profile updated', profile);
+      }
+      return new SuccessResponseDto(200, 'Coop member deleted successfully');
+    } catch (error) {
+      this.logger.error('exitCooperative error', error);
+      return new ErrorResponseDto(500, 'exitCooperative error', error);
+    }
+  }
 
   async updateCooperative(
     id: string,

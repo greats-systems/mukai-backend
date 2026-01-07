@@ -42,6 +42,15 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsOptional()
   profile_id?: string;
+  /*
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Logged in user ID',
+  })
+  @IsString()
+  @IsOptional()
+  logged_in_user_id?: string;
+  */
 
   // @ApiProperty({
   //   example: 150,
@@ -62,7 +71,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   // @IsArray()
   @IsOptional()
-  supporting_votes?: string;
+  supporting_votes?: string[];
 
   @ApiProperty({
     example: [
@@ -74,7 +83,7 @@ export class CreateCooperativeMemberApprovalsDto {
   @IsString()
   @IsArray()
   @IsOptional()
-  opposing_votes?: string;
+  opposing_votes?: string[];
 
   @ApiProperty({
     example: 'Annual leadership election',

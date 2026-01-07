@@ -2,6 +2,64 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsUUID } from 'class-validator';
 import { UUID } from 'crypto';
 
+export class FilterCooperativesDto {
+  @ApiProperty({
+    example: '8e8bf5e9-0702-4ebf-bd39-98d020f6da3f',
+    description: 'Profile ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  profile_id?: string;
+
+  @ApiProperty({
+    example: 'Credit Unions',
+    description: 'Cooperative category',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @ApiProperty({
+    example: 'Mashonaland East',
+    description: 'Province',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  province?: string;
+
+  @ApiProperty({
+    example: 'Mutare',
+    description: 'Unique identifier for the cooperative (optional)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  city?: string;
+}
+
+export class FilterCooperativesLikeDto {
+  @ApiProperty({
+    example: '987e6543-e21b-43d2-b456-426614174000',
+    description: 'Profile ID',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  profile_id?: string;
+
+  @ApiProperty({
+    example: 'Cre',
+    description: 'Coop search term (name, category, city)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  search_term?: string;
+}
+
 export class CreateCooperativeDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -154,4 +212,18 @@ export class CreateCooperativeDto {
   })
   @IsString()
   no_of_members: number;
+
+  @ApiProperty({
+    example: 10,
+    description: 'Exchange rate',
+  })
+  @IsString()
+  exchange_rate: number;
+
+  @ApiProperty({
+    example: 'FIRST STREET',
+    description: 'Nearest service centre to the cooperative',
+  })
+  @IsString()
+  service_centre: string;
 }

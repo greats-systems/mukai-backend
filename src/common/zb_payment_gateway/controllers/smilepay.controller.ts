@@ -3,10 +3,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { SmilePayService } from '../services/smilepay.service';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import {
+  EcocashPaymentRequest,
   ExpressPaymentAuth,
   ExpressPaymentConfirm,
   ExpressPaymentSmilePayRequestAuth,
   ExpressPaymentSmilePayRequestConfirm,
+  StandardCheckoutRequest,
 } from '../requests/smilepay.requests';
 
 @ApiTags('SmilePay - Express Checkout')
@@ -127,11 +129,11 @@ export class SmilePayController {
     summary: 'Initiate EcoCash express checkout',
     description: 'Initiates an express checkout transaction using EcoCash',
   })
-  @ApiBody({ type: ExpressPaymentAuth })
+  @ApiBody({ type: EcocashPaymentRequest })
   @ApiResponse({
     status: 200,
     description: 'EcoCash checkout initiated successfully',
-    type: Object, // Replace with actual success response DTO
+    type: EcocashPaymentRequest, // Replace with actual success response DTO
   })
   @ApiResponse({
     status: 400,
@@ -144,7 +146,7 @@ export class SmilePayController {
     type: GeneralErrorResponseDto,
   })
   async initiateExpressCheckoutEcocash(
-    @Body() ecocashRequest: ExpressPaymentAuth,
+    @Body() ecocashRequest: EcocashPaymentRequest,
   ) {
     const response =
       await this.spService.initiateExpressCheckoutEcocash(ecocashRequest);
@@ -250,6 +252,41 @@ export class SmilePayController {
       await this.spService.initiateExpressCheckoutVisaMastercard(visamcRequest);
     if (response instanceof GeneralErrorResponseDto) {
       throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
+  @Post('initiate-payment')
+  @ApiOperation({
+    summary: 'Initiate standard checkout',
+    description:
+      'Initiates a standard transaction using any supported payment option',
+  })
+  @ApiBody({ type: StandardCheckoutRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Standard checkout initiated successfully',
+    type: StandardCheckoutRequest, // Replace with actual success response DTO
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request parameters',
+    type: GeneralErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 402,
+    description: 'Payment declined',
+    type: GeneralErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: GeneralErrorResponseDto,
+  })
+  async initiateStandardCheckout(@Body() scRequest: StandardCheckoutRequest) {
+    const response = await this.spService.initiateStandardCheckout(scRequest);
+    if (response instanceof GeneralErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
     }
     return response;
   }

@@ -28,7 +28,58 @@ import { FinancialArticle } from './mukai/entities/financial_articles.entity';
 import { SmileCashWalletModule } from './common/zb_smilecash_wallet/modules/smilecash-wallet.module';
 import { SmilePayModule } from './common/zb_payment_gateway/modules/smilepay.module';
 import { NotifyTextModule } from './messagings/notify-text.module';
+import { SystemLogsModule } from './mukai/modules/system-log.module';
 // import { PostmanModule } from './postman/postman.module';
+import { MailModule } from './common/mail/mail.module';
+import { MailController } from './common/mail/mail.controller';
+import { ServiceCentreModule } from './mukai/modules/service-centre.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { SmilePayController } from './common/zb_payment_gateway/controllers/smilepay.controller';
+import { SmilePayService } from './common/zb_payment_gateway/services/smilepay.service';
+import { SmileCashWalletController } from './common/zb_smilecash_wallet/controllers/smilecash-wallet.controller';
+import { SmileCashWalletService } from './common/zb_smilecash_wallet/services/smilecash-wallet.service';
+import { AgreementsController } from './mukai/controllers/agreements.controller';
+import { AssetsController } from './mukai/controllers/assets.controller';
+import { ChatsController } from './mukai/controllers/chats.controller';
+import { CooperativeMemberApprovalsController } from './mukai/controllers/cooperative-member-approvals.controller';
+import { CooperativeMemberRequestsController } from './mukai/controllers/cooperative_member_requests.controller';
+import { CooperativesController } from './mukai/controllers/cooperatives.controller';
+import { EscrowController } from './mukai/controllers/escrow.controller';
+import { FinancialArticleController } from './mukai/controllers/financial-articles.controller';
+import { GroupsController } from './mukai/controllers/group.controller';
+import { GroupMemberController } from './mukai/controllers/group_members.controller';
+import { LoanController } from './mukai/controllers/loan.controller';
+import { MessagesController } from './mukai/controllers/messages.controller';
+import { SpendingConditionsController } from './mukai/controllers/spending-conditions.controller';
+import { TransactionsController } from './mukai/controllers/transactions.controller';
+import { WalletsController } from './mukai/controllers/wallets.controller';
+import { AgreementsService } from './mukai/services/agreements.service';
+import { AssetsService } from './mukai/services/assets.service';
+import { ChatsService } from './mukai/services/chats.service';
+import { CooperativeMemberApprovalsService } from './mukai/services/cooperative-member-approvals.service';
+import { CooperativeMemberRequestsService } from './mukai/services/cooperative_member_requests.service';
+import { CooperativesService } from './mukai/services/cooperatives.service';
+import { EscrowService } from './mukai/services/escrow.service';
+import { FinancialArticleService } from './mukai/services/financial-article.service';
+import { GroupMemberService } from './mukai/services/group-members.service';
+import { GroupService } from './mukai/services/group.service';
+import { LoanService } from './mukai/services/loan.service';
+import { MessagesService } from './mukai/services/messages.service';
+import { SpendingConditionsService } from './mukai/services/spending-conditions.service';
+import { TransactionsService } from './mukai/services/transactions.service';
+import { WalletsService } from './mukai/services/wallets.service';
+import { OrganizationsController } from './organizations/organizations.controller';
+import { OrganizationsService } from './organizations/organizations.service';
+import { EmployeesController } from './smartbiz/payroll/controllers/employee.controller';
+import { PayslipsController } from './smartbiz/payroll/controllers/payslip.controller';
+import { EmployeesService } from './smartbiz/payroll/services/employee.service';
+import { PayslipsService } from './smartbiz/payroll/services/payslip.service';
+import { SubscriberController } from './wallet/controllers/subscriber.controller';
+import { WalletTransactionController } from './wallet/controllers/wallet-transaction.controller';
+import { SubscriberService } from './wallet/services/subscriber.service';
+import { WalletTransactionService } from './wallet/services/wallet-transaction.service';
+import { SmileWalletService } from './wallet/services/zb_digital_wallet.service';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -64,7 +115,72 @@ import { ScheduleModule } from '@nestjs/schedule';
     FinancialArticle,
     SmileCashWalletModule,
     SmilePayModule,
+    SystemLogsModule,
     NotifyTextModule,
+    MailModule,
+    SystemLogsModule,
+    ServiceCentreModule,
+    // MunicipalitiesModule,
+    // PostmanModule,
+  ],
+  controllers: [
+    AppController,
+    AgreementsController,
+    WalletsController,
+    TransactionsController,
+    OrganizationsController,
+    MessagesController,
+    CooperativesController,
+    CooperativeMemberRequestsController,
+    ChatsController,
+    AssetsController,
+    GroupsController,
+    GroupMemberController,
+    SpendingConditionsController,
+    EscrowController,
+    LoanController,
+    CooperativeMemberRequestsController,
+    CooperativeMemberApprovalsController,
+    SubscriberController,
+    WalletTransactionController,
+    EmployeesController,
+    PayslipsController,
+    FinancialArticleController,
+    SmileCashWalletController,
+    SmilePayController,
+    MailController,
+  ],
+  providers: [
+    AppService,
+    AgreementsService,
+    WalletsService,
+    TransactionsService,
+    OrganizationsService,
+    MessagesService,
+    CooperativesService,
+    CooperativeMemberRequestsService,
+    ChatsService,
+    AssetsService,
+    GroupService,
+    GroupMemberService,
+    SpendingConditionsService,
+    EscrowService,
+    LoanService,
+    CooperativeMemberRequestsService,
+    CooperativeMemberApprovalsService,
+    SubscriberService,
+    SmileWalletService,
+    WalletTransactionService,
+    // WalletTransactionService,
+    EmployeesService,
+    PayslipsService,
+    FinancialArticleService,
+    //   {
+    //   provide: APP_GUARD,
+    //   useClass: PostgresRestHandlerGuard,
+    // },
+    SmileCashWalletService,
+    SmilePayService,
   ],
 })
 export class AppModule {}

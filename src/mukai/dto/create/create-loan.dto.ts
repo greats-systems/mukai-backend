@@ -90,7 +90,6 @@ export class CreateLoanDto {
   })
   @IsString()
   @IsOptional()
-  enum: ['pending', 'active', 'paid', 'defaulted', 'cancelled'];
   status?: string;
 
   @ApiProperty({

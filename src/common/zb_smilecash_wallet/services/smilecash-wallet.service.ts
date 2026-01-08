@@ -45,6 +45,7 @@ import { plainToInstance } from 'class-transformer';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { PostgresRest } from 'src/common/postgresrest';
 import { MunicipalityBillRequest } from '../requests/municipality-bill.request';
+import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 
 function initLogger(funcname: Function): Logger {
   return new Logger(funcname.name);
@@ -899,6 +900,21 @@ export class SmileCashWalletService {
         statusCode: 500,
         message: error,
       };
+    }
+  }
+
+  async deregisterSubscriber(
+    mobile: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      await axios.get(
+        `${this.baseUrl}/accounts/api/v1/subscribers/remove/${mobile}`,
+      );
+      // this.logger.warn('deregisterSubscriber response: ', response);
+      return true;
+    } catch (error) {
+      this.logger.error('deregisterSubscriber error', error);
+      return new ErrorResponseDto(500, 'deregisterSubscriber error', error);
     }
   }
 

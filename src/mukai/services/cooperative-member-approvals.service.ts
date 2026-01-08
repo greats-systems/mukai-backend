@@ -64,6 +64,38 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
+  async checkActiveElections(
+    cooperative_id: string,
+    elected_member_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest
+        .from('cooperative_member_approvals')
+        .select()
+        .eq('group_id', cooperative_id)
+        .eq('elected_member_profile_id', elected_member_id)
+        .eq('consensus_reached', false)
+        .ilike('poll_description', 'elect%')
+        .limit(1)
+        .single();
+
+      if (error && error.code != 'PGRST116') {
+        this.logger.error(
+          `Error checking for active elections: ${error.message}`,
+        );
+        return new ErrorResponseDto(400, error.details);
+      }
+      if (data) {
+        this.logger.log(data);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`checkActiveElections error: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
   async createCooperativeMemberApprovals(
     createCooperativeMemberApprovalsDto: CreateCooperativeMemberApprovalsDto,
     logged_in_user_id: string,

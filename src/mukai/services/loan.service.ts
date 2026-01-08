@@ -51,6 +51,9 @@ export class LoanService {
     try {
       createLoanDto.id = createLoanDto.id || uuidv4();
       createLoanDto.created_at = DateTime.now().toISO();
+      if (!createLoanDto.currency) {
+        createLoanDto.currency = 'USD';
+      }
       /*
       // Check if the user has an existing loan
       const hasActiveLoan = await this.hasActiveLoan(createLoanDto);

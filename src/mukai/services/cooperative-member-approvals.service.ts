@@ -217,11 +217,9 @@ export class CooperativeMemberApprovalsService {
         .select(
           '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*),cooperative_member_approvals_loan_id_fkey(*)',
         )
-        // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
         .eq('group_id', group_id)
         .order('created_at', { ascending: false });
-      // .neq('profile_id', member_id);
 
       if (error) {
         this.logger.error(
@@ -333,6 +331,51 @@ export class CooperativeMemberApprovalsService {
       slDto.request = updateCooperativeMemberApprovalsDto;
       slDto.platform = platform;
 
+      // Fetch poll data
+      const pollsResponse = await this.viewCooperativeMemberApprovalsByCoop(
+        updateCooperativeMemberApprovalsDto.group_id!,
+        logged_in_user_id,
+        platform,
+      );
+      if (pollsResponse instanceof ErrorResponseDto) {
+        return pollsResponse;
+      }
+      const approvals = pollsResponse['data'];
+      approvals.forEach((record) => {
+        this.logger.log(
+          `record: ${JSON.stringify(record.cooperative_member_approvals_group_id_fkey.no_of_members)}`,
+        );
+        // Safely get vote counts (default to 0 if null/undefined)
+        const supportingCount = record.supporting_votes?.length || 0;
+        const opposingCount = record.opposing_votes?.length || 0;
+
+        // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
+        const totalMembersExcludingAdmin = Math.max(
+          (record.cooperative_member_approvals_group_id_fkey.no_of_members ||
+            1) - 1,
+          1,
+        );
+
+        // Calculate approval ratio (using members excluding admin)
+        const approvalRatio = supportingCount / totalMembersExcludingAdmin;
+        const has75PercentApproval = approvalRatio >= 0.75;
+
+        // Log detailed information
+        this.logger.debug(`Approval ID: ${record.id}`);
+        this.logger.debug(`- Supporting votes: ${supportingCount}`);
+        this.logger.debug(`- Opposing votes: ${opposingCount}`);
+        this.logger.debug(
+          `- Total members (excluding admin): ${totalMembersExcludingAdmin}`,
+        );
+        this.logger.debug(
+          `- Approval ratio: ${(approvalRatio * 100).toFixed(0)}%`,
+        );
+        this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
+        record.consensus_reached = has75PercentApproval;
+        updateCooperativeMemberApprovalsDto.consensus_reached =
+          has75PercentApproval;
+      });
+
       // Fetch coop data
       const { data: coop, error: coopError } = await this.postgresrest
         .from('cooperatives')
@@ -363,7 +406,7 @@ export class CooperativeMemberApprovalsService {
       const coopData = coop as CreateCooperativeDto;
       updateCooperativeMemberApprovalsDto.consensus_reached =
         updateCooperativeMemberApprovalsDto.supporting_votes!.length /
-          coopData.no_of_members >=
+          (coopData.no_of_members - 1) >=
         0.75;
 
       const { data, error } = await this.postgresrest

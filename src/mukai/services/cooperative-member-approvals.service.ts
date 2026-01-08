@@ -204,24 +204,24 @@ export class CooperativeMemberApprovalsService {
 
   async viewCooperativeMemberApprovalsByCoop(
     group_id: string,
-    logged_in_user_id: string,
-    platform: string,
+    logged_in_user_id?: string,
+    platform?: string,
   ): Promise<SuccessResponseDto | object | ErrorResponseDto> {
     try {
       const slDto = new CreateSystemLogDto();
-      slDto.profile_id = logged_in_user_id;
-      slDto.action = 'view polls for group';
-      slDto.platform = platform;
+      if (logged_in_user_id && platform) {
+        slDto.profile_id = logged_in_user_id;
+        slDto.action = 'view polls for group';
+        slDto.platform = platform;
+      }
       const { data, error } = await this.postgresrest
         .from('cooperative_member_approvals')
         .select(
           '*,cooperative_member_approvals_group_id_fkey(*),cooperative_member_approvals_profile_id_fkey(*),cooperative_member_approvals_loan_id_fkey(*)',
         )
-        // .neq('profile_id', userJson['profile_id'])
         .eq('consensus_reached', false)
         .eq('group_id', group_id)
         .order('created_at', { ascending: false });
-      // .neq('profile_id', member_id);
 
       if (error) {
         this.logger.error(
@@ -256,43 +256,6 @@ export class CooperativeMemberApprovalsService {
       // Type assertion
       const approvals = data as CooperativeMemberApprovals[];
 
-      // const grou
-
-      // Process each approval record
-      approvals.forEach((record) => {
-        this.logger.log(
-          `record: ${JSON.stringify(record.cooperative_member_approvals_group_id_fkey.no_of_members)}`,
-        );
-        // Safely get vote counts (default to 0 if null/undefined)
-        const supportingCount = record.supporting_votes?.length || 0;
-        const opposingCount = record.opposing_votes?.length || 0;
-
-        // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
-        const totalMembersExcludingAdmin = Math.max(
-          (record.cooperative_member_approvals_group_id_fkey.no_of_members ||
-            1) - 1,
-          1,
-        );
-
-        // Calculate approval ratio (using members excluding admin)
-        const approvalRatio = supportingCount / totalMembersExcludingAdmin;
-        const has75PercentApproval = approvalRatio >= 0.75;
-
-        // Log detailed information
-        this.logger.debug(`Approval ID: ${record.id}`);
-        this.logger.debug(`- Supporting votes: ${supportingCount}`);
-        this.logger.debug(`- Opposing votes: ${opposingCount}`);
-        this.logger.debug(
-          `- Total members (excluding admin): ${totalMembersExcludingAdmin}`,
-        );
-        this.logger.debug(
-          `- Approval ratio: ${(approvalRatio * 100).toFixed(0)}%`,
-        );
-        this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
-        record.consensus_reached = has75PercentApproval;
-      });
-
-      // this.logger.log(approvals);
       slDto.response = {
         statusCode: 200,
         message: 'Approvals fetched successfully',
@@ -320,6 +283,62 @@ export class CooperativeMemberApprovalsService {
     }
   }
 
+  private async calculateConsensusOnUpdate(
+    coop_id: string,
+  ): Promise<boolean | ErrorResponseDto> {
+    try {
+      const pollsResponse =
+        await this.viewCooperativeMemberApprovalsByCoop(coop_id);
+      if (pollsResponse instanceof ErrorResponseDto) {
+        return pollsResponse;
+      }
+      const approvals = pollsResponse['data'];
+      let consensusReached = false;
+      approvals.forEach((record) => {
+        this.logger.log(
+          `record: ${JSON.stringify(record.cooperative_member_approvals_group_id_fkey.no_of_members)}`,
+        );
+        // Safely get vote counts (default to 0 if null/undefined)
+        const supportingCount = record.supporting_votes?.length || 0;
+        const opposingCount = record.opposing_votes?.length || 0;
+
+        // Subtract 1 from total members to exclude admin (ensure it doesn't go below 1)
+        const totalMembersExcludingAdmin = Math.max(
+          (record.cooperative_member_approvals_group_id_fkey.no_of_members ||
+            1) - 1,
+          1,
+        );
+
+        // Calculate approval ratio (using members excluding admin)
+        const approvalRatio = supportingCount / totalMembersExcludingAdmin;
+        const has75PercentApproval = approvalRatio >= 0.75;
+
+        // Log detailed information
+        this.logger.debug('CALCULATING CONSENSUS UPON SUPPORTING/OPPOSING');
+        this.logger.debug(`Approval ID: ${record.id}`);
+        this.logger.debug(`- Supporting votes: ${supportingCount}`);
+        this.logger.debug(`- Opposing votes: ${opposingCount}`);
+        this.logger.debug(
+          `- Total members (excluding admin): ${totalMembersExcludingAdmin}`,
+        );
+        this.logger.debug(
+          `- Approval ratio: ${(approvalRatio * 100).toFixed(0)}%`,
+        );
+        this.logger.debug(`- 75% approval achieved: ${has75PercentApproval}`);
+        record.consensus_reached = has75PercentApproval;
+        consensusReached = has75PercentApproval;
+      });
+      return consensusReached;
+    } catch (error) {
+      this.logger.error('calculateConsensusOnUpdate error', error);
+      return new ErrorResponseDto(
+        500,
+        'calculateConsensusOnUpdate error',
+        error,
+      );
+    }
+  }
+
   async updateCooperativeMemberApprovals(
     id: string,
     updateCooperativeMemberApprovalsDto: UpdateCooperativeMemberApprovalsDto,
@@ -332,6 +351,23 @@ export class CooperativeMemberApprovalsService {
       slDto.action = 'update a poll';
       slDto.request = updateCooperativeMemberApprovalsDto;
       slDto.platform = platform;
+
+      // Fetch poll data
+      const pollsResponse = await this.viewCooperativeMemberApprovalsByCoop(
+        updateCooperativeMemberApprovalsDto.group_id!,
+        logged_in_user_id,
+        platform,
+      );
+      if (pollsResponse instanceof ErrorResponseDto) {
+        return pollsResponse;
+      }
+      const consensusResponse = await this.calculateConsensusOnUpdate(
+        updateCooperativeMemberApprovalsDto.group_id!,
+      );
+      if (consensusResponse instanceof ErrorResponseDto) {
+        return consensusResponse;
+      }
+      updateCooperativeMemberApprovalsDto.consensus_reached = consensusResponse;
 
       // Fetch coop data
       const { data: coop, error: coopError } = await this.postgresrest
@@ -363,7 +399,7 @@ export class CooperativeMemberApprovalsService {
       const coopData = coop as CreateCooperativeDto;
       updateCooperativeMemberApprovalsDto.consensus_reached =
         updateCooperativeMemberApprovalsDto.supporting_votes!.length /
-          coopData.no_of_members >=
+          (coopData.no_of_members - 1) >=
         0.75;
 
       const { data, error } = await this.postgresrest

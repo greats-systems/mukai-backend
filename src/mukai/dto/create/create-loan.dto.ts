@@ -48,6 +48,15 @@ export class CreateLoanDto {
   principal_amount?: number;
 
   @ApiProperty({
+    example: 'US$',
+    description: 'Currency',
+    required: true,
+  })
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @ApiProperty({
     example: 0.02,
     description: 'Interest rate',
     required: true,

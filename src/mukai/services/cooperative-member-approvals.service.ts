@@ -68,41 +68,24 @@ export class CooperativeMemberApprovalsService {
 
   async checkActiveElections(
     cooperative_id: string,
-    // elected_member_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      // Fetch all members within the cooperative
-      const { data, error } = await this.postgresrest
-        .from('group_members')
-        .select()
-        .eq('cooperative_id', cooperative_id);
-      if (error) {
-        this.logger.error(
-          `Error checking for active elections: ${error.message}`,
-        );
-        return new ErrorResponseDto(400, error.details);
-      }
-      const coopMembers = data as GroupMembers[];
       // Initialize a list of elections
       let elections: CooperativeMemberApprovals[] = [];
-      for (const member of coopMembers) {
-        const { data: electionData, error: electionError } =
-          await this.postgresrest
-            .from('cooperative_member_approvals')
-            .select()
-            .match({
-              group_id: cooperative_id,
-              consensus_reached: false,
-            })
-            .ilike('poll_description', '%elect%');
-        if (electionError) {
-          this.logger.error(
-            `Error fetching elections: ${electionError.message}`,
-          );
-          return new ErrorResponseDto(400, electionError.details);
-        }
-        elections = electionData as CooperativeMemberApprovals[];
+      const { data: electionData, error: electionError } =
+        await this.postgresrest
+          .from('cooperative_member_approvals')
+          .select()
+          .match({
+            group_id: cooperative_id,
+            consensus_reached: false,
+          })
+          .ilike('poll_description', '%elect%');
+      if (electionError) {
+        this.logger.error(`Error fetching elections: ${electionError.message}`);
+        return new ErrorResponseDto(400, electionError.details);
       }
+      elections = electionData as CooperativeMemberApprovals[];
       return new SuccessResponseDto(
         200,
         'Elections fetched successfully',

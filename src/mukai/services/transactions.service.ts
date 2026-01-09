@@ -997,35 +997,6 @@ export class TransactionsService {
       return new ErrorResponseDto(500, error);
     }
   }
-  /*
-  async fetchMostRecentBillPayment(
-    phone: string,
-  ): Promise<object | ErrorResponseDto> {
-    try {
-      const { data, error } = await this.postgresrest
-        .from('transactions')
-        .select(
-          `*,
-          transactions_sending_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*)), 
-          transactions_receiving_wallet_fkey(*,wallets_profile_id_fkey(*), wallets_group_id_fkey(*))`,
-        )
-        .eq('sending_wallet', sending_wallet)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        this.logger.error('Error fetching most recent transaction', error);
-        return new ErrorResponseDto(400, error.details);
-      }
-
-      return data as object;
-    } catch (error) {
-      this.logger.error('Exception in fetchMostRecentSenderTransaction', error);
-      return new ErrorResponseDto(500, error);
-    }
-  }
-  */
 
   async streamTransactions(
     wallet_id: string,
@@ -1200,6 +1171,67 @@ export class TransactionsService {
         500,
         error instanceof Error ? error.message : 'Unknown error',
       );
+    }
+  }
+
+  async fetchCoopLoanDisbursements(
+    cooperative_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_loan_disbursements',
+        { p_cooperative_id: cooperative_id },
+      );
+      if (error) {
+        this.logger.error(
+          'Failed to fetch cooperative loan disbursements',
+          error,
+        );
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative loan disbursements',
+          error,
+        );
+      }
+      return new SuccessResponseDto(
+        200,
+        'Cooperative loan disbursements fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopLoanDisbursements error', error);
+      return new ErrorResponseDto(
+        500,
+        'fetchCoopLoanDisbursements error',
+        error,
+      );
+    }
+  }
+
+  async fetchCoopTransactions(
+    cooperative_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const { data, error } = await this.postgresrest.rpc(
+        'fetch_coop_transactions',
+        { p_cooperative_id: cooperative_id },
+      );
+      if (error) {
+        this.logger.error('Failed to fetch cooperative transactions', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperative transactions',
+          error,
+        );
+      }
+      return new SuccessResponseDto(
+        200,
+        'Cooperative transactions fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopTransactions error', error);
+      return new ErrorResponseDto(500, 'fetchCoopTransactions error', error);
     }
   }
 

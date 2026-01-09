@@ -14,6 +14,7 @@ import {
   UseGuards,
   Req,
   Headers,
+  Query,
 } from '@nestjs/common';
 import { CooperativeMemberApprovalsService } from '../services/cooperative-member-approvals.service';
 import { CreateCooperativeMemberApprovalsDto } from '../dto/create/create-cooperative-member-approvals.dto';
@@ -54,7 +55,7 @@ import { SuccessResponseDto } from 'src/common/dto/success-response.dto';
 export class CooperativeMemberApprovalsController {
   constructor(
     private readonly cooperativeMemberApprovalsService: CooperativeMemberApprovalsService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new member approval poll' })
@@ -114,9 +115,49 @@ export class CooperativeMemberApprovalsController {
     description: 'Internal server error',
     type: ErrorResponseDto,
   })
-  async findAll(@Req() req,@Headers() headers,) {
+  async findAll(@Req() req, @Headers() headers,) {
     const response =
       await this.cooperativeMemberApprovalsService.findAllCooperativeMemberApprovals(req.user.sub, headers['x-platform']);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response.message!, response.statusCode);
+    }
+    return response;
+  }
+
+  @Get('elections')
+  @ApiOperation({ summary: 'Check active elections for a group' })
+  @ApiParam({
+    name: 'group_id',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Group ID to fetch polls for',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Election details',
+    type: SuccessResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid ID format',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Election not found',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    type: ErrorResponseDto,
+  })
+  async checkActiveElections(
+    @Query('group_id') group_id: string,
+  ) {
+    const response =
+      await this.cooperativeMemberApprovalsService.checkActiveElections(
+        group_id,
+      );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);
     }

@@ -32,23 +32,9 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
+// @ApiBearerAuth()
 @Controller('transactions')
-@ApiHeader({
-  name: 'apikey',
-  description: 'API key for authentication (insert access token)',
-  required: true, // Set to true if the header is mandatory
-  example:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
-})
-@ApiHeader({
-  name: 'Authorization',
-  description: 'Bearer token for authentication (insert access token)',
-  required: true, // Set to true if the header is mandatory
-  example:
-    'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuYXV0aDAuY29tLyIsImF1ZCI6Imh0dHBzOi8vYXBpLmVkY2Fyd2FyZS5jb20vY2FsZW5kYXIvdjEvIiwic3ViIjoidXNyXzEyMyIsImlhdCI6MTQ1ODc4NTc5NiwiZXhwIjoxNDU4ODcyMTk2fQ.CA7eaHjIHz5NxeIJoFK9krqaeZrPLwmMmgI_XiQiIkQ', // Optional: provide an example value
-})
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
@@ -945,6 +931,65 @@ export class TransactionsController {
         response['message'],
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+    return response;
+  }
+
+  @ApiOperation({
+    summary: 'Get cooperative loan disbursements',
+    description:
+      'Retrieves cooperative loan disbursements for all cooperatives',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative loan disbursements retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @ApiQuery({
+    name: 'cooperative_id',
+    description: 'Cooperative ID to filter disbursements by',
+  })
+  @Get('disbursements/filter')
+  async fetchCoopLoanDisbursements(
+    @Query('cooperative_id') cooperative_id: string,
+  ) {
+    const response =
+      await this.transactionsService.fetchCoopLoanDisbursements(cooperative_id);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
+    }
+    return response;
+  }
+
+  @ApiOperation({
+    summary: 'Fetch cooperative transactions',
+    description: 'Retrieves cooperative transactions for all cooperatives',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cooperative transactions retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  @Get('coop-transactions/filter')
+  async fetchCoopTransactions(@Query('cooperative_id') cooperative_id: string) {
+    const response =
+      await this.transactionsService.fetchCoopTransactions(cooperative_id);
+    if (response instanceof ErrorResponseDto) {
+      throw new HttpException(response, response.statusCode);
     }
     return response;
   }

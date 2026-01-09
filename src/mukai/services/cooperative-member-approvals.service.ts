@@ -27,6 +27,8 @@ import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/re
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+import { GroupMembers } from '../entities/group-members.entity';
+import { match } from 'assert';
 // import { up } from 'supabase/apps/cms/src/migrations/20250529_103319';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
@@ -60,6 +62,37 @@ export class CooperativeMemberApprovalsService {
       return false;
     } catch (error) {
       this.logger.error(`checkActivePolls error: ${error}`);
+      return new ErrorResponseDto(500, error);
+    }
+  }
+
+  async checkActiveElections(
+    cooperative_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      // Initialize a list of elections
+      let elections: CooperativeMemberApprovals[] = [];
+      const { data: electionData, error: electionError } =
+        await this.postgresrest
+          .from('cooperative_member_approvals')
+          .select()
+          .match({
+            group_id: cooperative_id,
+            consensus_reached: false,
+          })
+          .ilike('poll_description', '%elect%');
+      if (electionError) {
+        this.logger.error(`Error fetching elections: ${electionError.message}`);
+        return new ErrorResponseDto(400, electionError.details);
+      }
+      elections = electionData as CooperativeMemberApprovals[];
+      return new SuccessResponseDto(
+        200,
+        'Elections fetched successfully',
+        elections,
+      );
+    } catch (error) {
+      this.logger.error(`checkActiveElections error: ${error}`);
       return new ErrorResponseDto(500, error);
     }
   }

@@ -153,12 +153,10 @@ export class CooperativeMemberApprovalsController {
   })
   async checkActiveElections(
     @Query('group_id') group_id: string,
-    @Query('member_id') member_id: string,
   ) {
     const response =
       await this.cooperativeMemberApprovalsService.checkActiveElections(
         group_id,
-        member_id
       );
     if (response instanceof ErrorResponseDto) {
       throw new HttpException(response.message!, response.statusCode);

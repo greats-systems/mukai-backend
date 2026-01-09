@@ -27,6 +27,8 @@ import { WalletToWalletTransferRequest } from 'src/common/zb_smilecash_wallet/re
 import { CreateCooperativeDto } from '../dto/create/create-cooperative.dto';
 import { GeneralErrorResponseDto } from 'src/common/dto/general-error-response.dto';
 import { CreateSystemLogDto } from '../dto/create/create-system-logs.dto';
+import { GroupMembers } from '../entities/group-members.entity';
+import { match } from 'assert';
 // import { up } from 'supabase/apps/cms/src/migrations/20250529_103319';
 // import { SmileCashWalletService } from 'src/common/zb_smilecash_wallet/services/smilecash-wallet.service';
 
@@ -66,30 +68,46 @@ export class CooperativeMemberApprovalsService {
 
   async checkActiveElections(
     cooperative_id: string,
-    elected_member_id: string,
-  ): Promise<boolean | ErrorResponseDto> {
+    // elected_member_id: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
+      // Fetch all members within the cooperative
       const { data, error } = await this.postgresrest
-        .from('cooperative_member_approvals')
+        .from('group_members')
         .select()
-        .eq('group_id', cooperative_id)
-        .eq('elected_member_profile_id', elected_member_id)
-        .eq('consensus_reached', false)
-        .ilike('poll_description', 'elect%')
-        .limit(1)
-        .single();
-
-      if (error && error.code != 'PGRST116') {
+        .eq('cooperative_id', cooperative_id);
+      if (error) {
         this.logger.error(
           `Error checking for active elections: ${error.message}`,
         );
         return new ErrorResponseDto(400, error.details);
       }
-      if (data) {
-        this.logger.log(data);
-        return true;
+      const coopMembers = data as GroupMembers[];
+      // Initialize a list of elections
+      let elections: CooperativeMemberApprovals[] = [];
+      for (const member of coopMembers) {
+        const { data: electionData, error: electionError } =
+          await this.postgresrest
+            .from('cooperative_member_approvals')
+            .select()
+            .match({
+              group_id: cooperative_id,
+              consensus_reached: false,
+            })
+            .ilike('poll_description', '%elect%');
+        if (electionError) {
+          this.logger.error(
+            `Error fetching elections: ${electionError.message}`,
+          );
+          return new ErrorResponseDto(400, electionError.details);
+        }
+        elections = electionData as CooperativeMemberApprovals[];
       }
-      return false;
+      return new SuccessResponseDto(
+        200,
+        'Elections fetched successfully',
+        elections,
+      );
     } catch (error) {
       this.logger.error(`checkActiveElections error: ${error}`);
       return new ErrorResponseDto(500, error);

@@ -1223,6 +1223,45 @@ export class CooperativesService {
     }
   }
 
+  async fetchCoopsForRegion(
+    logged_in_user_id: string,
+    platform: string,
+  ): Promise<SuccessResponseDto | ErrorResponseDto> {
+    try {
+      const slDto = new CreateSystemLogDto();
+      slDto.profile_id = logged_in_user_id;
+      slDto.platform = platform;
+      slDto.action = 'Fetch cooperatives for region';
+      // Implement function logic here
+      const { data, error } = await this.postgresrest
+        .from('region_coops')
+        .select();
+      if (error) {
+        slDto.response = error;
+        await this.postgresrest.from('system_logs').insert(slDto);
+        this.logger.error('Failed to fetch cooperatives for region', error);
+        return new ErrorResponseDto(
+          400,
+          'Failed to fetch cooperatives for region',
+          error,
+        );
+      }
+      slDto.response = {
+        statusCode: 200,
+        message: 'Cooperatives for region fetched successfully',
+      };
+      await this.postgresrest.from('system_logs').insert(slDto);
+      return new SuccessResponseDto(
+        200,
+        'Cooperatives for region fetched successfully',
+        data,
+      );
+    } catch (error) {
+      this.logger.error('fetchCoopsForRegion error', error);
+      return new ErrorResponseDto(500, 'fetchCoopsForRegion error', error);
+    }
+  }
+
   async setCoopExchangeRate(
     cooperative_id: string,
     exchange_rate: number,

@@ -227,6 +227,35 @@ export class CooperativesController {
     return response;
   }
 
+  @Get('region')
+  @ApiOperation({ summary: 'List all cooperatives linked to a region' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of cooperatives',
+    type: [Object],
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async fetchCoopsForRegion(@Req() req, @Headers() headers) {
+    const response = await this.cooperativesService.fetchCoopsForRegion(
+      req.user.sub,
+      headers['x-platform'],
+    );
+    if (response['statusCode'] === 400) {
+      throw new HttpException(
+        response['message'] ?? 'An error occurred',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return response;
+  }
+
   @Get('initialize-data/:member_id')
   @ApiOperation({ summary: 'Return coops to which a given member belongs' })
   @ApiResponse({
@@ -719,6 +748,7 @@ export class CooperativesController {
   }
 
   @Patch('exit')
+  @ApiExcludeEndpoint()
   @ApiOperation({
     summary: 'Exit a cooperative',
   })

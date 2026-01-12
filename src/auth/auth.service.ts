@@ -1473,7 +1473,7 @@ export class AuthService {
 
       // 7. Setup wallet with balance data
       createWalletDto.profile_id = userId;
-      createWalletDto.default_currency = 'usd';
+      createWalletDto.default_currency = 'USD';
       createWalletDto.is_group_wallet = false;
       createWalletDto.is_active = true;
       createWalletDto.status = 'active';

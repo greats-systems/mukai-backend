@@ -936,7 +936,7 @@ export class TransactionsController {
   }
 
   @ApiOperation({
-    summary: 'Get cooperative loan disbursements',
+    summary: 'Get cooperative loan disbursements ',
     description:
       'Retrieves cooperative loan disbursements for all cooperatives',
   })

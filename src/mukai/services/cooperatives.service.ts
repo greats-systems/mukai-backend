@@ -49,6 +49,7 @@ export class CooperativesService {
     platform: string,
   ): Promise<Cooperative | GeneralErrorResponseDto | ErrorResponseDto> {
     try {
+      this.logger.warn('Creating cooperative: ', createCooperativeDto);
       const slDto = new CreateSystemLogDto();
       slDto.profile_id = logged_in_user_id;
       slDto.platform = platform;
@@ -81,7 +82,7 @@ export class CooperativesService {
       // Fetch service centre ID for given nearest service centre
       if (createCooperativeDto.service_centre) {
         const scResponse = await this.fetchNearestServiceCentre(
-          createCooperativeDto.service_centre,
+          createCooperativeDto.service_centre.toUpperCase(),
         );
         if (scResponse instanceof ErrorResponseDto) {
           slDto.response = scResponse;

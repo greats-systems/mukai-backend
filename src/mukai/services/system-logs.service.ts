@@ -42,6 +42,7 @@ export class SystemLogsService {
         .from('logs')
         .select()
         .neq('profile_id', logged_in_user_id)
+        .limit(500)
         .order('created_at', { ascending: false });
 
       if (error) {

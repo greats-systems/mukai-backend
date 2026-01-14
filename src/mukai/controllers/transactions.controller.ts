@@ -21,7 +21,6 @@ import {
   // ApiBearerAuth,
   ApiBody,
   ApiExcludeEndpoint,
-  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -32,8 +31,8 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { MunicipalityBillRequest } from 'src/common/zb_smilecash_wallet/requests/municipality-bill.request';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.auth.guard';
 
-// @UseGuards(JwtAuthGuard)
-// @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}

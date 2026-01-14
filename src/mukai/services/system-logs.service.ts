@@ -38,23 +38,34 @@ export class SystemLogsService {
     logged_in_user_id: string,
   ): Promise<SuccessResponseDto | ErrorResponseDto> {
     try {
-      const { data, error } = await this.postgresrest
-        .from('logs')
-        .select()
-        .neq('profile_id', logged_in_user_id)
-        .limit(500)
-        .order('created_at', { ascending: false });
+      // Fetch data in parallel
+      const [logs, logsCount] = await Promise.all([
+        this.postgresrest
+          .from('logs')
+          .select()
+          .neq('profile_id', logged_in_user_id)
+          .limit(500)
+          .order('created_at', { ascending: false }),
+        this.postgresrest
+          .from('logs')
+          .select('id', { count: 'exact', head: true })
+          .neq('profile_id', logged_in_user_id),
+      ]);
 
-      if (error) {
-        this.logger.error('Error fetching logs', error);
-        return new ErrorResponseDto(400, error.details);
+      if (logs.error) {
+        this.logger.error('Error fetching logs', logs.error);
+        return new ErrorResponseDto(400, logs.error.details);
       }
 
-      return new SuccessResponseDto(
-        200,
-        'Logs fetched successfully',
-        data as object[],
-      );
+      if (logsCount.error) {
+        this.logger.error('Error fetching logs count', logsCount.error);
+        return new ErrorResponseDto(400, logsCount.error.details);
+      }
+
+      return new SuccessResponseDto(200, 'Logs fetched successfully', {
+        logs: logs.data as object[],
+        logsCount: logsCount.data,
+      });
     } catch (error) {
       this.logger.error('Exception in findAllSystemLogs', error);
       return new ErrorResponseDto(500, error);
